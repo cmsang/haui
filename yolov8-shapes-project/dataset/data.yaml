@@ -1,4 +1,4 @@
-path: dataset
+path: /content/haui/yolov8-shapes-project/dataset
 train: images/train
 val: images/val
 
