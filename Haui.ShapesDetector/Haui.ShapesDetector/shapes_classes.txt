@@ -1,0 +1,5 @@
+cylinder
+pentagonal_prism
+hexagonal_prism
+star6
+cuboid
