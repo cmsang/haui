@@ -12,7 +12,7 @@ public class YoloV11DetectionService : IDetectionService, IDisposable
 {
     private InferenceSession? _session;
     private string[]? _classes;
-    private float _confidenceThreshold = 0.5f;
+    private float _confidenceThreshold = 0.75f;
     private float _iouThreshold = 0.45f;
     private const int ModelInputSize = 640;
 
