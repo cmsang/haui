@@ -8,13 +8,21 @@ using SixLaborsSize = SixLabors.ImageSharp.Size;
 
 namespace Haui.ShapesDetector.Services;
 
+/// <summary>
+/// Optimized YOLOv11 Detection Service with:
+/// - Letterbox padding (maintain aspect ratio - CRITICAL for accuracy!)
+/// - GPU acceleration support (for FP16 half=True model)
+/// - Bicubic resampling for better quality
+/// - Accurate coordinate transformation
+/// </summary>
 public class YoloV11DetectionService : IDetectionService, IDisposable
 {
     private InferenceSession? _session;
     private string[]? _classes;
-    private float _confidenceThreshold = 0.75f;
+    private float _confidenceThreshold = 0.75f; // Keep 75% threshold
     private float _iouThreshold = 0.45f;
     private const int ModelInputSize = 640;
+    private bool _useGpu = false;
 
     public bool IsInitialized => _session != null && _classes != null;
 
@@ -22,9 +30,22 @@ public class YoloV11DetectionService : IDetectionService, IDisposable
     {
         try
         {
-            // Load ONNX model
+            // Load ONNX model with optimizations
             var sessionOptions = new SessionOptions();
             sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+
+            // Try to use CUDA GPU (for FP16 half=True model)
+            try
+            {
+                sessionOptions.AppendExecutionProvider_CUDA(0);
+                _useGpu = true;
+            }
+            catch
+            {
+                // Fallback to CPU if CUDA not available
+                _useGpu = false;
+            }
+
             _session = new InferenceSession(modelPath, sessionOptions);
 
             // Load classes
@@ -53,9 +74,11 @@ public class YoloV11DetectionService : IDetectionService, IDisposable
 
         return await Task.Run(() =>
         {
-            // Load and preprocess image
+            // Load image
             using var image = SixLaborsImage.Load<Rgb24>(imageData);
-            var input = PreprocessImage(image);
+
+            // Preprocess with letterbox (CRITICAL: maintain aspect ratio like training)
+            var (input, ratio, padX, padY) = PreprocessImageWithLetterbox(image);
 
             // Run inference
             var inputs = new List<NamedOnnxValue>
@@ -66,48 +89,94 @@ public class YoloV11DetectionService : IDetectionService, IDisposable
             using var results = _session!.Run(inputs);
             var output = results.First().AsEnumerable<float>().ToArray();
 
-            // Post-process results
-            var detections = PostProcess(output, originalWidth, originalHeight);
+            // Post-process results (adjust for letterbox padding)
+            var detections = PostProcess(output, originalWidth, originalHeight, ratio, padX, padY);
             return detections;
         });
     }
 
-    private DenseTensor<float> PreprocessImage(SixLabors.ImageSharp.Image<Rgb24> image)
+    /// <summary>
+    /// Letterbox preprocessing - maintain aspect ratio with gray padding (like YOLO training)
+    /// This prevents image distortion and significantly improves accuracy!
+    /// </summary>
+    private (DenseTensor<float> tensor, float ratio, int padX, int padY) PreprocessImageWithLetterbox(
+        SixLabors.ImageSharp.Image<Rgb24> image)
     {
-        // Resize to 640x640
+        int originalWidth = image.Width;
+        int originalHeight = image.Height;
+
+        // Calculate resize ratio (maintain aspect ratio)
+        float ratio = Math.Min(
+            ModelInputSize / (float)originalWidth,
+            ModelInputSize / (float)originalHeight
+        );
+
+        int newWidth = (int)(originalWidth * ratio);
+        int newHeight = (int)(originalHeight * ratio);
+
+        // Calculate padding to center the image
+        int padX = (ModelInputSize - newWidth) / 2;
+        int padY = (ModelInputSize - newHeight) / 2;
+
+        // Resize image (maintain aspect ratio, use Bicubic for better quality)
         image.Mutate(x => x.Resize(new ResizeOptions
         {
-            Size = new SixLaborsSize(ModelInputSize, ModelInputSize),
-            Mode = ResizeMode.Stretch
+            Size = new SixLaborsSize(newWidth, newHeight),
+            Mode = ResizeMode.Max, // Maintain aspect ratio
+            Sampler = KnownResamplers.Bicubic // Better quality than default
         }));
 
-        // Create tensor [1, 3, 640, 640]
+        // Create tensor with padding [1, 3, 640, 640]
         var tensor = new DenseTensor<float>(new[] { 1, 3, ModelInputSize, ModelInputSize });
 
-        // Convert to RGB normalized [0, 1]
-        image.ProcessPixelRows(accessor =>
+        // Fill with gray padding (114/255 = 0.447 - standard YOLO padding color)
+        for (int c = 0; c < 3; c++)
         {
             for (int y = 0; y < ModelInputSize; y++)
             {
-                var pixelRow = accessor.GetRowSpan(y);
                 for (int x = 0; x < ModelInputSize; x++)
                 {
-                    tensor[0, 0, y, x] = pixelRow[x].R / 255f; // R
-                    tensor[0, 1, y, x] = pixelRow[x].G / 255f; // G
-                    tensor[0, 2, y, x] = pixelRow[x].B / 255f; // B
+                    tensor[0, c, y, x] = 0.447f;
+                }
+            }
+        }
+
+        // Copy resized image to center with padding
+        image.ProcessPixelRows(accessor =>
+        {
+            for (int y = 0; y < newHeight; y++)
+            {
+                var pixelRow = accessor.GetRowSpan(y);
+                for (int x = 0; x < newWidth; x++)
+                {
+                    int tensorY = y + padY;
+                    int tensorX = x + padX;
+
+                    tensor[0, 0, tensorY, tensorX] = pixelRow[x].R / 255f; // R
+                    tensor[0, 1, tensorY, tensorX] = pixelRow[x].G / 255f; // G
+                    tensor[0, 2, tensorY, tensorX] = pixelRow[x].B / 255f; // B
                 }
             }
         });
 
-        return tensor;
+        return (tensor, ratio, padX, padY);
     }
 
-    private List<DetectionResult> PostProcess(float[] output, int originalWidth, int originalHeight)
+    /// <summary>
+    /// Post-process with letterbox coordinate transformation
+    /// Adjusts bounding boxes coordinates to account for padding
+    /// </summary>
+    private List<DetectionResult> PostProcess(
+        float[] output, 
+        int originalWidth, 
+        int originalHeight,
+        float ratio,
+        int padX,
+        int padY)
     {
         var results = new List<DetectionResult>();
 
-        // YOLOv11 output format: [1, 84, 8400] for 80 classes
-        // For custom model: [1, 4 + num_classes, num_predictions]
+        // YOLOv11 output format: [1, 4 + num_classes, num_predictions]
         int numClasses = _classes!.Length;
         int numPredictions = output.Length / (4 + numClasses);
 
@@ -115,7 +184,7 @@ public class YoloV11DetectionService : IDetectionService, IDisposable
 
         for (int i = 0; i < numPredictions; i++)
         {
-            // Extract box coordinates (cx, cy, w, h)
+            // Extract box coordinates (cx, cy, w, h) in 640x640 space
             float cx = output[i];
             float cy = output[numPredictions + i];
             float w = output[2 * numPredictions + i];
@@ -137,19 +206,32 @@ public class YoloV11DetectionService : IDetectionService, IDisposable
 
             if (maxConfidence > _confidenceThreshold)
             {
-                // Convert from center format to corner format
-                float x = (cx - w / 2) * originalWidth / ModelInputSize;
-                float y = (cy - h / 2) * originalHeight / ModelInputSize;
-                float width = w * originalWidth / ModelInputSize;
-                float height = h * originalHeight / ModelInputSize;
+                // Remove letterbox padding and scale back to original coordinates
+                float x1 = (cx - w / 2 - padX) / ratio;
+                float y1 = (cy - h / 2 - padY) / ratio;
+                float x2 = (cx + w / 2 - padX) / ratio;
+                float y2 = (cy + h / 2 - padY) / ratio;
 
-                detections.Add((new BoundingBox
+                // Clamp to original image bounds
+                x1 = Math.Max(0, Math.Min(x1, originalWidth));
+                y1 = Math.Max(0, Math.Min(y1, originalHeight));
+                x2 = Math.Max(0, Math.Min(x2, originalWidth));
+                y2 = Math.Max(0, Math.Min(y2, originalHeight));
+
+                float width = x2 - x1;
+                float height = y2 - y1;
+
+                // Filter out invalid boxes
+                if (width > 0 && height > 0)
                 {
-                    X = Math.Max(0, x),
-                    Y = Math.Max(0, y),
-                    Width = Math.Min(width, originalWidth - x),
-                    Height = Math.Min(height, originalHeight - y)
-                }, bestClassId, maxConfidence));
+                    detections.Add((new BoundingBox
+                    {
+                        X = x1,
+                        Y = y1,
+                        Width = width,
+                        Height = height
+                    }, bestClassId, maxConfidence));
+                }
             }
         }
 
