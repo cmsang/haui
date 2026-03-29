@@ -43,7 +43,7 @@ namespace Haui.ShapesDetector
             try
             {
                 var modelPath = Path.Combine(Application.StartupPath, "shapes_best.onnx");
-                var classesPath = Path.Combine(Application.StartupPath, "best-classes.txt");
+                var classesPath = Path.Combine(Application.StartupPath, "shapes_classes.txt");
 
                 if (!File.Exists(modelPath))
                 {

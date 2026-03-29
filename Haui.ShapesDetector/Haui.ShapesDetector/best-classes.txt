@@ -1,8 +1,0 @@
-Cube
-Sphere
-Cylinder
-Cone
-Pyramid
-Torus
-Prism
-Dodecahedron
