@@ -1,4 +1,3 @@
-using AForge.Video.DirectShow;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System.Drawing;
@@ -14,86 +13,15 @@ public class CameraService : IDisposable
     public event EventHandler<Bitmap>? FrameCaptured;
     public event EventHandler<string>? ErrorOccurred;
     public bool IsRunning { get; private set; }
-    VideoCaptureDevice captureDevice;
-    Bitmap _crbitmap;
 
     public void Start(int deviceIndex = 0)
-    {
-        if (IsRunning) return;
-        try
-        {
-            FilterInfoCollection filterInfo = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-
-            captureDevice = new VideoCaptureDevice(filterInfo[deviceIndex].MonikerString);
-            captureDevice.NewFrame += CaptureDevice_NewFrame;
-            captureDevice.Start();
-
-            IsRunning = true;
-
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show("Không tìm thấy thông tin camera. Vui lòng kiểm tra lại!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            Console.WriteLine($"{ex}");
-            Application.Exit();
-        }
-    }
-
-    private void CaptureDevice_NewFrame(object sender, AForge.Video.NewFrameEventArgs eventArgs)
-    {
-        try
-        {
-            // Clone bitmap từ event args
-            Bitmap bitmap = (Bitmap)eventArgs.Frame.Clone();
-            FrameCaptured?.Invoke(this, bitmap);
-            _crbitmap = bitmap;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Camera error: {ex.Message}");
-        }
-
-    }
-    public Bitmap? CaptureSnapshot()
-    {
-        if (IsRunning != true)
-            return null;
-
-        if (_crbitmap != null)
-            return _crbitmap;
-        else return null;
-    }
-
-    public void Dispose()
-    {
-        Stop();
-    }
-
-    public void Stop()
-    {
-        try
-        {
-            if (!IsRunning) return;
-            captureDevice.Stop();
-            IsRunning = false;
-        }
-        catch (Exception)
-        {
-
-        }
-
-    }
-
-    #region Luồng cũ
-
-    public void Start1(int deviceIndex = 0)
     {
         if (IsRunning) return;
 
         try
         {
             _capture = new VideoCapture(deviceIndex, VideoCaptureAPIs.DSHOW);
-
+            
             if (!_capture.IsOpened())
             {
                 ErrorOccurred?.Invoke(this, "Cannot open camera");
@@ -138,7 +66,7 @@ public class CameraService : IDisposable
         }
     }
 
-    public void Stop1()
+    public void Stop()
     {
         if (!IsRunning) return;
 
@@ -149,7 +77,7 @@ public class CameraService : IDisposable
         IsRunning = false;
     }
 
-    public Bitmap? CaptureSnapshot1()
+    public Bitmap? CaptureSnapshot()
     {
         if (_capture?.IsOpened() != true)
             return null;
@@ -163,10 +91,9 @@ public class CameraService : IDisposable
         return null;
     }
 
-    public void Dispose1()
+    public void Dispose()
     {
         Stop();
         _capture?.Dispose();
     }
-    #endregion
 }

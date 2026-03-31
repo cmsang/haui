@@ -1,9 +1,6 @@
-using Haui.ShapesDetector.Common;
 using Haui.ShapesDetector.Models;
 using Haui.ShapesDetector.Services;
 using System.Drawing.Imaging;
-using System.IO.Ports;
-using System.Runtime.Serialization;
 
 namespace Haui.ShapesDetector
 {
@@ -11,14 +8,8 @@ namespace Haui.ShapesDetector
     {
         private readonly IDetectionService _detectionService;
         private readonly CameraService _cameraService;
-        private readonly RobotService _robotService;
-        private SerialPort Robot = new SerialPort();
         private bool _isProcessing = false;
         private readonly List<DetectionResult> _allDetections = new();
-        private bool RobotArm_isReady = false;
-        private bool RobotArm_doneS1 = false;
-        private bool RobotArm_doneS2 = false;
-        private string _material = string.Empty;
 
         public frmMain()
         {
@@ -26,7 +17,6 @@ namespace Haui.ShapesDetector
 
             _detectionService = new YoloV11DetectionService();
             _cameraService = new CameraService();
-            _robotService = new RobotService();
 
             SetupEventHandlers();
         }
@@ -69,14 +59,6 @@ namespace Haui.ShapesDetector
                     return;
                 }
 
-                //if (!Robot.IsOpen)
-                //{
-                //    Robot.PortName = clsFileIO.ReadValue("COM_ROBOT");
-                //    Robot.BaudRate = int.Parse(clsFileIO.ReadValue("BAURATE_ROBOT"));
-                //    Robot.Open();
-                //    Robot.DataReceived += Robot_DataReceived;
-                //}
-
                 await _detectionService.InitializeAsync(modelPath, classesPath);
                 UpdateStatus("Ready", Color.LimeGreen);
             }
@@ -86,119 +68,6 @@ namespace Haui.ShapesDetector
                 UpdateStatus("Initialization failed", Color.Red);
             }
         }
-
-        private void Robot_DataReceived(object sender, SerialDataReceivedEventArgs e)
-        {
-            try
-            {
-                if (Robot.BytesToRead > 500)
-                {
-                    Robot.DiscardInBuffer();
-                    return;
-                }
-                string data = Robot.ReadTo("x");
-
-                data = data.Trim();
-                RobotDataAnalys(data);
-
-
-            }
-            catch (Exception ee)
-            {
-                MessageBox.Show(ee.ToString(), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="data"></param>
-        private void RobotDataAnalys(string data)
-        {
-            data = data.Trim();
-            //Báo arm đã sẵn sàng ở vị trí home
-            if (data.Contains("A1"))
-            {
-                RobotArm_isReady = true;
-                RobotArm_doneS1 = false;
-                RobotArm_doneS2 = false;
-            }
-            //Báo arm lấy xong hàng
-            else if (data.Contains("A2"))
-            {
-                RobotArm_isReady = false;
-                RobotArm_doneS1 = true;
-                RobotArm_doneS2 = false;
-                RobotarmControl(2);
-            }
-            //Báo arm trả xong hàng
-            else if (data.Contains("A3"))
-            {
-                RobotArm_isReady = false;
-                RobotArm_doneS1 = false;
-                RobotArm_doneS2 = true;
-            }
-        }
-
-        /// <summary>
-        /// Điều khiển cánh tay robot gắp chuyển hàng
-        /// </summary>
-        /// <param name="detections"></param>
-        private void RobotarmControl(int step)
-        {
-            if (!string.IsNullOrEmpty(_material) != null)
-            {
-                string dest = string.Empty;
-                if (step == 1) //gọi cánh tay đi lấy hàng
-                {
-                    if (RobotArm_isReady) //cánh tay đang wait => gọi luôn
-                    {
-                        dest = _robotService.GetRobotDest("POS0");
-                        CallRobotarm(dest);
-                    }
-                    else  //Cánh tay đang busy => 0.5s sau quét lại
-                    {
-
-                    }
-                }
-                if (step == 2) //Cánh tay lấy hàng xong => dựa theo loại sản phẩm để lấy điểm trả hàng
-                {
-                    switch (_material)
-                    {
-                        case "1":
-                            dest = _robotService.GetRobotDest("POS1");
-                            CallRobotarm(dest);
-                            break;
-                        case "2":
-                            dest = _robotService.GetRobotDest("POS2");
-                            CallRobotarm(dest);
-                            break;
-                        case "3":
-                            dest = _robotService.GetRobotDest("POS3");
-                            CallRobotarm(dest);
-                            break;
-                        case "4":
-                            dest = _robotService.GetRobotDest("POS4");
-                            CallRobotarm(dest);
-                            break;
-                        case "5":
-                            dest = _robotService.GetRobotDest("POS5");
-                            CallRobotarm(dest);
-                            break;
-                        default:
-                            dest = _robotService.GetRobotDest("POS6");
-                            CallRobotarm(dest);
-                            break;
-                    }
-                }
-            }
-        }
-
-        private void CallRobotarm(string dest)
-        {
-            Robot.Write("m" + dest);
-        }
-
 
         private async void OnFrameCaptured(object? sender, Bitmap bitmap)
         {
@@ -308,14 +177,8 @@ namespace Haui.ShapesDetector
                 detectionPanel.UpdateFrame(snapshot, detections);
                 UpdateResultsGrid(detections);
                 UpdateStatus($"Captured - {detections.Count} objects detected", Color.LimeGreen);
-                if (detections.Count > 0)
-                {
-                    _material = detections[0].ClassName.ToString().ToLower().Trim();
-                    RobotarmControl(1);
-                }
             }
         }
-
 
         private void btnSaveResults_Click(object sender, EventArgs e)
         {
@@ -355,12 +218,6 @@ namespace Haui.ShapesDetector
             _cameraService.Dispose();
             (_detectionService as IDisposable)?.Dispose();
             base.OnFormClosing(e);
-        }
-
-        private void btnSettings_Click(object sender, EventArgs e)
-        {
-            frmRobotTurning frm = new frmRobotTurning();
-            frm.ShowDialog();
         }
     }
 }
