@@ -31,11 +31,6 @@ namespace Haui.ShapesDetector
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            pnlSidebar = new Panel();
-            btnCamera = new Button();
-            btnImages = new Button();
-            btnSettings = new Button();
-            btnLogs = new Button();
             pnlMain = new Panel();
             pnlRight = new Panel();
             dgvResults = new DataGridView();
@@ -51,81 +46,11 @@ namespace Haui.ShapesDetector
             btnStop = new Button();
             btnStartCamera = new Button();
             timerCheckJob = new System.Windows.Forms.Timer(components);
-            pnlSidebar.SuspendLayout();
             pnlMain.SuspendLayout();
             pnlRight.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvResults).BeginInit();
             pnlBottom.SuspendLayout();
             SuspendLayout();
-            // 
-            // pnlSidebar
-            // 
-            pnlSidebar.BackColor = Color.FromArgb(30, 30, 30);
-            pnlSidebar.Controls.Add(btnCamera);
-            pnlSidebar.Controls.Add(btnImages);
-            pnlSidebar.Controls.Add(btnSettings);
-            pnlSidebar.Controls.Add(btnLogs);
-            pnlSidebar.Dock = DockStyle.Left;
-            pnlSidebar.Location = new Point(0, 0);
-            pnlSidebar.Name = "pnlSidebar";
-            pnlSidebar.Size = new Size(112, 661);
-            pnlSidebar.TabIndex = 0;
-            // 
-            // btnCamera
-            // 
-            btnCamera.BackColor = Color.FromArgb(0, 122, 204);
-            btnCamera.FlatAppearance.BorderSize = 0;
-            btnCamera.FlatStyle = FlatStyle.Flat;
-            btnCamera.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnCamera.ForeColor = Color.White;
-            btnCamera.Location = new Point(12, 12);
-            btnCamera.Name = "btnCamera";
-            btnCamera.Size = new Size(88, 80);
-            btnCamera.TabIndex = 0;
-            btnCamera.Text = "📷\r\nCamera";
-            btnCamera.UseVisualStyleBackColor = false;
-            // 
-            // btnImages
-            // 
-            btnImages.BackColor = Color.FromArgb(45, 45, 48);
-            btnImages.FlatAppearance.BorderSize = 0;
-            btnImages.FlatStyle = FlatStyle.Flat;
-            btnImages.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnImages.ForeColor = Color.White;
-            btnImages.Location = new Point(12, 98);
-            btnImages.Name = "btnImages";
-            btnImages.Size = new Size(88, 80);
-            btnImages.TabIndex = 1;
-            btnImages.Text = "🖼️\r\nImages";
-            btnImages.UseVisualStyleBackColor = false;
-            // 
-            // btnSettings
-            // 
-            btnSettings.BackColor = Color.FromArgb(45, 45, 48);
-            btnSettings.FlatAppearance.BorderSize = 0;
-            btnSettings.FlatStyle = FlatStyle.Flat;
-            btnSettings.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnSettings.ForeColor = Color.White;
-            btnSettings.Location = new Point(12, 184);
-            btnSettings.Name = "btnSettings";
-            btnSettings.Size = new Size(88, 80);
-            btnSettings.TabIndex = 2;
-            btnSettings.Text = "⚙️\r\nSettings";
-            btnSettings.UseVisualStyleBackColor = false;
-            // 
-            // btnLogs
-            // 
-            btnLogs.BackColor = Color.FromArgb(45, 45, 48);
-            btnLogs.FlatAppearance.BorderSize = 0;
-            btnLogs.FlatStyle = FlatStyle.Flat;
-            btnLogs.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            btnLogs.ForeColor = Color.White;
-            btnLogs.Location = new Point(12, 270);
-            btnLogs.Name = "btnLogs";
-            btnLogs.Size = new Size(88, 80);
-            btnLogs.TabIndex = 3;
-            btnLogs.Text = "📝\r\nLogs";
-            btnLogs.UseVisualStyleBackColor = false;
             // 
             // pnlMain
             // 
@@ -134,9 +59,9 @@ namespace Haui.ShapesDetector
             pnlMain.Controls.Add(detectionPanel);
             pnlMain.Controls.Add(pnlBottom);
             pnlMain.Dock = DockStyle.Fill;
-            pnlMain.Location = new Point(112, 0);
+            pnlMain.Location = new Point(0, 0);
             pnlMain.Name = "pnlMain";
-            pnlMain.Size = new Size(1170, 661);
+            pnlMain.Size = new Size(1282, 661);
             pnlMain.TabIndex = 1;
             // 
             // pnlRight
@@ -145,7 +70,7 @@ namespace Haui.ShapesDetector
             pnlRight.Controls.Add(dgvResults);
             pnlRight.Controls.Add(lblResults);
             pnlRight.Dock = DockStyle.Right;
-            pnlRight.Location = new Point(820, 0);
+            pnlRight.Location = new Point(932, 0);
             pnlRight.Name = "pnlRight";
             pnlRight.Size = new Size(350, 581);
             pnlRight.TabIndex = 2;
@@ -210,7 +135,7 @@ namespace Haui.ShapesDetector
             detectionPanel.Dock = DockStyle.Fill;
             detectionPanel.Location = new Point(0, 0);
             detectionPanel.Name = "detectionPanel";
-            detectionPanel.Size = new Size(1170, 581);
+            detectionPanel.Size = new Size(1282, 581);
             detectionPanel.TabIndex = 1;
             // 
             // pnlBottom
@@ -224,7 +149,7 @@ namespace Haui.ShapesDetector
             pnlBottom.Dock = DockStyle.Bottom;
             pnlBottom.Location = new Point(0, 581);
             pnlBottom.Name = "pnlBottom";
-            pnlBottom.Size = new Size(1170, 80);
+            pnlBottom.Size = new Size(1282, 80);
             pnlBottom.TabIndex = 0;
             // 
             // lblStatus
@@ -232,7 +157,7 @@ namespace Haui.ShapesDetector
             lblStatus.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             lblStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             lblStatus.ForeColor = Color.LimeGreen;
-            lblStatus.Location = new Point(890, 30);
+            lblStatus.Location = new Point(1002, 30);
             lblStatus.Name = "lblStatus";
             lblStatus.Size = new Size(250, 23);
             lblStatus.TabIndex = 4;
@@ -312,12 +237,10 @@ namespace Haui.ShapesDetector
             BackColor = Color.FromArgb(45, 45, 48);
             ClientSize = new Size(1282, 661);
             Controls.Add(pnlMain);
-            Controls.Add(pnlSidebar);
             Name = "frmMain";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Object Detection Tool - Haui.ShapesDetector";
             Load += frmMain_Load;
-            pnlSidebar.ResumeLayout(false);
             pnlMain.ResumeLayout(false);
             pnlRight.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)dgvResults).EndInit();
@@ -326,12 +249,6 @@ namespace Haui.ShapesDetector
         }
 
         #endregion
-
-        private Panel pnlSidebar;
-        private Button btnCamera;
-        private Button btnImages;
-        private Button btnSettings;
-        private Button btnLogs;
         private Panel pnlMain;
         private DetectionPanel detectionPanel;
         private Panel pnlBottom;
