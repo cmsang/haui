@@ -11,5 +11,15 @@ namespace Haui.ShapesDetector.Services
         {
             return clsFileIO.ReadValue(PointType);
         }
+
+        public void UpdatePosition(string key, string value)
+        {
+            clsFileIO.UpdateValue(key, value);
+        }
+
+        public string GetPosition(string key)
+        {
+            return clsFileIO.ReadValue(key);
+        }
     }
 }

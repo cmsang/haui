@@ -30,6 +30,7 @@ namespace Haui.ShapesDetector
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             pnlSidebar = new Panel();
             btnCamera = new Button();
             btnImages = new Button();
@@ -49,6 +50,7 @@ namespace Haui.ShapesDetector
             btnCapture = new Button();
             btnStop = new Button();
             btnStartCamera = new Button();
+            timerCheckJob = new System.Windows.Forms.Timer(components);
             pnlSidebar.SuspendLayout();
             pnlMain.SuspendLayout();
             pnlRight.SuspendLayout();
@@ -313,6 +315,11 @@ namespace Haui.ShapesDetector
             btnStartCamera.UseVisualStyleBackColor = false;
             btnStartCamera.Click += btnStartCamera_Click;
             // 
+            // timerCheckJob
+            // 
+            timerCheckJob.Interval = 500;
+            timerCheckJob.Tick += timerCheckJob_Tick;
+            // 
             // frmMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -355,5 +362,6 @@ namespace Haui.ShapesDetector
         private DataGridViewTextBoxColumn colConfidence;
         private DataGridViewTextBoxColumn colTime;
         private Label lblStatus;
+        private System.Windows.Forms.Timer timerCheckJob;
     }
 }

@@ -30,5 +30,23 @@ namespace Haui.ShapesDetector.Common
 
             return dstrResult.ToString();
         }
+
+        public static void UpdateValue( string key, string newValue)
+        {
+            string filePath = AppDomain.CurrentDomain.BaseDirectory + @"system.ini";
+
+            var lines = File.ReadAllLines(filePath).ToList();
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (lines[i].StartsWith(key + "="))
+                {
+                    lines[i] = $"{key}={newValue}";
+                    break;
+                }
+            }
+
+            File.WriteAllLines(filePath, lines);
+        }
     }
 }

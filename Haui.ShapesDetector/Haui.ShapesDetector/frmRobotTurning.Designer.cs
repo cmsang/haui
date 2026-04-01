@@ -32,7 +32,6 @@
             trJ2 = new TrackBar();
             trJ4 = new TrackBar();
             trJ3 = new TrackBar();
-            txtSavePath = new TextBox();
             txtPointLocate = new TextBox();
             cboPos = new ComboBox();
             groupBox1 = new GroupBox();
@@ -54,8 +53,7 @@
             // trJ1
             // 
             trJ1.Location = new Point(62, 24);
-            trJ1.Maximum = 90;
-            trJ1.Minimum = -90;
+            trJ1.Maximum = 180;
             trJ1.Name = "trJ1";
             trJ1.Size = new Size(413, 45);
             trJ1.TabIndex = 0;
@@ -64,8 +62,7 @@
             // trJ2
             // 
             trJ2.Location = new Point(62, 82);
-            trJ2.Maximum = 90;
-            trJ2.Minimum = -90;
+            trJ2.Maximum = 180;
             trJ2.Name = "trJ2";
             trJ2.Size = new Size(413, 45);
             trJ2.TabIndex = 1;
@@ -74,8 +71,7 @@
             // trJ4
             // 
             trJ4.Location = new Point(62, 198);
-            trJ4.Maximum = 90;
-            trJ4.Minimum = -90;
+            trJ4.Maximum = 180;
             trJ4.Name = "trJ4";
             trJ4.Size = new Size(413, 45);
             trJ4.TabIndex = 3;
@@ -84,19 +80,11 @@
             // trJ3
             // 
             trJ3.Location = new Point(62, 140);
-            trJ3.Maximum = 90;
-            trJ3.Minimum = -90;
+            trJ3.Maximum = 180;
             trJ3.Name = "trJ3";
             trJ3.Size = new Size(413, 45);
             trJ3.TabIndex = 2;
             trJ3.ValueChanged += tr_ValueChanged;
-            // 
-            // txtSavePath
-            // 
-            txtSavePath.Location = new Point(481, 210);
-            txtSavePath.Name = "txtSavePath";
-            txtSavePath.Size = new Size(307, 23);
-            txtSavePath.TabIndex = 4;
             // 
             // txtPointLocate
             // 
@@ -109,11 +97,12 @@
             // cboPos
             // 
             cboPos.FormattingEnabled = true;
-            cboPos.Items.AddRange(new object[] { "Pickup", "Maeterial 1", "Maeterial 2", "Maeterial 3", "Maeterial 4", "Maeterial 5", "Maeterial 6" });
+            cboPos.Items.AddRange(new object[] { "Pickup", "Material 1", "Material 2", "Material 3", "Material 4", "Material 5", "Material 6" });
             cboPos.Location = new Point(92, 22);
             cboPos.Name = "cboPos";
             cboPos.Size = new Size(209, 23);
             cboPos.TabIndex = 6;
+            cboPos.SelectedIndexChanged += cboPos_SelectedIndexChanged;
             // 
             // groupBox1
             // 
@@ -127,7 +116,7 @@
             groupBox1.Size = new Size(307, 137);
             groupBox1.TabIndex = 7;
             groupBox1.TabStop = false;
-            groupBox1.Text = "groupBox1";
+            groupBox1.Text = "Setting infor";
             // 
             // label4
             // 
@@ -220,13 +209,14 @@
             Controls.Add(J1);
             Controls.Add(txtPointLocate);
             Controls.Add(groupBox1);
-            Controls.Add(txtSavePath);
             Controls.Add(trJ4);
             Controls.Add(trJ3);
             Controls.Add(trJ2);
             Controls.Add(trJ1);
             Name = "frmRobotTurning";
+            StartPosition = FormStartPosition.CenterScreen;
             Text = "frmRobotTurning";
+            Load += frmRobotTurning_Load;
             ((System.ComponentModel.ISupportInitialize)trJ1).EndInit();
             ((System.ComponentModel.ISupportInitialize)trJ2).EndInit();
             ((System.ComponentModel.ISupportInitialize)trJ4).EndInit();
@@ -243,7 +233,6 @@
         private TrackBar trJ2;
         private TrackBar trJ4;
         private TrackBar trJ3;
-        private TextBox txtSavePath;
         private TextBox txtPointLocate;
         private ComboBox cboPos;
         private GroupBox groupBox1;

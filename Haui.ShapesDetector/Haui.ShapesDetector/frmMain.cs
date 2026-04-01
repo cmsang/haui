@@ -18,6 +18,8 @@ namespace Haui.ShapesDetector
         private bool RobotArm_isReady = false;
         private bool RobotArm_doneS1 = false;
         private bool RobotArm_doneS2 = false;
+        private bool CameraWait = false;
+        private bool RobotArmWait = false;
         private string _material = string.Empty;
 
         public frmMain()
@@ -129,7 +131,7 @@ namespace Haui.ShapesDetector
                 RobotArm_isReady = false;
                 RobotArm_doneS1 = true;
                 RobotArm_doneS2 = false;
-                RobotarmControl(2);
+                RobotarmControl(3);
             }
             //Báo arm trả xong hàng
             else if (data.Contains("A3"))
@@ -137,6 +139,27 @@ namespace Haui.ShapesDetector
                 RobotArm_isReady = false;
                 RobotArm_doneS1 = false;
                 RobotArm_doneS2 = true;
+                _material = string.Empty;
+            }
+            //Báo arm về home xong
+            else if (data.Contains("A4"))
+            {
+                RobotArm_isReady = true;
+                RobotArm_doneS1 = false;
+                RobotArm_doneS2 = false;
+                _material = string.Empty;
+            }
+            //Hàng ở vị trí chụp ảnh
+            else if (data.Contains("S1"))
+            {
+                CameraWait = true;
+                RobotArmWait = false;
+            }
+            //Hàng ở vị trí chờ gắp
+            else if (data.Contains("S2"))
+            {
+                CameraWait = false;
+                RobotArmWait = true;
             }
         }
 
@@ -149,19 +172,25 @@ namespace Haui.ShapesDetector
             if (!string.IsNullOrEmpty(_material) != null)
             {
                 string dest = string.Empty;
-                if (step == 1) //gọi cánh tay đi lấy hàng
+                if (step == 1 && CameraWait)
                 {
-                    if (RobotArm_isReady) //cánh tay đang wait => gọi luôn
+                    CallConveyer("d1");
+                    RobotarmControl(2);
+                }
+                else if (step == 2) //gọi cánh tay đi lấy hàng
+                {
+                    if (RobotArm_isReady && RobotArmWait) //cánh tay đang wait => gọi luôn
                     {
                         dest = _robotService.GetRobotDest("POS0");
                         CallRobotarm(dest);
+                        timerCheckJob.Stop();
                     }
                     else  //Cánh tay đang busy => 0.5s sau quét lại
                     {
-
+                        timerCheckJob.Start();
                     }
                 }
-                if (step == 2) //Cánh tay lấy hàng xong => dựa theo loại sản phẩm để lấy điểm trả hàng
+                else if (step == 3) //Cánh tay lấy hàng xong => dựa theo loại sản phẩm để lấy điểm trả hàng
                 {
                     switch (_material)
                     {
@@ -194,11 +223,20 @@ namespace Haui.ShapesDetector
             }
         }
 
+        private void timerCheckJob_Tick(object sender, EventArgs e)
+        {
+            RobotarmControl(2);
+        }
+
+        private void CallConveyer(string mess)
+        {
+            Robot.Write(mess);
+        }
+
         private void CallRobotarm(string dest)
         {
             Robot.Write("m" + dest);
         }
-
 
         private async void OnFrameCaptured(object? sender, Bitmap bitmap)
         {
@@ -360,7 +398,13 @@ namespace Haui.ShapesDetector
         private void btnSettings_Click(object sender, EventArgs e)
         {
             frmRobotTurning frm = new frmRobotTurning();
-            frm.ShowDialog();
+            Robot.Close();
+            if (frm.ShowDialog() == DialogResult.OK)
+            {
+                //Robot.Open();
+            }
+
         }
+
     }
 }
