@@ -80,12 +80,47 @@ namespace Haui.ShapesDetector
                 //}
 
                 await _detectionService.InitializeAsync(modelPath, classesPath);
+
+                // Load danh sách cameras
+                LoadAvailableCameras();
+
                 UpdateStatus("Ready", Color.LimeGreen);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to initialize: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 UpdateStatus("Initialization failed", Color.Red);
+            }
+        }
+
+        private void LoadAvailableCameras()
+        {
+            cmbCameras.Items.Clear();
+
+            var cameras = CameraService.GetAvailableCameras();
+
+            if (cameras.Count == 0)
+            {
+                cmbCameras.Items.Add("No cameras found");
+                cmbCameras.Enabled = false;
+                return;
+            }
+
+            foreach (var camera in cameras)
+            {
+                cmbCameras.Items.Add(camera);
+            }
+
+            cmbCameras.SelectedIndex = 0;
+            cmbCameras.Enabled = true;
+        }
+
+        private void cmbCameras_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbCameras.SelectedItem is CameraInfo camera)
+            {
+                _cameraService.SwitchCamera(camera.Index);
+                UpdateStatus($"Switched to {camera.Name}", Color.LimeGreen);
             }
         }
 
