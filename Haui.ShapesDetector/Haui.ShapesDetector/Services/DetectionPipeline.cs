@@ -1,5 +1,6 @@
 using Haui.ShapesDetector.Models;
-using System.Drawing.Imaging;
+using OpenCvSharp;
+using OpenCvSharp.Extensions;
 
 namespace Haui.ShapesDetector.Services;
 
@@ -177,10 +178,16 @@ public sealed class DetectionPipeline : IDisposable
 
     private async Task<List<DetectionResult>> DetectCoreAsync(Bitmap bitmap)
     {
-        using var ms = new MemoryStream();
-        bitmap.Save(ms, ImageFormat.Jpeg);
-        ms.Position = 0;
-        return await _detectionService.DetectAsync(ms.ToArray(), bitmap.Width, bitmap.Height);
+        // Convert to grayscale via OpenCvSharp (SIMD-accelerated, BT.601)
+        // Encode as PNG lossless — tránh artifact JPEG ảnh hưởng YOLO
+        using var colorMat = BitmapConverter.ToMat(bitmap);
+        using var grayMat  = new Mat();
+        var code = colorMat.Channels() == 4
+            ? ColorConversionCodes.BGRA2GRAY
+            : ColorConversionCodes.BGR2GRAY;
+        Cv2.CvtColor(colorMat, grayMat, code);
+        Cv2.ImEncode(".png", grayMat, out var pngBytes);
+        return await _detectionService.DetectAsync(pngBytes, bitmap.Width, bitmap.Height);
     }
 
     // ───────────────────────────────────────────────────────────────────────────
