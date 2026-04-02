@@ -349,7 +349,7 @@ namespace Haui.ShapesDetector
             lblStatus.AutoSize = true;
             lblStatus.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold);
             lblStatus.ForeColor = Color.LimeGreen;
-            lblStatus.Location = new Point(1245, 18);
+            lblStatus.Location = new Point(1316, 18);
             lblStatus.Margin = new Padding(0);
             lblStatus.Name = "lblStatus";
             lblStatus.Size = new Size(74, 23);
