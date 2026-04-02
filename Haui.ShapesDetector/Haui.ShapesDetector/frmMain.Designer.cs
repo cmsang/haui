@@ -42,6 +42,7 @@ namespace Haui.ShapesDetector
             colTime = new DataGridViewTextBoxColumn();
             lblResults = new Label();
             pnlBottom = new Panel();
+            btnPrepareDataset = new Button();
             btnTest = new Button();
             btnSettings = new Button();
             btnSaveResults = new Button();
@@ -193,6 +194,7 @@ namespace Haui.ShapesDetector
             // 
             pnlBottom.BackColor = Color.FromArgb(37, 37, 38);
             pnlBottom.BorderStyle = BorderStyle.FixedSingle;
+            pnlBottom.Controls.Add(btnPrepareDataset);
             pnlBottom.Controls.Add(btnTest);
             pnlBottom.Controls.Add(btnSettings);
             pnlBottom.Controls.Add(btnSaveResults);
@@ -206,6 +208,26 @@ namespace Haui.ShapesDetector
             pnlBottom.Padding = new Padding(16, 15, 16, 15);
             pnlBottom.Size = new Size(1400, 80);
             pnlBottom.TabIndex = 2;
+            // 
+            // btnPrepareDataset
+            // 
+            btnPrepareDataset.Anchor = AnchorStyles.Left;
+            btnPrepareDataset.BackColor = Color.FromArgb(200, 130, 40);
+            btnPrepareDataset.Cursor = Cursors.Hand;
+            btnPrepareDataset.FlatAppearance.BorderSize = 0;
+            btnPrepareDataset.FlatAppearance.MouseDownBackColor = Color.FromArgb(150, 90, 20);
+            btnPrepareDataset.FlatAppearance.MouseOverBackColor = Color.FromArgb(180, 110, 30);
+            btnPrepareDataset.FlatStyle = FlatStyle.Flat;
+            btnPrepareDataset.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnPrepareDataset.ForeColor = Color.White;
+            btnPrepareDataset.Location = new Point(1124, 15);
+            btnPrepareDataset.Margin = new Padding(12, 0, 0, 0);
+            btnPrepareDataset.Name = "btnPrepareDataset";
+            btnPrepareDataset.Size = new Size(160, 48);
+            btnPrepareDataset.TabIndex = 6;
+            btnPrepareDataset.Text = "🗂 Prepare Data";
+            btnPrepareDataset.UseVisualStyleBackColor = false;
+            btnPrepareDataset.Click += btnPrepareDataset_Click;
             // 
             // btnTest
             // 
@@ -399,7 +421,7 @@ namespace Haui.ShapesDetector
             MinimumSize = new Size(1200, 700);
             Name = "frmMain";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "🔍 Object Detection Tool - Haui.ShapesDetector";
+            Text = "Object Detection Tool - Haui.ShapesDetector";
             Load += frmMain_Load;
             pnlMain.ResumeLayout(false);
             pnlCenter.ResumeLayout(false);
@@ -434,6 +456,7 @@ namespace Haui.ShapesDetector
         private Button btnSaveResults;
         private Button btnSettings;
         private Button btnTest;
+        private Button btnPrepareDataset;
         private System.Windows.Forms.Timer timerCheckJob;
     }
 }

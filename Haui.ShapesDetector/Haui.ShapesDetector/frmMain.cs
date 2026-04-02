@@ -427,5 +427,11 @@ namespace Haui.ShapesDetector
             frm.Show(this);
         }
 
+        private void btnPrepareDataset_Click(object sender, EventArgs e)
+        {
+            using var frm = new frmPrepareDataset();
+            frm.ShowDialog(this);
+        }
+
     }
 }
