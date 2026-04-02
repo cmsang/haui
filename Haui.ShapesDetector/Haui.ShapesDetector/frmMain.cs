@@ -13,7 +13,14 @@ namespace Haui.ShapesDetector
         private readonly CameraService _cameraService;
         private readonly RobotService _robotService;
         private SerialPort Robot = new SerialPort();
-        private bool _isProcessing = false;
+
+        // Frame pipeline
+        private Bitmap? _latestRawFrame;
+        private Bitmap? _pendingYoloFrame;
+        private readonly object _frameLock = new();
+        private volatile List<DetectionResult> _cachedDetections = [];
+        private int _isDetecting = 0; // 0 = idle, 1 = running (Interlocked)
+
         private readonly List<DetectionResult> _allDetections = new();
         private bool RobotArm_isReady = false;
         private bool RobotArm_doneS1 = false;
@@ -273,33 +280,103 @@ namespace Haui.ShapesDetector
             Robot.Write("m" + dest);
         }
 
-        private async void OnFrameCaptured(object? sender, Bitmap bitmap)
+        // Called on the camera background thread (~30 fps).
+        // Shows the frame immediately, then wakes the YOLO worker if idle.
+        private void OnFrameCaptured(object? sender, Bitmap bitmap)
         {
-            if (_isProcessing || !_detectionService.IsInitialized)
-                return;
+            if (!_detectionService.IsInitialized) return;
 
-            _isProcessing = true;
+            // Swap into pipeline slots (separate clones — different lifetimes)
+            Bitmap rawClone  = (Bitmap)bitmap.Clone();
+            Bitmap yoloClone = (Bitmap)bitmap.Clone();
+            Bitmap? oldRaw;
 
+            lock (_frameLock)
+            {
+                oldRaw          = _latestRawFrame;
+                _latestRawFrame = rawClone;
+
+                _pendingYoloFrame?.Dispose();   // discard superseded frame
+                _pendingYoloFrame = yoloClone;
+            }
+            oldRaw?.Dispose();
+
+            // Push to UI immediately — no waiting for YOLO
+            if (IsHandleCreated)
+            {
+                var display = (Bitmap)bitmap.Clone();
+                BeginInvoke(() => detectionPanel.UpdateFrame(display, _cachedDetections));
+            }
+
+            // Wake YOLO worker (only one instance runs at a time)
+            if (Interlocked.CompareExchange(ref _isDetecting, 1, 0) == 0)
+                _ = RunDetectionLoopAsync();
+        }
+
+        // YOLO worker: always consumes the LATEST pending frame, loops until none remain.
+        private async Task RunDetectionLoopAsync()
+        {
             try
             {
-                var detections = await DetectObjectsAsync(bitmap);
-
-                if (InvokeRequired)
+                while (true)
                 {
-                    BeginInvoke(() =>
+                    Bitmap? frame;
+                    lock (_frameLock)
                     {
-                        detectionPanel.UpdateFrame((Bitmap)bitmap.Clone(), detections);
-                        UpdateResultsGrid(detections);
-                    });
+                        frame             = _pendingYoloFrame;
+                        _pendingYoloFrame = null;
+                    }
+
+                    if (frame == null)
+                    {
+                        // Release before exiting — guard against a race where a new frame
+                        // arrived between the null-check above and this release.
+                        Interlocked.Exchange(ref _isDetecting, 0);
+                        lock (_frameLock)
+                        {
+                            if (_pendingYoloFrame == null) break;  // truly empty → exit
+                        }
+                        // A new frame snuck in; try to reclaim the worker slot
+                        if (Interlocked.CompareExchange(ref _isDetecting, 1, 0) != 0) break;
+                        continue;
+                    }
+
+                    try
+                    {
+                        var detections = await DetectObjectsAsync(frame);
+                        _cachedDetections = detections;
+
+                        // Overlay boxes on the LATEST raw frame, not the one YOLO processed
+                        if (IsHandleCreated)
+                        {
+                            BeginInvoke(() =>
+                            {
+                                Bitmap? latestDisplay;
+                                lock (_frameLock)
+                                {
+                                    latestDisplay = _latestRawFrame != null
+                                        ? (Bitmap)_latestRawFrame.Clone()
+                                        : null;
+                                }
+                                if (latestDisplay != null)
+                                {
+                                    detectionPanel.UpdateFrame(latestDisplay, detections);
+                                    UpdateResultsGrid(detections);
+                                }
+                            });
+                        }
+                    }
+                    finally
+                    {
+                        frame.Dispose();
+                    }
                 }
             }
             catch (Exception ex)
             {
-                BeginInvoke(() => UpdateStatus($"Detection error: {ex.Message}", Color.Red));
-            }
-            finally
-            {
-                _isProcessing = false;
+                Interlocked.Exchange(ref _isDetecting, 0);
+                if (IsHandleCreated)
+                    BeginInvoke(() => UpdateStatus($"Detection error: {ex.Message}", Color.Red));
             }
         }
 
@@ -377,13 +454,18 @@ namespace Haui.ShapesDetector
             var snapshot = _cameraService.CaptureSnapshot();
             if (snapshot != null)
             {
+                // Show frame immediately with last cached detections
+                detectionPanel.UpdateFrame((Bitmap)snapshot.Clone(), _cachedDetections);
+                UpdateStatus("Detecting...", Color.Orange);
+
                 var detections = await DetectObjectsAsync(snapshot);
+                _cachedDetections = detections;
                 detectionPanel.UpdateFrame(snapshot, detections);
                 UpdateResultsGrid(detections);
                 UpdateStatus($"Captured - {detections.Count} objects detected", Color.LimeGreen);
                 if (detections.Count > 0)
                 {
-                    _material = detections[0].ClassName.ToString().ToLower().Trim();
+                    _material = detections[0].ClassName.ToLower().Trim();
                     RobotarmControl(1);
                 }
             }
@@ -427,6 +509,15 @@ namespace Haui.ShapesDetector
         {
             _cameraService.Dispose();
             (_detectionService as IDisposable)?.Dispose();
+
+            lock (_frameLock)
+            {
+                _latestRawFrame?.Dispose();
+                _pendingYoloFrame?.Dispose();
+                _latestRawFrame  = null;
+                _pendingYoloFrame = null;
+            }
+
             base.OnFormClosing(e);
         }
 
