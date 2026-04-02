@@ -42,6 +42,7 @@ namespace Haui.ShapesDetector
             colTime = new DataGridViewTextBoxColumn();
             lblResults = new Label();
             pnlBottom = new Panel();
+            btnTest = new Button();
             btnSettings = new Button();
             btnSaveResults = new Button();
             btnCapture = new Button();
@@ -192,6 +193,7 @@ namespace Haui.ShapesDetector
             // 
             pnlBottom.BackColor = Color.FromArgb(37, 37, 38);
             pnlBottom.BorderStyle = BorderStyle.FixedSingle;
+            pnlBottom.Controls.Add(btnTest);
             pnlBottom.Controls.Add(btnSettings);
             pnlBottom.Controls.Add(btnSaveResults);
             pnlBottom.Controls.Add(btnCapture);
@@ -204,6 +206,26 @@ namespace Haui.ShapesDetector
             pnlBottom.Padding = new Padding(16, 15, 16, 15);
             pnlBottom.Size = new Size(1400, 80);
             pnlBottom.TabIndex = 2;
+            // 
+            // btnTest
+            // 
+            btnTest.Anchor = AnchorStyles.Left;
+            btnTest.BackColor = Color.FromArgb(180, 100, 220);
+            btnTest.Cursor = Cursors.Hand;
+            btnTest.FlatAppearance.BorderSize = 0;
+            btnTest.FlatAppearance.MouseDownBackColor = Color.FromArgb(130, 60, 170);
+            btnTest.FlatAppearance.MouseOverBackColor = Color.FromArgb(160, 80, 200);
+            btnTest.FlatStyle = FlatStyle.Flat;
+            btnTest.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnTest.ForeColor = Color.White;
+            btnTest.Location = new Point(944, 15);
+            btnTest.Margin = new Padding(12, 0, 0, 0);
+            btnTest.Name = "btnTest";
+            btnTest.Size = new Size(160, 48);
+            btnTest.TabIndex = 5;
+            btnTest.Text = "\U0001f9ea Test";
+            btnTest.UseVisualStyleBackColor = false;
+            btnTest.Click += btnTest_Click;
             // 
             // btnSettings
             // 
@@ -411,6 +433,7 @@ namespace Haui.ShapesDetector
         private Button btnCapture;
         private Button btnSaveResults;
         private Button btnSettings;
+        private Button btnTest;
         private System.Windows.Forms.Timer timerCheckJob;
     }
 }

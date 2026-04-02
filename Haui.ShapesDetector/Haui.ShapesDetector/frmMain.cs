@@ -415,5 +415,17 @@ namespace Haui.ShapesDetector
             frm.ShowDialog(this);
         }
 
+        private void btnTest_Click(object sender, EventArgs e)
+        {
+            if (!_pipeline.IsInitialized)
+            {
+                MessageBox.Show("YOLO model chưa được khởi tạo. Vui lòng chờ khởi tạo xong.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var frm = new frmTestDetection(_pipeline);
+            frm.Show(this);
+        }
+
     }
 }

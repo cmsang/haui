@@ -112,9 +112,7 @@ public class YoloV11DetectionService : IDetectionService, IDisposable
         );
 
         int newWidth  = (int)(originalWidth  * ratio);
-        int newHeight = (int)(originalHeight * ratio);
-        int padX      = (ModelInputSize - newWidth)  / 2;
-        int padY      = (ModelInputSize - newHeight) / 2;
+        int newHeight = (int)(originalHeight * ratio);      
 
         image.Mutate(x => x.Resize(new ResizeOptions
         {
@@ -123,21 +121,28 @@ public class YoloV11DetectionService : IDetectionService, IDisposable
             Sampler = KnownResamplers.Bicubic
         }));
 
+        // Read ACTUAL dimensions after resize — ResizeMode.Max may differ by ±1px
+        // due to its own internal aspect-ratio rounding, making pre-computed values stale.
+        int actualWidth  = image.Width;
+        int actualHeight = image.Height;
+        int padX = (ModelInputSize - actualWidth)  / 2;
+        int padY = (ModelInputSize - actualHeight) / 2;
+
         var tensor = new DenseTensor<float>(new[] { 1, 3, ModelInputSize, ModelInputSize });
 
-        // Fill với gray padding chuẩn YOLO (114/255 ≈ 0.447)
+        // Fill with gray padding (YOLO standard: 114/255 ≈ 0.447)
         for (int c = 0; c < 3; c++)
             for (int y = 0; y < ModelInputSize; y++)
                 for (int x = 0; x < ModelInputSize; x++)
                     tensor[0, c, y, x] = 0.447f;
 
-        // 1 pass duy nhất — L8: 1 byte/pixel, replicate sang 3 channels
+        // L8: 1 byte/pixel, replicate to 3 channels
         image.ProcessPixelRows(accessor =>
         {
-            for (int y = 0; y < newHeight; y++)
+            for (int y = 0; y < actualHeight; y++)
             {
                 var row = accessor.GetRowSpan(y);
-                for (int x = 0; x < newWidth; x++)
+                for (int x = 0; x < actualWidth; x++)
                 {
                     float gray = row[x].PackedValue / 255f;
                     tensor[0, 0, y + padY, x + padX] = gray;
