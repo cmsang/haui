@@ -27,6 +27,7 @@ public sealed class DetectionPipeline : IDisposable
     private readonly object _frameLock = new();
     private volatile List<DetectionResult> _cachedDetections = [];
     private int _isDetecting = 0; // 0 = idle, 1 = running (Interlocked)
+    private float _confidenceThreshold = 0.75f;
 
     /// <summary>Fired on the camera background thread (~30 fps) with the raw frame and last known detections.</summary>
     public event EventHandler<FrameReadyEventArgs>? FrameReady;
@@ -42,6 +43,9 @@ public sealed class DetectionPipeline : IDisposable
 
     /// <summary>The most recently cached detection results (volatile reference — thread-safe read).</summary>
     public List<DetectionResult> CachedDetections => _cachedDetections;
+
+    /// <summary>Current confidence threshold (0.01 – 1.0). Default 0.75.</summary>
+    public float ConfidenceThreshold => _confidenceThreshold;
 
     public DetectionPipeline(IDetectionService detectionService, CameraService cameraService)
     {
@@ -65,6 +69,15 @@ public sealed class DetectionPipeline : IDisposable
     public static List<CameraInfo> GetAvailableCameras() => CameraService.GetAvailableCameras();
 
     public Bitmap? CaptureSnapshot() => _cameraService.CaptureSnapshot();
+
+    /// <summary>
+    /// Updates the confidence threshold and forwards it to the underlying detection service.
+    /// </summary>
+    public void SetConfidenceThreshold(float threshold)
+    {
+        _confidenceThreshold = Math.Clamp(threshold, 0.01f, 1.0f);
+        _detectionService.SetConfidenceThreshold(_confidenceThreshold);
+    }
 
     /// <summary>
     /// Detects objects on a manually captured snapshot and updates <see cref="CachedDetections"/>.

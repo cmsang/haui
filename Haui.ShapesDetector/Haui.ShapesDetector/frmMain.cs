@@ -411,13 +411,8 @@ namespace Haui.ShapesDetector
 
         private void btnSettings_Click(object sender, EventArgs e)
         {
-            frmRobotTurning frm = new frmRobotTurning();
-            Robot.Close();
-            if (frm.ShowDialog() == DialogResult.OK)
-            {
-                //Robot.Open();
-            }
-
+            using var frm = new frmSettings(_pipeline);
+            frm.ShowDialog(this);
         }
 
     }

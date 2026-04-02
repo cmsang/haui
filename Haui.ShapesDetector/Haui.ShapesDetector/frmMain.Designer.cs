@@ -42,6 +42,7 @@ namespace Haui.ShapesDetector
             colTime = new DataGridViewTextBoxColumn();
             lblResults = new Label();
             pnlBottom = new Panel();
+            btnSettings = new Button();
             btnSaveResults = new Button();
             btnCapture = new Button();
             btnStop = new Button();
@@ -191,6 +192,7 @@ namespace Haui.ShapesDetector
             // 
             pnlBottom.BackColor = Color.FromArgb(37, 37, 38);
             pnlBottom.BorderStyle = BorderStyle.FixedSingle;
+            pnlBottom.Controls.Add(btnSettings);
             pnlBottom.Controls.Add(btnSaveResults);
             pnlBottom.Controls.Add(btnCapture);
             pnlBottom.Controls.Add(btnStop);
@@ -202,6 +204,26 @@ namespace Haui.ShapesDetector
             pnlBottom.Padding = new Padding(16, 15, 16, 15);
             pnlBottom.Size = new Size(1400, 80);
             pnlBottom.TabIndex = 2;
+            // 
+            // btnSettings
+            // 
+            btnSettings.Anchor = AnchorStyles.Left;
+            btnSettings.BackColor = Color.FromArgb(80, 80, 84);
+            btnSettings.Cursor = Cursors.Hand;
+            btnSettings.FlatAppearance.BorderSize = 0;
+            btnSettings.FlatAppearance.MouseDownBackColor = Color.FromArgb(50, 50, 54);
+            btnSettings.FlatAppearance.MouseOverBackColor = Color.FromArgb(100, 100, 104);
+            btnSettings.FlatStyle = FlatStyle.Flat;
+            btnSettings.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnSettings.ForeColor = Color.White;
+            btnSettings.Location = new Point(764, 15);
+            btnSettings.Margin = new Padding(12, 0, 0, 0);
+            btnSettings.Name = "btnSettings";
+            btnSettings.Size = new Size(160, 48);
+            btnSettings.TabIndex = 4;
+            btnSettings.Text = "Settings";
+            btnSettings.UseVisualStyleBackColor = false;
+            btnSettings.Click += btnSettings_Click;
             // 
             // btnSaveResults
             // 
@@ -388,6 +410,7 @@ namespace Haui.ShapesDetector
         private Button btnStop;
         private Button btnCapture;
         private Button btnSaveResults;
+        private Button btnSettings;
         private System.Windows.Forms.Timer timerCheckJob;
     }
 }
