@@ -9,10 +9,42 @@ public class CameraService : IDisposable
     private VideoCapture? _capture;
     private CancellationTokenSource? _cts;
     private Task? _captureTask;
+    private int _currentDeviceIndex = 0;
 
     public event EventHandler<Bitmap>? FrameCaptured;
     public event EventHandler<string>? ErrorOccurred;
     public bool IsRunning { get; private set; }
+
+    /// <summary>
+    /// L?y danh sách các camera có s?n
+    /// </summary>
+    public static List<CameraInfo> GetAvailableCameras()
+    {
+        var cameras = new List<CameraInfo>();
+
+        for (int i = 0; i < 10; i++)
+        {
+            try
+            {
+                using var capture = new VideoCapture(i, VideoCaptureAPIs.DSHOW);
+                if (capture.IsOpened())
+                {
+                    cameras.Add(new CameraInfo
+                    {
+                        Index = i,
+                        Name = $"Camera {i}"
+                    });
+                    capture.Release();
+                }
+            }
+            catch
+            {
+                // Camera không kh? d?ng
+            }
+        }
+
+        return cameras;
+    }
 
     public void Start(int deviceIndex = 0)
     {
@@ -20,6 +52,7 @@ public class CameraService : IDisposable
 
         try
         {
+            _currentDeviceIndex = deviceIndex;
             _capture = new VideoCapture(deviceIndex, VideoCaptureAPIs.DSHOW);
             
             if (!_capture.IsOpened())
@@ -77,6 +110,30 @@ public class CameraService : IDisposable
         IsRunning = false;
     }
 
+    /// <summary>
+    /// Chuy?n ??i sang camera khác
+    /// </summary>
+    public void SwitchCamera(int deviceIndex)
+    {
+        if (_currentDeviceIndex == deviceIndex) return;
+
+        var wasRunning = IsRunning;
+
+        if (wasRunning)
+        {
+            Stop();
+        }
+
+        if (wasRunning)
+        {
+            Start(deviceIndex);
+        }
+        else
+        {
+            _currentDeviceIndex = deviceIndex;
+        }
+    }
+
     public Bitmap? CaptureSnapshot()
     {
         if (_capture?.IsOpened() != true)
@@ -96,4 +153,15 @@ public class CameraService : IDisposable
         Stop();
         _capture?.Dispose();
     }
+}
+
+/// <summary>
+/// Thông tin camera
+/// </summary>
+public class CameraInfo
+{
+    public int Index { get; set; }
+    public string Name { get; set; } = string.Empty;
+
+    public override string ToString() => Name;
 }

@@ -74,8 +74,9 @@ public class YoloV11DetectionService : IDetectionService, IDisposable
 
         return await Task.Run(() =>
         {
-            // Load image
-            using var image = SixLaborsImage.Load<Rgb24>(imageData);
+            // Load as L8 (grayscale) — 1 byte/pixel, không cần Mutate() riêng
+            // Grayscale đã được convert bởi OpenCvSharp ở tầng DetectionPipeline
+            using var image = SixLaborsImage.Load<L8>(imageData);
 
             // Preprocess with letterbox (CRITICAL: maintain aspect ratio like training)
             var (input, ratio, padX, padY) = PreprocessImageWithLetterbox(image);
@@ -96,65 +97,57 @@ public class YoloV11DetectionService : IDetectionService, IDisposable
     }
 
     /// <summary>
-    /// Letterbox preprocessing - maintain aspect ratio with gray padding (like YOLO training)
-    /// This prevents image distortion and significantly improves accuracy!
+    /// Letterbox preprocessing với grayscale L8 — 1 byte/pixel, 1 pass duy nhất.
+    /// Grayscale value được replicate sang cả 3 channels của tensor [1, 3, 640, 640].
     /// </summary>
     private (DenseTensor<float> tensor, float ratio, int padX, int padY) PreprocessImageWithLetterbox(
-        SixLabors.ImageSharp.Image<Rgb24> image)
+        SixLabors.ImageSharp.Image<L8> image)
     {
-        int originalWidth = image.Width;
+        int originalWidth  = image.Width;
         int originalHeight = image.Height;
 
-        // Calculate resize ratio (maintain aspect ratio)
-        float ratio = Math.Min(
+        float ratio   = Math.Min(
             ModelInputSize / (float)originalWidth,
             ModelInputSize / (float)originalHeight
         );
 
-        int newWidth = (int)(originalWidth * ratio);
-        int newHeight = (int)(originalHeight * ratio);
+        int newWidth  = (int)(originalWidth  * ratio);
+        int newHeight = (int)(originalHeight * ratio);      
 
-        // Calculate padding to center the image
-        int padX = (ModelInputSize - newWidth) / 2;
-        int padY = (ModelInputSize - newHeight) / 2;
-
-        // Resize image (maintain aspect ratio, use Bicubic for better quality)
         image.Mutate(x => x.Resize(new ResizeOptions
         {
-            Size = new SixLaborsSize(newWidth, newHeight),
-            Mode = ResizeMode.Max, // Maintain aspect ratio
-            Sampler = KnownResamplers.Bicubic // Better quality than default
+            Size    = new SixLaborsSize(newWidth, newHeight),
+            Mode    = ResizeMode.Max,
+            Sampler = KnownResamplers.Bicubic
         }));
 
-        // Create tensor with padding [1, 3, 640, 640]
+        // Read ACTUAL dimensions after resize — ResizeMode.Max may differ by ±1px
+        // due to its own internal aspect-ratio rounding, making pre-computed values stale.
+        int actualWidth  = image.Width;
+        int actualHeight = image.Height;
+        int padX = (ModelInputSize - actualWidth)  / 2;
+        int padY = (ModelInputSize - actualHeight) / 2;
+
         var tensor = new DenseTensor<float>(new[] { 1, 3, ModelInputSize, ModelInputSize });
 
-        // Fill with gray padding (114/255 = 0.447 - standard YOLO padding color)
+        // Fill with gray padding (YOLO standard: 114/255 ≈ 0.447)
         for (int c = 0; c < 3; c++)
-        {
             for (int y = 0; y < ModelInputSize; y++)
-            {
                 for (int x = 0; x < ModelInputSize; x++)
-                {
                     tensor[0, c, y, x] = 0.447f;
-                }
-            }
-        }
 
-        // Copy resized image to center with padding
+        // L8: 1 byte/pixel, replicate to 3 channels
         image.ProcessPixelRows(accessor =>
         {
-            for (int y = 0; y < newHeight; y++)
+            for (int y = 0; y < actualHeight; y++)
             {
-                var pixelRow = accessor.GetRowSpan(y);
-                for (int x = 0; x < newWidth; x++)
+                var row = accessor.GetRowSpan(y);
+                for (int x = 0; x < actualWidth; x++)
                 {
-                    int tensorY = y + padY;
-                    int tensorX = x + padX;
-
-                    tensor[0, 0, tensorY, tensorX] = pixelRow[x].R / 255f; // R
-                    tensor[0, 1, tensorY, tensorX] = pixelRow[x].G / 255f; // G
-                    tensor[0, 2, tensorY, tensorX] = pixelRow[x].B / 255f; // B
+                    float gray = row[x].PackedValue / 255f;
+                    tensor[0, 0, y + padY, x + padX] = gray;
+                    tensor[0, 1, y + padY, x + padX] = gray;
+                    tensor[0, 2, y + padY, x + padX] = gray;
                 }
             }
         });

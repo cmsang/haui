@@ -1,19 +1,16 @@
 using Haui.ShapesDetector.Common;
 using Haui.ShapesDetector.Models;
 using Haui.ShapesDetector.Services;
-using System.Drawing.Imaging;
 using System.IO.Ports;
-using System.Runtime.Serialization;
 
 namespace Haui.ShapesDetector
 {
     public partial class frmMain : Form
     {
-        private readonly IDetectionService _detectionService;
-        private readonly CameraService _cameraService;
+        private readonly DetectionPipeline _pipeline;
         private readonly RobotService _robotService;
         private SerialPort Robot = new SerialPort();
-        private bool _isProcessing = false;
+
         private readonly List<DetectionResult> _allDetections = new();
         private bool RobotArm_isReady = false;
         private bool RobotArm_doneS1 = false;
@@ -26,8 +23,7 @@ namespace Haui.ShapesDetector
         {
             InitializeComponent();
 
-            _detectionService = new YoloV11DetectionService();
-            _cameraService = new CameraService();
+            _pipeline     = new DetectionPipeline(new YoloV11DetectionService(), new CameraService());
             _robotService = new RobotService();
 
             SetupEventHandlers();
@@ -35,8 +31,12 @@ namespace Haui.ShapesDetector
 
         private void SetupEventHandlers()
         {
-            _cameraService.FrameCaptured += OnFrameCaptured;
-            _cameraService.ErrorOccurred += OnCameraError;
+            _pipeline.FrameReady         += OnFrameReady;
+            _pipeline.DetectionCompleted  += OnDetectionCompleted;
+            _pipeline.ErrorOccurred       += (_, msg) =>
+            {
+                if (IsHandleCreated) BeginInvoke(() => UpdateStatus(msg, Color.Red));
+            };
 
             // Setup DataGridView
             dgvResults.DefaultCellStyle.BackColor = Color.FromArgb(30, 30, 30);
@@ -79,13 +79,48 @@ namespace Haui.ShapesDetector
                 //    Robot.DataReceived += Robot_DataReceived;
                 //}
 
-                await _detectionService.InitializeAsync(modelPath, classesPath);
+                await _pipeline.InitializeAsync(modelPath, classesPath);
+
+                // Load danh sách cameras
+                LoadAvailableCameras();
+
                 UpdateStatus("Ready", Color.LimeGreen);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to initialize: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 UpdateStatus("Initialization failed", Color.Red);
+            }
+        }
+
+        private void LoadAvailableCameras()
+        {
+            cmbCameras.Items.Clear();
+
+            var cameras = DetectionPipeline.GetAvailableCameras();
+
+            if (cameras.Count == 0)
+            {
+                cmbCameras.Items.Add("No cameras found");
+                cmbCameras.Enabled = false;
+                return;
+            }
+
+            foreach (var camera in cameras)
+            {
+                cmbCameras.Items.Add(camera);
+            }
+
+            cmbCameras.SelectedIndex = 0;
+            cmbCameras.Enabled = true;
+        }
+
+        private void cmbCameras_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbCameras.SelectedItem is CameraInfo camera)
+            {
+                _pipeline.SwitchCamera(camera.Index);
+                UpdateStatus($"Switched to {camera.Name}", Color.LimeGreen);
             }
         }
 
@@ -238,43 +273,24 @@ namespace Haui.ShapesDetector
             Robot.Write("m" + dest);
         }
 
-        private async void OnFrameCaptured(object? sender, Bitmap bitmap)
+        // ─── Pipeline event handlers ────────────────────────────────────────────────
+
+        /// <summary>Fired on the camera thread — pushes the raw frame to the UI immediately.</summary>
+        private void OnFrameReady(object? sender, FrameReadyEventArgs e)
         {
-            if (_isProcessing || !_detectionService.IsInitialized)
-                return;
-
-            _isProcessing = true;
-
-            try
-            {
-                var detections = await DetectObjectsAsync(bitmap);
-
-                if (InvokeRequired)
-                {
-                    BeginInvoke(() =>
-                    {
-                        detectionPanel.UpdateFrame((Bitmap)bitmap.Clone(), detections);
-                        UpdateResultsGrid(detections);
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                BeginInvoke(() => UpdateStatus($"Detection error: {ex.Message}", Color.Red));
-            }
-            finally
-            {
-                _isProcessing = false;
-            }
+            if (IsHandleCreated)
+                BeginInvoke(() => detectionPanel.UpdateFrame(e.Frame, e.CachedDetections));
         }
 
-        private async Task<List<DetectionResult>> DetectObjectsAsync(Bitmap bitmap)
+        /// <summary>Fired after YOLO finishes — updates the panel with detection boxes.</summary>
+        private void OnDetectionCompleted(object? sender, DetectionCompletedEventArgs e)
         {
-            using var ms = new MemoryStream();
-            bitmap.Save(ms, ImageFormat.Jpeg);
-            ms.Position = 0;
-
-            return await _detectionService.DetectAsync(ms.ToArray(), bitmap.Width, bitmap.Height);
+            if (IsHandleCreated)
+                BeginInvoke(() =>
+                {
+                    detectionPanel.UpdateFrame(e.Frame, e.Detections);
+                    UpdateResultsGrid(e.Detections);
+                });
         }
 
         private void UpdateResultsGrid(List<DetectionResult> detections)
@@ -298,57 +314,56 @@ namespace Haui.ShapesDetector
             }
         }
 
-        private void OnCameraError(object? sender, string error)
-        {
-            BeginInvoke(() => UpdateStatus(error, Color.Red));
-        }
-
         private void UpdateStatus(string message, Color color)
         {
-            lblStatus.Text = $"● {message}";
+            lblStatus.Text      = $"● {message}";
             lblStatus.ForeColor = color;
         }
 
         private void btnStartCamera_Click(object sender, EventArgs e)
         {
-            if (!_detectionService.IsInitialized)
+            if (!_pipeline.IsInitialized)
             {
                 MessageBox.Show("YOLO model not initialized", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            _cameraService.Start();
+            _pipeline.Start();
             btnStartCamera.Enabled = false;
-            btnStop.Enabled = true;
+            btnStop.Enabled        = true;
             UpdateStatus("Camera running", Color.LimeGreen);
         }
 
         private void btnStop_Click(object sender, EventArgs e)
         {
-            _cameraService.Stop();
+            _pipeline.Stop();
             btnStartCamera.Enabled = true;
-            btnStop.Enabled = false;
+            btnStop.Enabled        = false;
             UpdateStatus("Camera stopped", Color.Orange);
         }
 
         private async void btnCapture_Click(object sender, EventArgs e)
         {
-            if (!_detectionService.IsInitialized)
+            if (!_pipeline.IsInitialized)
             {
                 MessageBox.Show("YOLO model not initialized", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            var snapshot = _cameraService.CaptureSnapshot();
+            var snapshot = _pipeline.CaptureSnapshot();
             if (snapshot != null)
             {
-                var detections = await DetectObjectsAsync(snapshot);
+                // Show frame immediately with last cached detections
+                detectionPanel.UpdateFrame((Bitmap)snapshot.Clone(), _pipeline.CachedDetections);
+                UpdateStatus("Detecting...", Color.Orange);
+
+                var detections = await _pipeline.DetectSnapshotAsync(snapshot);
                 detectionPanel.UpdateFrame(snapshot, detections);
                 UpdateResultsGrid(detections);
                 UpdateStatus($"Captured - {detections.Count} objects detected", Color.LimeGreen);
                 if (detections.Count > 0)
                 {
-                    _material = detections[0].ClassName.ToString().ToLower().Trim();
+                    _material = detections[0].ClassName.ToLower().Trim();
                     RobotarmControl(1);
                 }
             }
@@ -390,20 +405,32 @@ namespace Haui.ShapesDetector
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            _cameraService.Dispose();
-            (_detectionService as IDisposable)?.Dispose();
+            _pipeline.Dispose();
             base.OnFormClosing(e);
         }
 
         private void btnSettings_Click(object sender, EventArgs e)
         {
-            frmRobotTurning frm = new frmRobotTurning();
-            Robot.Close();
-            if (frm.ShowDialog() == DialogResult.OK)
+            using var frm = new frmSettings(_pipeline);
+            frm.ShowDialog(this);
+        }
+
+        private void btnTest_Click(object sender, EventArgs e)
+        {
+            if (!_pipeline.IsInitialized)
             {
-                //Robot.Open();
+                MessageBox.Show("YOLO model chưa được khởi tạo. Vui lòng chờ khởi tạo xong.", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
+            var frm = new frmTestDetection(_pipeline);
+            frm.Show(this);
+        }
+
+        private void btnPrepareDataset_Click(object sender, EventArgs e)
+        {
+            using var frm = new frmPrepareDataset();
+            frm.ShowDialog(this);
         }
 
     }
