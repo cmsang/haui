@@ -1,4 +1,4 @@
-﻿using Haui.ShapesDetector.Controls;
+using Haui.ShapesDetector.Controls;
 
 namespace Haui.ShapesDetector
 {
@@ -32,166 +32,212 @@ namespace Haui.ShapesDetector
         {
             components = new System.ComponentModel.Container();
             pnlMain = new Panel();
+            pnlCenter = new Panel();
+            pnlLeft = new Panel();
+            detectionPanel = new DetectionPanel();
             pnlRight = new Panel();
             dgvResults = new DataGridView();
             colObjectName = new DataGridViewTextBoxColumn();
             colConfidence = new DataGridViewTextBoxColumn();
             colTime = new DataGridViewTextBoxColumn();
             lblResults = new Label();
-            detectionPanel = new DetectionPanel();
             pnlBottom = new Panel();
-            pnlBottomTop = new Panel();
             btnSaveResults = new Button();
             btnCapture = new Button();
             btnStop = new Button();
             btnStartCamera = new Button();
-            pnlBottomBottom = new Panel();
+            pnlTop = new Panel();
             lblStatus = new Label();
             cmbCameras = new ComboBox();
             lblCamera = new Label();
             timerCheckJob = new System.Windows.Forms.Timer(components);
             pnlMain.SuspendLayout();
+            pnlCenter.SuspendLayout();
+            pnlLeft.SuspendLayout();
             pnlRight.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvResults).BeginInit();
             pnlBottom.SuspendLayout();
-            pnlBottomTop.SuspendLayout();
-            pnlBottomBottom.SuspendLayout();
+            pnlTop.SuspendLayout();
             SuspendLayout();
             // 
             // pnlMain
             // 
-            pnlMain.BackColor = Color.FromArgb(37, 37, 38);
-            pnlMain.Controls.Add(pnlRight);
-            pnlMain.Controls.Add(detectionPanel);
+            pnlMain.BackColor = Color.FromArgb(30, 30, 30);
+            pnlMain.Controls.Add(pnlCenter);
             pnlMain.Controls.Add(pnlBottom);
+            pnlMain.Controls.Add(pnlTop);
             pnlMain.Dock = DockStyle.Fill;
             pnlMain.Location = new Point(0, 0);
+            pnlMain.Margin = new Padding(0);
             pnlMain.Name = "pnlMain";
-            pnlMain.Size = new Size(1311, 733);
-            pnlMain.TabIndex = 1;
+            pnlMain.Size = new Size(1400, 800);
+            pnlMain.TabIndex = 0;
+            // 
+            // pnlCenter
+            // 
+            pnlCenter.BackColor = Color.FromArgb(30, 30, 30);
+            pnlCenter.Controls.Add(pnlLeft);
+            pnlCenter.Controls.Add(pnlRight);
+            pnlCenter.Dock = DockStyle.Fill;
+            pnlCenter.Location = new Point(0, 60);
+            pnlCenter.Margin = new Padding(0);
+            pnlCenter.Name = "pnlCenter";
+            pnlCenter.Size = new Size(1400, 660);
+            pnlCenter.TabIndex = 1;
+            // 
+            // pnlLeft
+            // 
+            pnlLeft.BackColor = Color.FromArgb(30, 30, 30);
+            pnlLeft.BorderStyle = BorderStyle.FixedSingle;
+            pnlLeft.Controls.Add(detectionPanel);
+            pnlLeft.Dock = DockStyle.Fill;
+            pnlLeft.Location = new Point(0, 0);
+            pnlLeft.Margin = new Padding(0);
+            pnlLeft.Name = "pnlLeft";
+            pnlLeft.Size = new Size(1050, 660);
+            pnlLeft.TabIndex = 0;
+            // 
+            // detectionPanel
+            // 
+            detectionPanel.BackColor = Color.FromArgb(20, 20, 20);
+            detectionPanel.Dock = DockStyle.Fill;
+            detectionPanel.Location = new Point(0, 0);
+            detectionPanel.Margin = new Padding(0);
+            detectionPanel.Name = "detectionPanel";
+            detectionPanel.Padding = new Padding(5);
+            detectionPanel.Size = new Size(1048, 658);
+            detectionPanel.TabIndex = 1;
             // 
             // pnlRight
             // 
             pnlRight.BackColor = Color.FromArgb(45, 45, 48);
+            pnlRight.BorderStyle = BorderStyle.FixedSingle;
             pnlRight.Controls.Add(dgvResults);
             pnlRight.Controls.Add(lblResults);
             pnlRight.Dock = DockStyle.Right;
-            pnlRight.Location = new Point(961, 0);
+            pnlRight.Location = new Point(1050, 0);
+            pnlRight.Margin = new Padding(0);
             pnlRight.Name = "pnlRight";
-            pnlRight.Size = new Size(350, 613);
-            pnlRight.TabIndex = 2;
+            pnlRight.Size = new Size(350, 660);
+            pnlRight.TabIndex = 1;
             // 
             // dgvResults
             // 
             dgvResults.AllowUserToAddRows = false;
             dgvResults.AllowUserToDeleteRows = false;
+            dgvResults.AllowUserToResizeColumns = false;
+            dgvResults.AllowUserToResizeRows = false;
+            dgvResults.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvResults.BackgroundColor = Color.FromArgb(30, 30, 30);
             dgvResults.BorderStyle = BorderStyle.None;
-            dgvResults.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dgvResults.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            dgvResults.ColumnHeadersHeight = 35;
+            dgvResults.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             dgvResults.Columns.AddRange(new DataGridViewColumn[] { colObjectName, colConfidence, colTime });
             dgvResults.Dock = DockStyle.Fill;
-            dgvResults.Location = new Point(0, 40);
+            dgvResults.GridColor = Color.FromArgb(60, 60, 60);
+            dgvResults.Location = new Point(0, 45);
+            dgvResults.Margin = new Padding(0);
+            dgvResults.MultiSelect = false;
             dgvResults.Name = "dgvResults";
             dgvResults.ReadOnly = true;
             dgvResults.RowHeadersVisible = false;
             dgvResults.RowHeadersWidth = 51;
-            dgvResults.Size = new Size(350, 573);
+            dgvResults.RowTemplate.Height = 30;
+            dgvResults.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvResults.Size = new Size(348, 613);
             dgvResults.TabIndex = 1;
             // 
             // colObjectName
             // 
-            colObjectName.HeaderText = "Object Name";
-            colObjectName.MinimumWidth = 6;
+            colObjectName.FillWeight = 45F;
+            colObjectName.HeaderText = "Object";
+            colObjectName.MinimumWidth = 80;
             colObjectName.Name = "colObjectName";
             colObjectName.ReadOnly = true;
-            colObjectName.Width = 130;
             // 
             // colConfidence
             // 
-            colConfidence.HeaderText = "Confidence";
-            colConfidence.MinimumWidth = 6;
+            colConfidence.FillWeight = 30F;
+            colConfidence.HeaderText = "Conf.";
+            colConfidence.MinimumWidth = 60;
             colConfidence.Name = "colConfidence";
             colConfidence.ReadOnly = true;
-            colConfidence.Width = 90;
             // 
             // colTime
             // 
+            colTime.FillWeight = 25F;
             colTime.HeaderText = "Time";
-            colTime.MinimumWidth = 6;
+            colTime.MinimumWidth = 80;
             colTime.Name = "colTime";
             colTime.ReadOnly = true;
-            colTime.Width = 125;
             // 
             // lblResults
             // 
             lblResults.BackColor = Color.FromArgb(37, 37, 38);
+            lblResults.BorderStyle = BorderStyle.FixedSingle;
             lblResults.Dock = DockStyle.Top;
-            lblResults.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblResults.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold);
             lblResults.ForeColor = Color.White;
             lblResults.Location = new Point(0, 0);
+            lblResults.Margin = new Padding(0);
             lblResults.Name = "lblResults";
-            lblResults.Size = new Size(350, 40);
+            lblResults.Size = new Size(348, 45);
             lblResults.TabIndex = 0;
-            lblResults.Text = "Detection Results";
+            lblResults.Text = "📊 Detection Results";
             lblResults.TextAlign = ContentAlignment.MiddleCenter;
-            // 
-            // detectionPanel
-            // 
-            detectionPanel.BackColor = Color.FromArgb(30, 30, 30);
-            detectionPanel.Dock = DockStyle.Fill;
-            detectionPanel.Location = new Point(0, 0);
-            detectionPanel.Name = "detectionPanel";
-            detectionPanel.Size = new Size(1311, 613);
-            detectionPanel.TabIndex = 1;
             // 
             // pnlBottom
             // 
-            pnlBottom.BackColor = Color.FromArgb(30, 30, 30);
-            pnlBottom.Controls.Add(pnlBottomTop);
-            pnlBottom.Controls.Add(pnlBottomBottom);
+            pnlBottom.BackColor = Color.FromArgb(37, 37, 38);
+            pnlBottom.BorderStyle = BorderStyle.FixedSingle;
+            pnlBottom.Controls.Add(btnSaveResults);
+            pnlBottom.Controls.Add(btnCapture);
+            pnlBottom.Controls.Add(btnStop);
+            pnlBottom.Controls.Add(btnStartCamera);
             pnlBottom.Dock = DockStyle.Bottom;
-            pnlBottom.Location = new Point(0, 613);
+            pnlBottom.Location = new Point(0, 720);
+            pnlBottom.Margin = new Padding(0);
             pnlBottom.Name = "pnlBottom";
-            pnlBottom.Size = new Size(1311, 120);
-            pnlBottom.TabIndex = 0;
-            // 
-            // pnlBottomTop
-            // 
-            pnlBottomTop.Controls.Add(btnSaveResults);
-            pnlBottomTop.Controls.Add(btnCapture);
-            pnlBottomTop.Controls.Add(btnStop);
-            pnlBottomTop.Controls.Add(btnStartCamera);
-            pnlBottomTop.Dock = DockStyle.Top;
-            pnlBottomTop.Location = new Point(0, 0);
-            pnlBottomTop.Name = "pnlBottomTop";
-            pnlBottomTop.Size = new Size(1311, 70);
-            pnlBottomTop.TabIndex = 0;
+            pnlBottom.Padding = new Padding(16, 15, 16, 15);
+            pnlBottom.Size = new Size(1400, 80);
+            pnlBottom.TabIndex = 2;
             // 
             // btnSaveResults
             // 
-            btnSaveResults.BackColor = Color.FromArgb(0, 122, 204);
-            btnSaveResults.FlatAppearance.BorderColor = Color.FromArgb(0, 122, 204);
+            btnSaveResults.Anchor = AnchorStyles.Left;
+            btnSaveResults.BackColor = Color.FromArgb(28, 151, 234);
+            btnSaveResults.Cursor = Cursors.Hand;
+            btnSaveResults.FlatAppearance.BorderSize = 0;
+            btnSaveResults.FlatAppearance.MouseDownBackColor = Color.FromArgb(0, 100, 170);
+            btnSaveResults.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 140, 210);
             btnSaveResults.FlatStyle = FlatStyle.Flat;
-            btnSaveResults.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnSaveResults.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
             btnSaveResults.ForeColor = Color.White;
-            btnSaveResults.Location = new Point(530, 15);
+            btnSaveResults.Location = new Point(580, 15);
+            btnSaveResults.Margin = new Padding(12, 0, 0, 0);
             btnSaveResults.Name = "btnSaveResults";
-            btnSaveResults.Size = new Size(150, 40);
+            btnSaveResults.Size = new Size(160, 48);
             btnSaveResults.TabIndex = 3;
-            btnSaveResults.Text = "Save Results";
+            btnSaveResults.Text = "Save";
             btnSaveResults.UseVisualStyleBackColor = false;
             btnSaveResults.Click += btnSaveResults_Click;
             // 
             // btnCapture
             // 
-            btnCapture.BackColor = Color.FromArgb(0, 122, 204);
-            btnCapture.FlatAppearance.BorderColor = Color.FromArgb(0, 122, 204);
+            btnCapture.Anchor = AnchorStyles.Left;
+            btnCapture.BackColor = Color.FromArgb(28, 151, 234);
+            btnCapture.Cursor = Cursors.Hand;
+            btnCapture.FlatAppearance.BorderSize = 0;
+            btnCapture.FlatAppearance.MouseDownBackColor = Color.FromArgb(0, 100, 170);
+            btnCapture.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 140, 210);
             btnCapture.FlatStyle = FlatStyle.Flat;
-            btnCapture.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnCapture.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
             btnCapture.ForeColor = Color.White;
-            btnCapture.Location = new Point(362, 15);
+            btnCapture.Location = new Point(396, 15);
+            btnCapture.Margin = new Padding(12, 0, 0, 0);
             btnCapture.Name = "btnCapture";
-            btnCapture.Size = new Size(150, 40);
+            btnCapture.Size = new Size(160, 48);
             btnCapture.TabIndex = 2;
             btnCapture.Text = "Capture";
             btnCapture.UseVisualStyleBackColor = false;
@@ -199,15 +245,20 @@ namespace Haui.ShapesDetector
             // 
             // btnStop
             // 
-            btnStop.BackColor = Color.FromArgb(0, 122, 204);
+            btnStop.Anchor = AnchorStyles.Left;
+            btnStop.BackColor = Color.FromArgb(231, 72, 86);
+            btnStop.Cursor = Cursors.Hand;
             btnStop.Enabled = false;
-            btnStop.FlatAppearance.BorderColor = Color.FromArgb(0, 122, 204);
+            btnStop.FlatAppearance.BorderSize = 0;
+            btnStop.FlatAppearance.MouseDownBackColor = Color.FromArgb(180, 50, 60);
+            btnStop.FlatAppearance.MouseOverBackColor = Color.FromArgb(210, 60, 70);
             btnStop.FlatStyle = FlatStyle.Flat;
-            btnStop.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnStop.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
             btnStop.ForeColor = Color.White;
-            btnStop.Location = new Point(194, 15);
+            btnStop.Location = new Point(212, 15);
+            btnStop.Margin = new Padding(12, 0, 0, 0);
             btnStop.Name = "btnStop";
-            btnStop.Size = new Size(150, 40);
+            btnStop.Size = new Size(160, 48);
             btnStop.TabIndex = 1;
             btnStop.Text = "Stop";
             btnStop.UseVisualStyleBackColor = false;
@@ -215,64 +266,77 @@ namespace Haui.ShapesDetector
             // 
             // btnStartCamera
             // 
-            btnStartCamera.BackColor = Color.FromArgb(0, 122, 204);
-            btnStartCamera.FlatAppearance.BorderColor = Color.FromArgb(0, 122, 204);
+            btnStartCamera.Anchor = AnchorStyles.Left;
+            btnStartCamera.BackColor = Color.FromArgb(16, 185, 129);
+            btnStartCamera.Cursor = Cursors.Hand;
+            btnStartCamera.FlatAppearance.BorderSize = 0;
+            btnStartCamera.FlatAppearance.MouseDownBackColor = Color.FromArgb(10, 140, 100);
+            btnStartCamera.FlatAppearance.MouseOverBackColor = Color.FromArgb(13, 160, 115);
             btnStartCamera.FlatStyle = FlatStyle.Flat;
-            btnStartCamera.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            btnStartCamera.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
             btnStartCamera.ForeColor = Color.White;
-            btnStartCamera.Location = new Point(26, 15);
+            btnStartCamera.Location = new Point(16, 15);
+            btnStartCamera.Margin = new Padding(0);
             btnStartCamera.Name = "btnStartCamera";
-            btnStartCamera.Size = new Size(150, 40);
+            btnStartCamera.Size = new Size(180, 48);
             btnStartCamera.TabIndex = 0;
             btnStartCamera.Text = "Start Camera";
             btnStartCamera.UseVisualStyleBackColor = false;
             btnStartCamera.Click += btnStartCamera_Click;
             // 
-            // pnlBottomBottom
+            // pnlTop
             // 
-            pnlBottomBottom.Controls.Add(lblStatus);
-            pnlBottomBottom.Controls.Add(cmbCameras);
-            pnlBottomBottom.Controls.Add(lblCamera);
-            pnlBottomBottom.Dock = DockStyle.Bottom;
-            pnlBottomBottom.Location = new Point(0, 70);
-            pnlBottomBottom.Name = "pnlBottomBottom";
-            pnlBottomBottom.Size = new Size(1311, 50);
-            pnlBottomBottom.TabIndex = 1;
+            pnlTop.BackColor = Color.FromArgb(37, 37, 38);
+            pnlTop.BorderStyle = BorderStyle.FixedSingle;
+            pnlTop.Controls.Add(lblStatus);
+            pnlTop.Controls.Add(cmbCameras);
+            pnlTop.Controls.Add(lblCamera);
+            pnlTop.Dock = DockStyle.Top;
+            pnlTop.Location = new Point(0, 0);
+            pnlTop.Margin = new Padding(0);
+            pnlTop.Name = "pnlTop";
+            pnlTop.Padding = new Padding(16, 10, 16, 10);
+            pnlTop.Size = new Size(1400, 60);
+            pnlTop.TabIndex = 0;
             // 
             // lblStatus
             // 
             lblStatus.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            lblStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblStatus.AutoSize = true;
+            lblStatus.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold);
             lblStatus.ForeColor = Color.LimeGreen;
-            lblStatus.Location = new Point(1031, 13);
+            lblStatus.Location = new Point(1245, 18);
+            lblStatus.Margin = new Padding(0);
             lblStatus.Name = "lblStatus";
-            lblStatus.Size = new Size(250, 23);
+            lblStatus.Size = new Size(74, 23);
             lblStatus.TabIndex = 2;
             lblStatus.Text = "● Ready";
             lblStatus.TextAlign = ContentAlignment.MiddleRight;
             // 
             // cmbCameras
             // 
-            cmbCameras.BackColor = Color.FromArgb(45, 45, 48);
+            cmbCameras.BackColor = Color.FromArgb(62, 62, 64);
             cmbCameras.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbCameras.FlatStyle = FlatStyle.Flat;
-            cmbCameras.Font = new Font("Segoe UI", 9F);
+            cmbCameras.Font = new Font("Segoe UI", 10.2F);
             cmbCameras.ForeColor = Color.White;
             cmbCameras.FormattingEnabled = true;
-            cmbCameras.Location = new Point(106, 13);
+            cmbCameras.Location = new Point(116, 15);
+            cmbCameras.Margin = new Padding(8, 0, 0, 0);
             cmbCameras.Name = "cmbCameras";
-            cmbCameras.Size = new Size(250, 28);
+            cmbCameras.Size = new Size(300, 31);
             cmbCameras.TabIndex = 1;
             cmbCameras.SelectedIndexChanged += cmbCameras_SelectedIndexChanged;
             // 
             // lblCamera
             // 
             lblCamera.AutoSize = true;
-            lblCamera.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            lblCamera.ForeColor = Color.White;
-            lblCamera.Location = new Point(26, 16);
+            lblCamera.Font = new Font("Segoe UI", 10.2F, FontStyle.Bold);
+            lblCamera.ForeColor = Color.FromArgb(200, 200, 200);
+            lblCamera.Location = new Point(16, 18);
+            lblCamera.Margin = new Padding(0);
             lblCamera.Name = "lblCamera";
-            lblCamera.Size = new Size(66, 20);
+            lblCamera.Size = new Size(76, 23);
             lblCamera.TabIndex = 0;
             lblCamera.Text = "Camera:";
             // 
@@ -286,41 +350,44 @@ namespace Haui.ShapesDetector
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(45, 45, 48);
-            ClientSize = new Size(1311, 733);
+            ClientSize = new Size(1400, 800);
             Controls.Add(pnlMain);
+            MinimumSize = new Size(1200, 700);
             Name = "frmMain";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Object Detection Tool - Haui.ShapesDetector";
+            Text = "🔍 Object Detection Tool - Haui.ShapesDetector";
             Load += frmMain_Load;
             pnlMain.ResumeLayout(false);
+            pnlCenter.ResumeLayout(false);
+            pnlLeft.ResumeLayout(false);
             pnlRight.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)dgvResults).EndInit();
             pnlBottom.ResumeLayout(false);
-            pnlBottomTop.ResumeLayout(false);
-            pnlBottomBottom.ResumeLayout(false);
-            pnlBottomBottom.PerformLayout();
+            pnlTop.ResumeLayout(false);
+            pnlTop.PerformLayout();
             ResumeLayout(false);
         }
 
         #endregion
         private Panel pnlMain;
+        private Panel pnlTop;
+        private Label lblCamera;
+        private ComboBox cmbCameras;
+        private Label lblStatus;
+        private Panel pnlCenter;
+        private Panel pnlLeft;
         private DetectionPanel detectionPanel;
+        private Panel pnlRight;
+        private Label lblResults;
+        private DataGridView dgvResults;
+        private DataGridViewTextBoxColumn colObjectName;
+        private DataGridViewTextBoxColumn colConfidence;
+        private DataGridViewTextBoxColumn colTime;
         private Panel pnlBottom;
-        private Panel pnlBottomTop;
-        private Panel pnlBottomBottom;
         private Button btnStartCamera;
         private Button btnStop;
         private Button btnCapture;
         private Button btnSaveResults;
-        private Panel pnlRight;
-        private DataGridView dgvResults;
-        private Label lblResults;
-        private DataGridViewTextBoxColumn colObjectName;
-        private DataGridViewTextBoxColumn colConfidence;
-        private DataGridViewTextBoxColumn colTime;
-        private Label lblStatus;
-        private ComboBox cmbCameras;
-        private Label lblCamera;
         private System.Windows.Forms.Timer timerCheckJob;
     }
 }
