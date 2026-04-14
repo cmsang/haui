@@ -122,6 +122,7 @@ Follow SOLID principles strictly when generating code:
 - Use `InputArray` / `OutputArray` overloads for zero-copy operations
 
 ## Constraints
+- **Only read, create, or modify files inside `D:\haui\Haui.GarlicDetector\`**
 - Do not generate unnecessary UI code
 - Focus on core logic
 - Keep classes loosely coupled and highly cohesive
