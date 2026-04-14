@@ -2,11 +2,12 @@
 This is a C# WinForms application for object recognition using Support Vector Machine (SVM).
 
 # Tech Stack
-- .NET Framework 4.8 or .NET 6 WinForms
-- Language: C#
-- Image Processing: EmguCV (OpenCV wrapper)
-- Machine Learning: SVM (Emgu.CV.ML)
-- UI: Windows Forms
+- Runtime: .NET 10 (`net10.0-windows`)
+- Language: C# 13 (`Nullable enable`, `ImplicitUsings enable`)
+- Image Processing: `OpenCvSharp4` v4.13.0 (OpenCV 4.13 wrapper)
+- Image Processing Extensions: `OpenCvSharp4.Extensions` v4.13.0 (Bitmap ↔ Mat conversion)
+- Machine Learning: SVM via `OpenCvSharp.ML` (`OpenCvSharp.ML.SVM`)
+- UI: Windows Forms (`UseWindowsForms`)
 
 # Architecture Principles (SOLID)
 Follow SOLID principles strictly when generating code:
@@ -72,12 +73,26 @@ Follow SOLID principles strictly when generating code:
 
 # Code Style
 - PascalCase for public methods
+- camelCase for local variables and private fields (prefix `_` for private fields)
 - Meaningful variable names
-- Avoid magic numbers
-- Dispose unmanaged resources (EmguCV objects)
+- Avoid magic numbers — use `const` or `readonly` fields
+- Use `using` declarations (C# 8+) for all `IDisposable` OpenCvSharp objects (`Mat`, `VideoCapture`, `BackgroundSubtractor`, etc.)
+- Prefer `using var` over `using()` blocks for readability
+- Never pass a disposed `Mat` to downstream methods
+- Use file-scoped namespaces (`namespace Foo.Bar;`)
+
+# Best Practices (OpenCvSharp4)
+- Always dispose `Mat` objects — unmanaged memory is NOT collected by GC
+- Prefer `Mat.Clone()` over direct assignment to avoid shared native pointers
+- Use `Cv2.*` static methods instead of instance methods where available
+- For WinForms display: convert `Mat` → `Bitmap` via `OpenCvSharp.Extensions.BitmapConverter.ToBitmap()`
+- Use `Task.Run()` + `Invoke()` for camera loops to keep UI thread free
+- Check `mat.Empty()` before processing to guard against null frames
+- Use `InputArray` / `OutputArray` overloads for zero-copy operations
 
 # Constraints
 - Do not generate unnecessary UI code
 - Focus on core logic
 - Keep classes loosely coupled and highly cohesive
+- Do not use `Emgu.CV` — project uses `OpenCvSharp4` exclusively
 
