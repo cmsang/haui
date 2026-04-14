@@ -9,13 +9,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260330" />
-    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.13.0.20260302" />
-    <PackageReference Include="OpenCvSharp4.Extensions" Version="4.13.0.20260330" />
+    <Compile Remove=".github\**" />
+    <EmbeddedResource Remove=".github\**" />
+    <None Remove=".github\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include=".github\copilot-instructions.md" />
+    <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260330" />
+    <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.13.0.20260302" />
+    <PackageReference Include="OpenCvSharp4.Extensions" Version="4.13.0.20260330" />
   </ItemGroup>
 
 </Project>

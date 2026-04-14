@@ -1,7 +1,9 @@
-# Project Context
+# Copilot Instructions
+
+## Project Context
 This is a C# WinForms application for object recognition using Support Vector Machine (SVM).
 
-# Tech Stack
+## Tech Stack
 - Runtime: .NET 10 (`net10.0-windows`)
 - Language: C# 13 (`Nullable enable`, `ImplicitUsings enable`)
 - Image Processing: `OpenCvSharp4` v4.13.0 (OpenCV 4.13 wrapper)
@@ -9,7 +11,7 @@ This is a C# WinForms application for object recognition using Support Vector Ma
 - Machine Learning: SVM via `OpenCvSharp.ML` (`OpenCvSharp.ML.SVM`)
 - UI: Windows Forms (`UseWindowsForms`)
 
-# Architecture Principles (SOLID)
+## Architecture Principles (SOLID)
 Follow SOLID principles strictly when generating code:
 
 1. Single Responsibility Principle (SRP)
@@ -43,7 +45,7 @@ Follow SOLID principles strictly when generating code:
 - Example:
   - SvmClassifier depends on IFeatureExtractor instead of concrete class
   
-# Coding Guidelines
+## Coding Guidelines
 - Separate UI logic from processing and ML logic
 - Avoid putting business logic inside Form classes
 - Use async/await for long-running operations
@@ -51,7 +53,7 @@ Follow SOLID principles strictly when generating code:
 - Add vietnamese comments for complex logic
 - Follow OOP principles
 
-# ML Pipeline
+## ML Pipeline
 - Input: image or feature vector
 - Preprocessing: grayscale, resize, normalize
 - Segmentation: HSV/Lab threshold + morphology
@@ -60,7 +62,7 @@ Follow SOLID principles strictly when generating code:
 - Output: predicted label
 - Avoid blocking UI thread
 
-# Expected Structure
+## Expected Structure
 - Interfaces:
   - IImageProcessor
   - IFeatureExtractor
@@ -71,7 +73,7 @@ Follow SOLID principles strictly when generating code:
   - HogFeatureExtractor
   - SvmClassifier
 
-# Code Style
+## Code Style
 - PascalCase for public methods
 - camelCase for local variables and private fields (prefix `_` for private fields)
 - Meaningful variable names
@@ -81,7 +83,7 @@ Follow SOLID principles strictly when generating code:
 - Never pass a disposed `Mat` to downstream methods
 - Use file-scoped namespaces (`namespace Foo.Bar;`)
 
-# Best Practices (OpenCvSharp4)
+## Best Practices (OpenCvSharp4)
 - Always dispose `Mat` objects — unmanaged memory is NOT collected by GC
 - Prefer `Mat.Clone()` over direct assignment to avoid shared native pointers
 - Use `Cv2.*` static methods instead of instance methods where available
@@ -90,7 +92,7 @@ Follow SOLID principles strictly when generating code:
 - Check `mat.Empty()` before processing to guard against null frames
 - Use `InputArray` / `OutputArray` overloads for zero-copy operations
 
-# Constraints
+## Constraints
 - Do not generate unnecessary UI code
 - Focus on core logic
 - Keep classes loosely coupled and highly cohesive
