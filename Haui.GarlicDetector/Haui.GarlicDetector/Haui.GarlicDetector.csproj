@@ -14,4 +14,8 @@
     <PackageReference Include="OpenCvSharp4.Extensions" Version="4.10.0.20241108" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include=".github\copilot-instructions.md" />
+  </ItemGroup>
+
 </Project>
