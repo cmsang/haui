@@ -4,9 +4,10 @@ namespace Haui.GarlicDetector.Vision;
 
 /// <summary>
 /// Thuật toán phân vùng màu sắc theo không gian màu HSV để phát hiện tỏi.
-/// Quy trình: BGR → HSV → lọc ngưỡng → hình thái học (mở + đóng) → tìm contour.
+/// Quy trình: lọc ngưỡng HSV → hình thái học (mở + đóng) → tìm contour.
+/// Nhận frame đã được tiền xử lý (HSV) từ <see cref="IImagePreprocessor"/>.
 /// </summary>
-public sealed class HsvSegmenter
+public sealed class HsvSegmenter : IGarlicSegmentor
 {
     // ─── Ngưỡng HSV ──────────────────────────────────────────────────────────
 
@@ -33,32 +34,26 @@ public sealed class HsvSegmenter
 
     // ─── Phân vùng ───────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Phân tích frame BGR và trả về danh sách bounding box của các vùng tỏi.
-    /// </summary>
-    /// <param name="bgrFrame">Frame ảnh BGR nhận từ camera.</param>
-    public List<Rect> Segment(Mat bgrFrame)
+    /// <inheritdoc />
+    /// <param name="preprocessedFrame">Frame HSV đã được tiền xử lý bởi <see cref="IImagePreprocessor"/>.</param>
+    public List<Rect> Segment(Mat preprocessedFrame)
     {
-        // Bước 1: Chuyển không gian màu BGR → HSV
-        using var hsvMat = new Mat();
-        Cv2.CvtColor(bgrFrame, hsvMat, ColorConversionCodes.BGR2HSV);
-
-        // Bước 2: Lọc các pixel nằm trong ngưỡng HSV chỉ định
+        // Bước 1: Lọc các pixel nằm trong ngưỡng HSV chỉ định
         using var mask = new Mat();
         Cv2.InRange(
-            hsvMat,
+            preprocessedFrame,
             new Scalar(HMin, SMin, VMin),
             new Scalar(HMax, SMax, VMax),
             mask);
 
-        // Bước 3: Hình thái học — Mở để loại nhiễu nhỏ, Đóng để lấp lỗ hổng bên trong vùng
+        // Bước 2: Hình thái học
         using var kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new OpenCvSharp.Size(7, 7));
         using var opened = new Mat();
         Cv2.MorphologyEx(mask,   opened, MorphTypes.Open,  kernel, iterations: 2);
         using var closed = new Mat();
         Cv2.MorphologyEx(opened, closed, MorphTypes.Close, kernel, iterations: 3);
 
-        // Bước 4: Tìm contour bên ngoài (không lồng nhau)
+        // Bước 3: Tìm contour
         Cv2.FindContours(
             closed,
             out var contours,
@@ -66,7 +61,7 @@ public sealed class HsvSegmenter
             RetrievalModes.External,
             ContourApproximationModes.ApproxSimple);
 
-        // Bước 5: Lọc theo diện tích tối thiểu và trả về bounding box
+        // Bước 4: Lọc theo diện tích
         var results = new List<Rect>();
         foreach (var contour in contours)
         {

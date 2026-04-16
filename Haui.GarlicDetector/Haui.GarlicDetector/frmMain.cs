@@ -7,6 +7,7 @@ namespace Haui.GarlicDetector;
 public partial class frmMain : Form
 {
     private GarlicPipeline? _pipeline;
+    private HsvSegmenter?   _segmenter;
 
     public frmMain()
     {
@@ -57,9 +58,10 @@ public partial class frmMain : Form
     {
         if (_pipeline != null) return;
 
-        var camService = new CameraService();
-        var segmenter  = new HsvSegmenter();
-        _pipeline      = new GarlicPipeline(camService, segmenter);
+        var camService  = new CameraService();
+        _segmenter      = new HsvSegmenter();
+        var preprocessor = new HsvGarlicPreprocessor();
+        _pipeline       = new GarlicPipeline(camService, preprocessor, _segmenter);
 
         // Đăng ký sự kiện từ pipeline
         _pipeline.FrameReady            += OnFrameReady;
@@ -94,7 +96,8 @@ public partial class frmMain : Form
 
         _pipeline.Stop();
         _pipeline.Dispose();
-        _pipeline = null;
+        _pipeline  = null;
+        _segmenter = null;
 
         // Xóa ảnh đang hiển thị
         picCamera.Image?.Dispose();
@@ -208,15 +211,14 @@ public partial class frmMain : Form
     /// </summary>
     private void SyncHsvToSegmenter()
     {
-        if (_pipeline == null) return;
+        if (_segmenter == null) return;
 
-        var seg  = _pipeline.Segmenter;
-        seg.HMin = trkHMin.Value;
-        seg.HMax = trkHMax.Value;
-        seg.SMin = trkSMin.Value;
-        seg.SMax = trkSMax.Value;
-        seg.VMin = trkVMin.Value;
-        seg.VMax = trkVMax.Value;
+        _segmenter.HMin = trkHMin.Value;
+        _segmenter.HMax = trkHMax.Value;
+        _segmenter.SMin = trkSMin.Value;
+        _segmenter.SMax = trkSMax.Value;
+        _segmenter.VMin = trkVMin.Value;
+        _segmenter.VMax = trkVMax.Value;
     }
 
     /// <summary>Người dùng kéo TrackBar — cập nhật ngưỡng và nhãn hiển thị.</summary>

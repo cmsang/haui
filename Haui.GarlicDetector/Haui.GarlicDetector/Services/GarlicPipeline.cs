@@ -21,8 +21,9 @@ public sealed record SegmentationCompletedEventArgs(Bitmap Frame, List<GarlicReg
 /// </summary>
 public sealed class GarlicPipeline : IDisposable
 {
-    private readonly CameraService _cameraService;
-    private readonly HsvSegmenter  _segmenter;
+    private readonly CameraService    _cameraService;
+    private readonly IImagePreprocessor _preprocessor;
+    private readonly IGarlicSegmentor   _segmenter;
 
     // Frame gốc mới nhất — dùng để overlay kết quả phân vùng
     private Bitmap? _latestRawFrame;
@@ -57,15 +58,19 @@ public sealed class GarlicPipeline : IDisposable
     /// <summary>Camera pipeline có đang chạy hay không.</summary>
     public bool IsRunning => _cameraService.IsRunning;
 
-    /// <summary>Thuật toán phân vùng HSV — cho phép điều chỉnh ngưỡng từ UI.</summary>
-    public HsvSegmenter Segmenter => _segmenter;
+    /// <summary>Thuật toán phân vùng — có thể ép kiểu sang implementation cụ thể nếu cần.</summary>
+    public IGarlicSegmentor Segmenter => _segmenter;
 
     /// <summary>Các vùng tỏi được phát hiện trong lần phân vùng gần nhất.</summary>
     public List<GarlicRegion> CachedRegions => _cachedRegions;
 
-    public GarlicPipeline(CameraService cameraService, HsvSegmenter segmenter)
+    public GarlicPipeline(
+        CameraService      cameraService,
+        IImagePreprocessor preprocessor,
+        IGarlicSegmentor   segmenter)
     {
         _cameraService = cameraService;
+        _preprocessor  = preprocessor;
         _segmenter     = segmenter;
 
         // Đăng ký sự kiện từ camera service
@@ -193,11 +198,12 @@ public sealed class GarlicPipeline : IDisposable
         }
     }
 
-    /// <summary>Chạy thuật toán HSV trên bitmap và chuyển kết quả thành danh sách GarlicRegion.</summary>
+    /// <summary>Tiền xử lý + phân vùng bitmap và chuyển kết quả thành danh sách GarlicRegion.</summary>
     private List<GarlicRegion> SegmentFrame(Bitmap bitmap)
     {
-        using var mat = BitmapConverter.ToMat(bitmap);
-        var rects = _segmenter.Segment(mat);
+        using var bgrMat          = BitmapConverter.ToMat(bitmap);
+        using var preprocessedMat = _preprocessor.Preprocess(bgrMat);
+        var rects                 = _segmenter.Segment(preprocessedMat);
 
         return rects.Select(r => new GarlicRegion
         {
