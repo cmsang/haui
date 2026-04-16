@@ -216,7 +216,25 @@ public sealed class GarlicPipeline : IDisposable
     }
 
     /// <summary>
-    /// Vẽ hình chữ nhật màu vàng và nhãn lên bitmap (thay đổi trực tiếp).
+    /// Vẽ bounding box màu vàng và nhãn thông tin lên bitmap (thay đổi trực tiếp, in-place).
+    /// <para>
+    /// Nhãn hiển thị hai chỉ số cho mỗi vùng tỏi:
+    /// <list type="bullet">
+    ///   <item>
+    ///     <term>A (Area)</term>
+    ///     <description>Diện tích contour thực tế (pixel²) — phân biệt tỏi to / tỏi nhỏ.</description>
+    ///   </item>
+    ///   <item>
+    ///     <term>C (Circularity)</term>
+    ///     <description>
+    ///       Độ tròn kết hợp ∈ [0, 1] — trung bình của:<br/>
+    ///       • <b>Isoperimetric</b> <c>4π·A/P²</c>: đo độ mượt của biên contour.<br/>
+    ///       • <b>MinEnclosingCircle ratio</b> <c>A/(π·r²)</c>: đo mức lấp đầy vòng tròn bao ngoài.<br/>
+    ///       Giá trị gợi ý: ≥ 0.72 → tỏi lành; &lt; 0.72 → nghi hỏng/méo.
+    ///     </description>
+    ///   </item>
+    /// </list>
+    /// </para>
     /// </summary>
     public static void DrawRegions(Bitmap bitmap, List<GarlicRegion> regions)
     {
