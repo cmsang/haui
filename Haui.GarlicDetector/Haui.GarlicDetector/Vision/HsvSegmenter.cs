@@ -1,3 +1,4 @@
+using Haui.GarlicDetector.Models;
 using OpenCvSharp;
 
 namespace Haui.GarlicDetector.Vision;
@@ -36,7 +37,7 @@ public sealed class HsvSegmenter : IGarlicSegmentor
 
     /// <inheritdoc />
     /// <param name="preprocessedFrame">Frame HSV đã được tiền xử lý bởi <see cref="IImagePreprocessor"/>.</param>
-    public List<Rect> Segment(Mat preprocessedFrame)
+    public List<GarlicSegmentResult> Segment(Mat preprocessedFrame)
     {
         // Bước 1: Lọc các pixel nằm trong ngưỡng HSV chỉ định
         using var mask = new Mat();
@@ -61,13 +62,22 @@ public sealed class HsvSegmenter : IGarlicSegmentor
             RetrievalModes.External,
             ContourApproximationModes.ApproxSimple);
 
-        // Bước 4: Lọc theo diện tích
-        var results = new List<Rect>();
+        // Bước 4: Lọc theo diện tích và tính circularity = 4π·A / P²
+        var results = new List<GarlicSegmentResult>();
         foreach (var contour in contours)
         {
             double area = Cv2.ContourArea(contour);
-            if (area >= MinArea)
-                results.Add(Cv2.BoundingRect(contour));
+            if (area < MinArea) continue;
+
+            double perimeter   = Cv2.ArcLength(contour, closed: true);
+            double circularity = perimeter > 0
+                ? Math.Clamp(4.0 * Math.PI * area / (perimeter * perimeter), 0.0, 1.0)
+                : 0.0;
+
+            results.Add(new GarlicSegmentResult(
+                BoundingRect: Cv2.BoundingRect(contour),
+                Area:         area,
+                Circularity:  circularity));
         }
 
         return results;

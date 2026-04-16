@@ -203,12 +203,14 @@ public sealed class GarlicPipeline : IDisposable
     {
         using var bgrMat          = BitmapConverter.ToMat(bitmap);
         using var preprocessedMat = _preprocessor.Preprocess(bgrMat);
-        var rects                 = _segmenter.Segment(preprocessedMat);
+        var segmentResults        = _segmenter.Segment(preprocessedMat);
 
-        return rects.Select(r => new GarlicRegion
+        return segmentResults.Select(r => new GarlicRegion
         {
-            BoundingBox = new Rectangle(r.X, r.Y, r.Width, r.Height),
-            Area        = r.Width * (double)r.Height,
+            BoundingBox = new Rectangle(r.BoundingRect.X, r.BoundingRect.Y,
+                                        r.BoundingRect.Width, r.BoundingRect.Height),
+            Area        = r.Area,
+            Circularity = r.Circularity,
             DetectedAt  = DateTime.Now,
         }).ToList();
     }
@@ -227,7 +229,7 @@ public sealed class GarlicPipeline : IDisposable
             g.DrawRectangle(pen, box);
 
             // Vẽ nhãn với nền bán trong suốt phía trên bounding box
-            string label    = $"Tỏi ({region.Area:N0}px²)";
+            string label    = $"Tỏi | A: {region.Area:N0}px²  C: {region.Circularity:F2}";
             var    font     = SystemFonts.SmallCaptionFont;
             var    textSize = g.MeasureString(label, font);
             var    labelRect = new RectangleF(

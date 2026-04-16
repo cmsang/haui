@@ -1,3 +1,4 @@
+using Haui.GarlicDetector.Models;
 using OpenCvSharp;
 
 namespace Haui.GarlicDetector.Vision;
@@ -8,8 +9,9 @@ namespace Haui.GarlicDetector.Vision;
 public interface IGarlicSegmentor
 {
     /// <summary>
-    /// Phân tích frame đã tiền xử lý (e.g. HSV) và trả về danh sách bounding box của các vùng tỏi.
+    /// Phân tích frame đã tiền xử lý (e.g. HSV) và trả về danh sách
+    /// kết quả phân vùng (bounding rect + diện tích contour + độ tròn).
     /// </summary>
     /// <param name="preprocessedFrame">Frame đã qua IImagePreprocessor — không bị thay đổi.</param>
-    List<Rect> Segment(Mat preprocessedFrame);
+    List<GarlicSegmentResult> Segment(Mat preprocessedFrame);
 }
