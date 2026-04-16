@@ -235,6 +235,10 @@ public sealed class GarlicPipeline : IDisposable
     ///   </item>
     /// </list>
     /// </para>
+    /// <para>
+    /// Vùng có <see cref="GarlicRegion.Circularity"/> &lt; 0.6 được coi là quá méo/bất thường —
+    /// chỉ vẽ bounding box, không hiển thị nhãn.
+    /// </para>
     /// </summary>
     public static void DrawRegions(Bitmap bitmap, List<GarlicRegion> regions)
     {
@@ -245,6 +249,9 @@ public sealed class GarlicPipeline : IDisposable
         {
             var box = region.BoundingBox;
             g.DrawRectangle(pen, box);
+
+            // Vùng có circularity < 0.6 quá méo/bất thường — chỉ vẽ khung, không gán nhãn
+            if (region.Circularity < 0.6) continue;
 
             // Vẽ nhãn với nền bán trong suốt phía trên bounding box
             string label    = $"Tỏi | A: {region.Area:N0}px²  C: {region.Circularity:F2}";
