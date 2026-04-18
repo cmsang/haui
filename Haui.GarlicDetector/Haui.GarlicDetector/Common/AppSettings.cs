@@ -10,6 +10,13 @@ public sealed record RegionDto(int X, int Y, int Width, int Height)
     public static RegionDto From(Rectangle r) => new(r.X, r.Y, r.Width, r.Height);
 }
 
+/// <summary>DTO lưu ngưỡng HSV cho bộ phân vùng tỏi.</summary>
+public sealed record HsvDto(int HMin, int HMax, int SMin, int SMax, int VMin, int VMax)
+{
+    /// <summary>Giá trị mặc định cho tỏi trắng/kem.</summary>
+    public static HsvDto Default => new(0, 179, 0, 60, 170, 255);
+}
+
 /// <summary>
 /// Cài đặt ứng dụng — lưu/tải từ file <c>settings.json</c> bên cạnh executable.
 /// Sử dụng singleton <see cref="Instance"/>.
@@ -41,6 +48,12 @@ public sealed class AppSettings
     /// <c>null</c> nghĩa là nhận diện toàn bộ khung hình.
     /// </summary>
     public RegionDto? DetectionRegion { get; set; }
+
+    /// <summary>
+    /// Ngưỡng HSV cho bộ phân vùng.
+    /// <c>null</c> nghĩa là dùng giá trị mặc định (<see cref="HsvDto.Default"/>).
+    /// </summary>
+    public HsvDto? Hsv { get; set; }
 
     // ─── Load / Save ─────────────────────────────────────────────────────────
 

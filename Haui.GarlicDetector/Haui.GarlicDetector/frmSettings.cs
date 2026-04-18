@@ -1,3 +1,5 @@
+using Haui.GarlicDetector.Common;
+
 namespace Haui.GarlicDetector;
 
 /// <summary>
@@ -29,6 +31,14 @@ public partial class frmSettings : Form
 
     private void frmSettings_Load(object sender, EventArgs e)
     {
+        // Khôi phục giá trị HSV đã lưu; nếu chưa có thì dùng mặc định
+        var hsv = AppSettings.Instance.Hsv ?? HsvDto.Default;
+        trkHMin.Value = Math.Clamp(hsv.HMin, trkHMin.Minimum, trkHMin.Maximum);
+        trkHMax.Value = Math.Clamp(hsv.HMax, trkHMax.Minimum, trkHMax.Maximum);
+        trkSMin.Value = Math.Clamp(hsv.SMin, trkSMin.Minimum, trkSMin.Maximum);
+        trkSMax.Value = Math.Clamp(hsv.SMax, trkSMax.Minimum, trkSMax.Maximum);
+        trkVMin.Value = Math.Clamp(hsv.VMin, trkVMin.Minimum, trkVMin.Maximum);
+        trkVMax.Value = Math.Clamp(hsv.VMax, trkVMax.Minimum, trkVMax.Maximum);
         UpdateLabels();
     }
 
@@ -38,7 +48,16 @@ public partial class frmSettings : Form
     private void trkHsv_ValueChanged(object? sender, EventArgs e)
     {
         UpdateLabels();
+        SaveHsv();
         HsvChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Ghi giá trị HSV hiện tại vào <see cref="AppSettings"/> và lưu file.</summary>
+    private void SaveHsv()
+    {
+        var settings = AppSettings.Instance;
+        settings.Hsv  = new HsvDto(HMin, HMax, SMin, SMax, VMin, VMax);
+        settings.Save();
     }
 
     private void UpdateLabels()
@@ -62,6 +81,7 @@ public partial class frmSettings : Form
         trkSMax.Value = 60;
         trkVMin.Value = 170;
         trkVMax.Value = 255;
+        // SaveHsv() được gọi tự động qua trkHsv_ValueChanged khi gán Value ở trên
     }
 
     private void btnClose_Click(object sender, EventArgs e) => Hide();
