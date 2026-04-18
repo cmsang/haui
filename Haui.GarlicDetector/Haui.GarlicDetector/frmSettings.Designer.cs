@@ -33,6 +33,12 @@ partial class frmSettings
     private Button btnReset;
     private Button btnClose;
 
+    // ─── GroupBox phân vùng (circularity) ───────────────────────────────────────
+    private GroupBox grpSegmentation;
+    private TrackBar trkCircularity;
+    private Label    lblCircularity;
+    private Label    lblCircularityTxt;
+
     protected override void Dispose(bool disposing)
     {
         if (disposing && components != null)
@@ -67,7 +73,13 @@ partial class frmSettings
         btnReset   = new Button();
         btnClose   = new Button();
 
+        grpSegmentation   = new GroupBox();
+        trkCircularity    = new TrackBar();
+        lblCircularity    = new Label();
+        lblCircularityTxt = new Label();
+
         grpHsv.SuspendLayout();
+        trkCircularity.BeginInit();
         trkHMin.BeginInit();
         trkHMax.BeginInit();
         trkSMin.BeginInit();
@@ -256,7 +268,46 @@ partial class frmSettings
         lblVMax.ForeColor = Color.Yellow;
         lblVMax.TextAlign = ContentAlignment.MiddleRight;
 
-        // ── pnlBottom ─────────────────────────────────────────────────────────
+        // ── grpSegmentation ─────────────────────────────────────────────────────────
+        grpSegmentation.Name      = "grpSegmentation";
+        grpSegmentation.Text      = "Phân vùng";
+        grpSegmentation.Dock      = DockStyle.Top;
+        grpSegmentation.Height    = 62;
+        grpSegmentation.ForeColor = Color.White;
+        grpSegmentation.Padding   = new Padding(10, 8, 10, 8);
+        grpSegmentation.Controls.AddRange(new Control[]
+        {
+            lblCircularityTxt, trkCircularity, lblCircularity,
+        });
+
+        // ── Circularity Min ─────────────────────────────────────────────────────────
+        lblCircularityTxt.Name      = "lblCircularityTxt";
+        lblCircularityTxt.Text      = "Độ tròn";
+        lblCircularityTxt.AutoSize  = false;
+        lblCircularityTxt.Width     = 44;
+        lblCircularityTxt.Height    = 20;
+        lblCircularityTxt.Location  = new Point(10, 28);
+        lblCircularityTxt.ForeColor = Color.LightGray;
+
+        trkCircularity.Name                 = "trkCircularity";
+        trkCircularity.Minimum              = 0;
+        trkCircularity.Maximum              = 100;
+        trkCircularity.Value                = 60;
+        trkCircularity.Location             = new Point(58, 22);
+        trkCircularity.Width                = 140;
+        trkCircularity.TickStyle            = TickStyle.None;
+        trkCircularity.ValueChanged        += trkHsv_ValueChanged;
+
+        lblCircularity.Name      = "lblCircularity";
+        lblCircularity.Text      = "0.60";
+        lblCircularity.AutoSize  = false;
+        lblCircularity.Width     = 36;
+        lblCircularity.Height    = 20;
+        lblCircularity.Location  = new Point(202, 28);
+        lblCircularity.ForeColor = Color.Yellow;
+        lblCircularity.TextAlign = ContentAlignment.MiddleRight;
+
+        // ── pnlBottom
         pnlBottom.Name      = "pnlBottom";
         pnlBottom.Dock      = DockStyle.Bottom;
         pnlBottom.Height    = 48;
@@ -290,7 +341,7 @@ partial class frmSettings
         // ── Form ──────────────────────────────────────────────────────────────
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode       = AutoScaleMode.Font;
-        ClientSize          = new Size(274, 358);
+        ClientSize          = new Size(274, 420);
         FormBorderStyle     = FormBorderStyle.FixedDialog;
         MaximizeBox         = false;
         MinimizeBox         = false;
@@ -304,6 +355,7 @@ partial class frmSettings
         Load               += frmSettings_Load;
 
         Controls.Add(grpHsv);
+        Controls.Add(grpSegmentation);
         Controls.Add(pnlBottom);
 
         trkHMin.EndInit();
@@ -312,7 +364,9 @@ partial class frmSettings
         trkSMax.EndInit();
         trkVMin.EndInit();
         trkVMax.EndInit();
+        trkCircularity.EndInit();
         grpHsv.ResumeLayout(false);
+        grpSegmentation.ResumeLayout(false);
         pnlBottom.ResumeLayout(false);
         ResumeLayout(false);
         PerformLayout();

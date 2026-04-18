@@ -1,3 +1,4 @@
+using Haui.GarlicDetector.Common;
 using Haui.GarlicDetector.Models;
 using Haui.GarlicDetector.Vision;
 using OpenCvSharp;
@@ -285,8 +286,8 @@ public sealed class GarlicPipeline : IDisposable
             var box = region.BoundingBox;
             g.DrawRectangle(pen, box);
 
-            // Vùng có circularity < 0.6 quá méo/bất thường — chỉ vẽ khung, không gán nhãn
-            if (region.Circularity < 0.6) continue;
+            // Vùng có circularity thấp hơn ngưỡng cài đặt — chỉ vẽ khung, không gán nhãn
+            if (region.Circularity < AppSettings.Instance.MinCircularity) continue;
 
             string label    = $"Tỏi | A: {region.Area:N0}px²  C: {region.Circularity:F2}";
             var    font     = SystemFonts.SmallCaptionFont ?? SystemFonts.DefaultFont;

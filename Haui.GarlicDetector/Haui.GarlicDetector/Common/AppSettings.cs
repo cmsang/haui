@@ -55,7 +55,14 @@ public sealed class AppSettings
     /// </summary>
     public HsvDto? Hsv { get; set; }
 
-    // ─── Load / Save ─────────────────────────────────────────────────────────
+    /// <summary>
+    /// Ngưỡng circularity tối thiểu ∈ [0, 1] để một vùng được coi là tỏi hợp lệ.
+    /// Vùng có circularity thấp hơn ngưỡng này sẽ không được gán nhãn.
+    /// Mặc định 0.6 (vừa đủ chấp nhận tỏi oval nhẹ).
+    /// </summary>
+    public double MinCircularity { get; set; } = 0.4;
+
+    // ─── Load / Save
 
     /// <summary>Đọc cài đặt từ <c>settings.json</c>. Trả về instance rỗng nếu file không tồn tại.</summary>
     public static AppSettings Load()

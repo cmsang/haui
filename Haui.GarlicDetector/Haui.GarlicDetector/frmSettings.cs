@@ -22,6 +22,9 @@ public partial class frmSettings : Form
     public int VMin => trkVMin.Value;
     public int VMax => trkVMax.Value;
 
+    /// <summary>Ngưỡng circularity tối thiểu ∈ [0, 1] đọc từ trackbar (0–100 → 0.00–1.00).</summary>
+    public double MinCircularity => trkCircularity.Value / 100.0;
+
     public frmSettings()
     {
         InitializeComponent();
@@ -39,6 +42,10 @@ public partial class frmSettings : Form
         trkSMax.Value = Math.Clamp(hsv.SMax, trkSMax.Minimum, trkSMax.Maximum);
         trkVMin.Value = Math.Clamp(hsv.VMin, trkVMin.Minimum, trkVMin.Maximum);
         trkVMax.Value = Math.Clamp(hsv.VMax, trkVMax.Minimum, trkVMax.Maximum);
+
+        // Khôi phục ngưỡng circularity đã lưu
+        int circ = (int)Math.Round(AppSettings.Instance.MinCircularity * 100);
+        trkCircularity.Value = Math.Clamp(circ, trkCircularity.Minimum, trkCircularity.Maximum);
         UpdateLabels();
     }
 
@@ -56,7 +63,8 @@ public partial class frmSettings : Form
     private void SaveHsv()
     {
         var settings = AppSettings.Instance;
-        settings.Hsv  = new HsvDto(HMin, HMax, SMin, SMax, VMin, VMax);
+        settings.Hsv             = new HsvDto(HMin, HMax, SMin, SMax, VMin, VMax);
+        settings.MinCircularity  = MinCircularity;
         settings.Save();
     }
 
@@ -68,6 +76,7 @@ public partial class frmSettings : Form
         lblSMax.Text = trkSMax.Value.ToString();
         lblVMin.Text = trkVMin.Value.ToString();
         lblVMax.Text = trkVMax.Value.ToString();
+        lblCircularity.Text = (trkCircularity.Value / 100.0).ToString("F2");
     }
 
     // ─── Nút ─────────────────────────────────────────────────────────────────
@@ -81,6 +90,7 @@ public partial class frmSettings : Form
         trkSMax.Value = 60;
         trkVMin.Value = 170;
         trkVMax.Value = 255;
+        trkCircularity.Value = 60;
         // SaveHsv() được gọi tự động qua trkHsv_ValueChanged khi gán Value ở trên
     }
 
