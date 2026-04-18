@@ -64,6 +64,13 @@ public sealed class GarlicPipeline : IDisposable
     /// <summary>Các vùng tỏi được phát hiện trong lần phân vùng gần nhất.</summary>
     public List<GarlicRegion> CachedRegions => _cachedRegions;
 
+    /// <summary>
+    /// Vùng nhận diện (pixel, tọa độ frame camera thực tế).
+    /// Khi được đặt, pipeline chỉ phân vùng bên trong hình chữ nhật này.
+    /// <c>null</c> = nhận diện toàn bộ khung hình.
+    /// </summary>
+    public Rectangle? DetectionRegion { get; set; }
+
     public GarlicPipeline(
         CameraService      cameraService,
         IImagePreprocessor preprocessor,
@@ -165,8 +172,11 @@ public sealed class GarlicPipeline : IDisposable
 
                 try
                 {
+                    // Snapshot DetectionRegion để tránh thay đổi giữa chừng
+                    var region  = DetectionRegion;
+
                     // Chạy phân vùng HSV trên thread-pool
-                    var regions = await Task.Run(() => SegmentFrame(frame));
+                    var regions = await Task.Run(() => SegmentFrame(frame, region));
                     _cachedRegions = regions;
 
                     // Overlay lên frame MỚI NHẤT từ camera (không phải frame đã phân vùng)
@@ -180,6 +190,7 @@ public sealed class GarlicPipeline : IDisposable
 
                     if (latestDisplay != null)
                     {
+                        // Chỉ vẽ bounding box tỏi — viền vùng nhận diện do frmMain.PicCamera_Paint đảm nhận
                         DrawRegions(latestDisplay, regions);
                         SegmentationCompleted?.Invoke(
                             this, new SegmentationCompletedEventArgs(latestDisplay, regions));
@@ -198,53 +209,77 @@ public sealed class GarlicPipeline : IDisposable
         }
     }
 
-    /// <summary>Tiền xử lý + phân vùng bitmap và chuyển kết quả thành danh sách GarlicRegion.</summary>
-    private List<GarlicRegion> SegmentFrame(Bitmap bitmap)
+    /// <summary>
+    /// Tiền xử lý + phân vùng bitmap.
+    /// Nếu <paramref name="detectionRegion"/> được đặt, chỉ phân vùng trong vùng đó;
+    /// bounding box kết quả được offset về tọa độ frame đầy đủ.
+    /// </summary>
+    private List<GarlicRegion> SegmentFrame(Bitmap bitmap, Rectangle? detectionRegion)
     {
-        using var bgrMat          = BitmapConverter.ToMat(bitmap);
-        using var preprocessedMat = _preprocessor.Preprocess(bgrMat);
-        var segmentResults        = _segmenter.Segment(preprocessedMat);
+        using var bgrMat = BitmapConverter.ToMat(bitmap);
 
-        return segmentResults.Select(r => new GarlicRegion
+        int  offsetX     = 0;
+        int  offsetY     = 0;
+        Mat  matToProcess;
+        Mat? roiMat      = null;
+
+        if (detectionRegion.HasValue)
         {
-            BoundingBox = new Rectangle(r.BoundingRect.X, r.BoundingRect.Y,
-                                        r.BoundingRect.Width, r.BoundingRect.Height),
-            Area        = r.Area,
-            Circularity = r.Circularity,
-            DetectedAt  = DateTime.Now,
-        }).ToList();
+            var dr = detectionRegion.Value;
+
+            // Clamp vùng vào kích thước frame thực tế
+            int x = Math.Clamp(dr.X,      0, bgrMat.Width  - 1);
+            int y = Math.Clamp(dr.Y,      0, bgrMat.Height - 1);
+            int w = Math.Clamp(dr.Width,  1, bgrMat.Width  - x);
+            int h = Math.Clamp(dr.Height, 1, bgrMat.Height - y);
+
+            // Bỏ qua ROI quá nhỏ để tránh lỗi OpenCV (kernel > image)
+            if (w < 20 || h < 20) return [];
+
+            roiMat       = new Mat(bgrMat, new Rect(x, y, w, h));
+            matToProcess = roiMat;
+            offsetX      = x;
+            offsetY      = y;
+        }
+        else
+        {
+            matToProcess = bgrMat;
+        }
+
+        try
+        {
+            using var preprocessedMat = _preprocessor.Preprocess(matToProcess);
+            var segmentResults        = _segmenter.Segment(preprocessedMat);
+
+            return segmentResults.Select(r => new GarlicRegion
+            {
+                // Cộng offset để bounding box luôn ở tọa độ frame gốc
+                BoundingBox = new Rectangle(
+                    r.BoundingRect.X + offsetX,
+                    r.BoundingRect.Y + offsetY,
+                    r.BoundingRect.Width,
+                    r.BoundingRect.Height),
+                Area        = r.Area,
+                Circularity = r.Circularity,
+                DetectedAt  = DateTime.Now,
+            }).ToList();
+        }
+        finally
+        {
+            roiMat?.Dispose();
+        }
     }
 
     /// <summary>
-    /// Vẽ bounding box màu vàng và nhãn thông tin lên bitmap (thay đổi trực tiếp, in-place).
-    /// <para>
-    /// Nhãn hiển thị hai chỉ số cho mỗi vùng tỏi:
-    /// <list type="bullet">
-    ///   <item>
-    ///     <term>A (Area)</term>
-    ///     <description>Diện tích contour thực tế (pixel²) — phân biệt tỏi to / tỏi nhỏ.</description>
-    ///   </item>
-    ///   <item>
-    ///     <term>C (Circularity)</term>
-    ///     <description>
-    ///       Độ tròn kết hợp ∈ [0, 1] — trung bình của:<br/>
-    ///       • <b>Isoperimetric</b> <c>4π·A/P²</c>: đo độ mượt của biên contour.<br/>
-    ///       • <b>MinEnclosingCircle ratio</b> <c>A/(π·r²)</c>: đo mức lấp đầy vòng tròn bao ngoài.<br/>
-    ///       Giá trị gợi ý: ≥ 0.72 → tỏi lành; &lt; 0.72 → nghi hỏng/méo.
-    ///     </description>
-    ///   </item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// Vùng có <see cref="GarlicRegion.Circularity"/> &lt; 0.6 được coi là quá méo/bất thường —
-    /// chỉ vẽ bounding box, không hiển thị nhãn.
-    /// </para>
+    /// Vẽ bounding box vàng + nhãn thông tin từng vùng tỏi lên bitmap (in-place).
+    /// Viền vùng nhận diện được vẽ riêng qua <c>PicCamera_Paint</c> trên UI thread.
     /// </summary>
     public static void DrawRegions(Bitmap bitmap, List<GarlicRegion> regions)
     {
         using var g   = Graphics.FromImage(bitmap);
         using var pen = new Pen(Color.Yellow, 2);
 
+        // Vẽ bounding box từng vùng tỏi
         foreach (var region in regions)
         {
             var box = region.BoundingBox;
@@ -253,15 +288,13 @@ public sealed class GarlicPipeline : IDisposable
             // Vùng có circularity < 0.6 quá méo/bất thường — chỉ vẽ khung, không gán nhãn
             if (region.Circularity < 0.6) continue;
 
-            // Vẽ nhãn với nền bán trong suốt phía trên bounding box
             string label    = $"Tỏi | A: {region.Area:N0}px²  C: {region.Circularity:F2}";
-            var    font     = SystemFonts.SmallCaptionFont;
+            var    font     = SystemFonts.SmallCaptionFont ?? SystemFonts.DefaultFont;
             var    textSize = g.MeasureString(label, font);
             var    labelRect = new RectangleF(
                 box.X, box.Y - textSize.Height,
                 textSize.Width + 4, textSize.Height);
 
-            // Tránh nhãn bị cắt ở cạnh trên màn hình
             if (labelRect.Y < 0) labelRect.Y = box.Y;
 
             using var bgBrush = new SolidBrush(Color.FromArgb(140, Color.Black));

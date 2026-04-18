@@ -12,6 +12,7 @@ partial class frmMain
     private ComboBox cmbResolution;
     private Button btnStart;
     private Button btnStop;
+    private Button btnSelectRegion;
     private Button btnSettings;
     private Label lblStatus;
 
@@ -37,6 +38,7 @@ partial class frmMain
         cmbResolution = new ComboBox();
         btnStart      = new Button();
         btnStop       = new Button();
+        btnSelectRegion = new Button();
         btnSettings   = new Button();
         lblStatus     = new Label();
 
@@ -57,7 +59,7 @@ partial class frmMain
         {
             lblCamera, cmbCameras,
             lblResolution, cmbResolution,
-            btnStart, btnStop, btnSettings, lblStatus,
+            btnStart, btnStop, btnSelectRegion, btnSettings, lblStatus,
         });
 
         // lblCamera
@@ -117,12 +119,24 @@ partial class frmMain
         btnStop.FlatAppearance.BorderSize = 0;
         btnStop.Click                    += btnStop_Click;
 
+        // btnSelectRegion
+        btnSelectRegion.Name                      = "btnSelectRegion";
+        btnSelectRegion.Text                      = "⬚ Chọn vùng";
+        btnSelectRegion.Width                     = 115;
+        btnSelectRegion.Height                    = 30;
+        btnSelectRegion.Location                  = new Point(771, 11);
+        btnSelectRegion.BackColor                 = Color.FromArgb(40, 110, 40);
+        btnSelectRegion.ForeColor                 = Color.White;
+        btnSelectRegion.FlatStyle                 = FlatStyle.Flat;
+        btnSelectRegion.FlatAppearance.BorderSize = 0;
+        btnSelectRegion.Click                    += btnSelectRegion_Click;
+
         // btnSettings
         btnSettings.Name                      = "btnSettings";
         btnSettings.Text                      = "⚙ Cài đặt";
         btnSettings.Width                     = 100;
         btnSettings.Height                    = 30;
-        btnSettings.Location                  = new Point(771, 11);
+        btnSettings.Location                  = new Point(898, 11);
         btnSettings.BackColor                 = Color.FromArgb(60, 60, 60);
         btnSettings.ForeColor                 = Color.White;
         btnSettings.FlatStyle                 = FlatStyle.Flat;
@@ -133,10 +147,10 @@ partial class frmMain
         lblStatus.Name      = "lblStatus";
         lblStatus.Text      = "Sẵn sàng.";
         lblStatus.AutoSize  = false;
-        lblStatus.Width     = 200;
+        lblStatus.Width     = 250;
         lblStatus.Height    = 20;
         lblStatus.ForeColor = Color.LightGray;
-        lblStatus.Location  = new Point(882, 17);
+        lblStatus.Location  = new Point(1010, 17);
 
         // ── picCamera ─────────────────────────────────────────────────────────
         picCamera.Name      = "picCamera";
@@ -148,8 +162,8 @@ partial class frmMain
         // AutoScaleDimensions & AutoScaleMode bắt buộc để Designer render được
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode       = AutoScaleMode.Font;
-        ClientSize          = new Size(1100, 662);
-        MinimumSize         = new Size(900, 540);
+        ClientSize          = new Size(1280, 662);
+        MinimumSize         = new Size(1000, 540);
         Name                = "frmMain";
         Text                = "Haui Garlic Detector";
         StartPosition       = FormStartPosition.CenterScreen;

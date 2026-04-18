@@ -57,10 +57,10 @@ public partial class frmSettings : Form
     private void btnReset_Click(object sender, EventArgs e)
     {
         trkHMin.Value = 0;
-        trkHMax.Value = 35;
+        trkHMax.Value = 179;
         trkSMin.Value = 0;
-        trkSMax.Value = 80;
-        trkVMin.Value = 150;
+        trkSMax.Value = 60;
+        trkVMin.Value = 170;
         trkVMax.Value = 255;
     }
 

@@ -133,14 +133,14 @@ partial class frmSettings
         trkHMax.Name                 = "trkHMax";
         trkHMax.Minimum              = 0;
         trkHMax.Maximum              = 179;
-        trkHMax.Value                = 35;
+        trkHMax.Value                = 179;
         trkHMax.Location             = new Point(58, 60);
         trkHMax.Width                = 140;
         trkHMax.TickStyle            = TickStyle.None;
         trkHMax.ValueChanged        += trkHsv_ValueChanged;
 
         lblHMax.Name      = "lblHMax";
-        lblHMax.Text      = "35";
+        lblHMax.Text      = "179";
         lblHMax.AutoSize  = false;
         lblHMax.Width     = 36;
         lblHMax.Height    = 20;
@@ -187,14 +187,14 @@ partial class frmSettings
         trkSMax.Name                 = "trkSMax";
         trkSMax.Minimum              = 0;
         trkSMax.Maximum              = 255;
-        trkSMax.Value                = 80;
+        trkSMax.Value                = 60;
         trkSMax.Location             = new Point(58, 136);
         trkSMax.Width                = 140;
         trkSMax.TickStyle            = TickStyle.None;
         trkSMax.ValueChanged        += trkHsv_ValueChanged;
 
         lblSMax.Name      = "lblSMax";
-        lblSMax.Text      = "80";
+        lblSMax.Text      = "60";
         lblSMax.AutoSize  = false;
         lblSMax.Width     = 36;
         lblSMax.Height    = 20;
@@ -214,14 +214,14 @@ partial class frmSettings
         trkVMin.Name                 = "trkVMin";
         trkVMin.Minimum              = 0;
         trkVMin.Maximum              = 255;
-        trkVMin.Value                = 150;
+        trkVMin.Value                = 170;
         trkVMin.Location             = new Point(58, 174);
         trkVMin.Width                = 140;
         trkVMin.TickStyle            = TickStyle.None;
         trkVMin.ValueChanged        += trkHsv_ValueChanged;
 
         lblVMin.Name      = "lblVMin";
-        lblVMin.Text      = "150";
+        lblVMin.Text      = "170";
         lblVMin.AutoSize  = false;
         lblVMin.Width     = 36;
         lblVMin.Height    = 20;

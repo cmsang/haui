@@ -171,8 +171,9 @@ public sealed class CameraService : IDisposable
                     continue;
                 }
 
-                // Chuyển Mat → Bitmap và phát sự kiện cho subscribers
-                var bitmap = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(mat);
+                // Chuyển Mat → Bitmap, phát sự kiện rồi dispose ngay —
+                // subscribers phải clone nếu cần giữ lại (GarlicPipeline đã làm vậy)
+                using var bitmap = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(mat);
                 FrameCaptured?.Invoke(this, bitmap);
 
                 // Giới hạn ~30 fps

@@ -15,23 +15,33 @@ public sealed class HsvSegmenter : IGarlicSegmentor
     /// <summary>Ngưỡng Hue tối thiểu (0–179).</summary>
     public int HMin { get; set; } = 0;
 
-    /// <summary>Ngưỡng Hue tối đa (0–179).</summary>
-    public int HMax { get; set; } = 35;
+    /// <summary>
+    /// Ngưỡng Hue tối đa (0–179).
+    /// Tỏi trắng/kem có Saturation rất thấp → kênh Hue không đáng tin cậy.
+    /// Đặt 179 để bỏ qua ràng buộc Hue, dựa vào S và V để lọc màu trắng.
+    /// </summary>
+    public int HMax { get; set; } = 179;
 
     /// <summary>Ngưỡng Saturation tối thiểu (0–255).</summary>
     public int SMin { get; set; } = 0;
 
-    /// <summary>Ngưỡng Saturation tối đa (0–255).</summary>
-    public int SMax { get; set; } = 80;
+    /// <summary>
+    /// Ngưỡng Saturation tối đa (0–255).
+    /// Giữ thấp (≤ 60) để chỉ bắt màu trắng/kem có sắc yếu, loại nền màu sắc mạnh.
+    /// </summary>
+    public int SMax { get; set; } = 60;
 
-    /// <summary>Ngưỡng Value tối thiểu (0–255).</summary>
-    public int VMin { get; set; } = 150;
+    /// <summary>
+    /// Ngưỡng Value tối thiểu (0–255).
+    /// Tỏi trắng sáng → V cao; đặt 170 để loại bóng tối và tỏi hỏng tối màu.
+    /// </summary>
+    public int VMin { get; set; } = 170;
 
     /// <summary>Ngưỡng Value tối đa (0–255).</summary>
     public int VMax { get; set; } = 255;
 
     /// <summary>Diện tích tối thiểu (pixel²) để vùng được coi là tỏi hợp lệ.</summary>
-    public double MinArea { get; set; } = 1000;
+    public double MinArea { get; set; } = 800;
 
     // ─── Phân vùng ───────────────────────────────────────────────────────────
 

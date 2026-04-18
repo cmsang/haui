@@ -20,4 +20,15 @@
     <PackageReference Include="OpenCvSharp4.Extensions" Version="4.13.0.20260330" />
   </ItemGroup>
 
+  <!--
+    settings.json mặc định — được copy sang output mỗi lần build.
+    Dùng PreserveNewest: nếu file đích đã tồn tại (user đã chỉnh sửa),
+    sẽ không bị ghi đè. Chỉ copy khi file nguồn mới hơn.
+  -->
+  <ItemGroup>
+    <Content Include="settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

@@ -1,3 +1,4 @@
+using Haui.GarlicDetector.Common;
 using Haui.GarlicDetector.Models;
 using Haui.GarlicDetector.Services;
 using Haui.GarlicDetector.Vision;
@@ -27,6 +28,12 @@ public partial class frmMain : Form
 
         // Đăng ký sự kiện HSV từ form cài đặt
         _frmSettings.HsvChanged += frmSettings_HsvChanged;
+
+        // Đăng ký Paint overlay cho vùng nhận diện
+        picCamera.Paint += PicCamera_Paint;
+
+        // Hiển thị trạng thái vùng nhận diện đã lưu
+        UpdateRegionStatus();
     }
 
     /// <summary>Quét và điền danh sách camera khả dụng vào combobox.</summary>
@@ -67,6 +74,9 @@ public partial class frmMain : Form
         _pipeline.FrameReady            += OnFrameReady;
         _pipeline.SegmentationCompleted += OnSegmentationCompleted;
         _pipeline.ErrorOccurred         += OnErrorOccurred;
+
+        // Áp dụng vùng nhận diện đã lưu trong AppSettings
+        _pipeline.DetectionRegion = AppSettings.Instance.DetectionRectangle;
 
         // Đồng bộ giá trị HSV hiện tại từ frmSettings vào segmenter
         SyncHsvToSegmenter();
@@ -181,6 +191,63 @@ public partial class frmMain : Form
         var old = picCamera.Image;
         picCamera.Image = frame;
         old?.Dispose();
+
+        // Trigger Paint để vẽ overlay viền vùng nhận diện lên trên ảnh mới
+        if (_pipeline?.DetectionRegion.HasValue == true)
+            picCamera.Invalidate();
+    }
+
+    // ─── Overlay vùng nhận diện (Paint event) ────────────────────────────────
+
+    /// <summary>
+    /// Vẽ viền xanh lá nét đứt biểu thị vùng nhận diện lên PictureBox
+    /// trong tọa độ màn hình (không sửa bitmap) — chạy trên UI thread, tần suất thấp.
+    /// </summary>
+    private void PicCamera_Paint(object? sender, PaintEventArgs e)
+    {
+        var region = _pipeline?.DetectionRegion;
+        if (!region.HasValue || picCamera.Image == null) return;
+
+        var ir = GetPicBoxImageRect(picCamera);
+        if (ir.IsEmpty) return;
+
+        float scaleX = ir.Width  / picCamera.Image.Width;
+        float scaleY = ir.Height / picCamera.Image.Height;
+
+        var dr          = region.Value;
+        var displayRect = new RectangleF(
+            ir.X + dr.X * scaleX,
+            ir.Y + dr.Y * scaleY,
+            dr.Width  * scaleX,
+            dr.Height * scaleY);
+
+        using var regionPen = new Pen(Color.LimeGreen, 2)
+        {
+            DashStyle = System.Drawing.Drawing2D.DashStyle.Dash
+        };
+        e.Graphics.DrawRectangle(regionPen, Rectangle.Round(displayRect));
+
+        var font    = SystemFonts.SmallCaptionFont ?? SystemFonts.DefaultFont;
+        var labelPt = new PointF(displayRect.X + 4, displayRect.Y + 4);
+        e.Graphics.DrawString("Vùng nhận diện", font, Brushes.LimeGreen, labelPt);
+    }
+
+    /// <summary>
+    /// Tính hình chữ nhật (display coords) của ảnh thực tế bên trong PictureBox Zoom mode.
+    /// </summary>
+    private static RectangleF GetPicBoxImageRect(PictureBox pb)
+    {
+        if (pb.Image == null) return RectangleF.Empty;
+
+        float imgW  = pb.Image.Width;
+        float imgH  = pb.Image.Height;
+        float pbW   = pb.ClientSize.Width;
+        float pbH   = pb.ClientSize.Height;
+        float scale = Math.Min(pbW / imgW, pbH / imgH);
+        float dw    = imgW * scale;
+        float dh    = imgH * scale;
+
+        return new RectangleF((pbW - dw) / 2f, (pbH - dh) / 2f, dw, dh);
     }
 
     // ─── Cài đặt HSV ─────────────────────────────────────────────────────────
@@ -213,6 +280,57 @@ public partial class frmMain : Form
         _segmenter.SMax = _frmSettings.SMax;
         _segmenter.VMin = _frmSettings.VMin;
         _segmenter.VMax = _frmSettings.VMax;
+    }
+
+    // ─── Chọn vùng nhận diện ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Mở form chọn vùng nhận diện.
+    /// Nếu camera đang chạy, chụp snapshot làm nền; nếu không thì dùng frame đang hiển thị.
+    /// Kết quả được lưu vào <c>settings.json</c> và áp dụng ngay vào pipeline.
+    /// </summary>
+    private void btnSelectRegion_Click(object sender, EventArgs e)
+    {
+        // Lấy ảnh nền: snapshot từ camera hoặc frame hiện tại trên PictureBox
+        Bitmap? snapshot = _pipeline?.CaptureSnapshot()
+                        ?? (picCamera.Image is Bitmap bmp ? (Bitmap)bmp.Clone() : null);
+
+        if (snapshot == null)
+        {
+            MessageBox.Show(
+                "Vui lòng bắt đầu camera trước khi chọn vùng nhận diện.",
+                "Chưa có ảnh",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            return;
+        }
+
+        using var selector = new frmRegionSelector(snapshot, AppSettings.Instance.DetectionRectangle);
+        snapshot.Dispose();
+
+        if (selector.ShowDialog(this) != DialogResult.OK) return;
+
+        // Lưu vào AppSettings và ghi ra settings.json
+        var settings = AppSettings.Instance;
+        settings.DetectionRegion = selector.SelectedRegion.HasValue
+            ? RegionDto.From(selector.SelectedRegion.Value)
+            : null;
+        settings.Save();
+
+        // Áp dụng ngay vào pipeline đang chạy (nếu có)
+        if (_pipeline != null)
+            _pipeline.DetectionRegion = selector.SelectedRegion;
+
+        UpdateRegionStatus();
+    }
+
+    /// <summary>Cập nhật <see cref="lblStatus"/> với thông tin vùng nhận diện hiện tại.</summary>
+    private void UpdateRegionStatus()
+    {
+        var region = AppSettings.Instance.DetectionRectangle;
+        lblStatus.Text = region.HasValue
+            ? $"Vùng: ({region.Value.X},{region.Value.Y}) {region.Value.Width}×{region.Value.Height}px"
+            : "Nhận diện toàn bộ khung hình.";
     }
 
     /// <summary>Dọn dẹp tài nguyên khi đóng form.</summary>
