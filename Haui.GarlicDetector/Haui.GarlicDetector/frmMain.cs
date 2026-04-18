@@ -8,6 +8,7 @@ public partial class frmMain : Form
 {
     private GarlicPipeline? _pipeline;
     private HsvSegmenter?   _segmenter;
+    private readonly frmSettings _frmSettings = new();
 
     public frmMain()
     {
@@ -24,9 +25,8 @@ public partial class frmMain : Form
         // Điền các tùy chọn độ phân giải vào combobox
         LoadResolutionList();
 
-        // Đăng ký sự kiện TrackBar HSV một lần duy nhất
-        // (handler tự kiểm tra null khi pipeline chưa tồn tại)
-        SubscribeHsvEvents();
+        // Đăng ký sự kiện HSV từ form cài đặt
+        _frmSettings.HsvChanged += frmSettings_HsvChanged;
     }
 
     /// <summary>Quét và điền danh sách camera khả dụng vào combobox.</summary>
@@ -68,7 +68,7 @@ public partial class frmMain : Form
         _pipeline.SegmentationCompleted += OnSegmentationCompleted;
         _pipeline.ErrorOccurred         += OnErrorOccurred;
 
-        // Đồng bộ giá trị TrackBar hiện tại vào segmenter
+        // Đồng bộ giá trị HSV hiện tại từ frmSettings vào segmenter
         SyncHsvToSegmenter();
 
         // Lấy camera và độ phân giải đã chọn
@@ -183,66 +183,43 @@ public partial class frmMain : Form
         old?.Dispose();
     }
 
-    // ─── Điều chỉnh ngưỡng HSV ───────────────────────────────────────────────
+    // ─── Cài đặt HSV ─────────────────────────────────────────────────────────
 
-    private void SubscribeHsvEvents()
+    /// <summary>Mở/ẩn form cài đặt ngưỡng HSV bên cạnh cửa sổ chính.</summary>
+    private void btnSettings_Click(object sender, EventArgs e)
     {
-        trkHMin.ValueChanged += trkHsv_ValueChanged;
-        trkHMax.ValueChanged += trkHsv_ValueChanged;
-        trkSMin.ValueChanged += trkHsv_ValueChanged;
-        trkSMax.ValueChanged += trkHsv_ValueChanged;
-        trkVMin.ValueChanged += trkHsv_ValueChanged;
-        trkVMax.ValueChanged += trkHsv_ValueChanged;
+        if (_frmSettings.Visible)
+        {
+            _frmSettings.Hide();
+            return;
+        }
+
+        // Right/Top của Form đã là tọa độ màn hình — đặt form Settings sát cạnh phải
+        _frmSettings.Location = new Point(Right + 4, Top);
+        _frmSettings.Show(this);
     }
 
-    private void UnsubscribeHsvEvents()
-    {
-        trkHMin.ValueChanged -= trkHsv_ValueChanged;
-        trkHMax.ValueChanged -= trkHsv_ValueChanged;
-        trkSMin.ValueChanged -= trkHsv_ValueChanged;
-        trkSMax.ValueChanged -= trkHsv_ValueChanged;
-        trkVMin.ValueChanged -= trkHsv_ValueChanged;
-        trkVMax.ValueChanged -= trkHsv_ValueChanged;
-    }
+    /// <summary>Nhận thông báo từ frmSettings mỗi khi giá trị HSV thay đổi.</summary>
+    private void frmSettings_HsvChanged(object? sender, EventArgs e) => SyncHsvToSegmenter();
 
-    /// <summary>
-    /// Đồng bộ giá trị TrackBar vào HsvSegmenter.
-    /// Tạm hủy sự kiện để tránh vòng lặp khi set Value từ code.
-    /// </summary>
+    /// <summary>Đồng bộ giá trị HSV từ frmSettings vào HsvSegmenter đang chạy.</summary>
     private void SyncHsvToSegmenter()
     {
         if (_segmenter == null) return;
 
-        _segmenter.HMin = trkHMin.Value;
-        _segmenter.HMax = trkHMax.Value;
-        _segmenter.SMin = trkSMin.Value;
-        _segmenter.SMax = trkSMax.Value;
-        _segmenter.VMin = trkVMin.Value;
-        _segmenter.VMax = trkVMax.Value;
-    }
-
-    /// <summary>Người dùng kéo TrackBar — cập nhật ngưỡng và nhãn hiển thị.</summary>
-    private void trkHsv_ValueChanged(object? sender, EventArgs e)
-    {
-        UpdateHsvLabels();
-        SyncHsvToSegmenter();
-    }
-
-    /// <summary>Cập nhật nhãn giá trị bên cạnh mỗi TrackBar.</summary>
-    private void UpdateHsvLabels()
-    {
-        lblHMin.Text = trkHMin.Value.ToString();
-        lblHMax.Text = trkHMax.Value.ToString();
-        lblSMin.Text = trkSMin.Value.ToString();
-        lblSMax.Text = trkSMax.Value.ToString();
-        lblVMin.Text = trkVMin.Value.ToString();
-        lblVMax.Text = trkVMax.Value.ToString();
+        _segmenter.HMin = _frmSettings.HMin;
+        _segmenter.HMax = _frmSettings.HMax;
+        _segmenter.SMin = _frmSettings.SMin;
+        _segmenter.SMax = _frmSettings.SMax;
+        _segmenter.VMin = _frmSettings.VMin;
+        _segmenter.VMax = _frmSettings.VMax;
     }
 
     /// <summary>Dọn dẹp tài nguyên khi đóng form.</summary>
     private void frmMain_FormClosing(object sender, FormClosingEventArgs e)
     {
-        UnsubscribeHsvEvents();
+        _frmSettings.HsvChanged -= frmSettings_HsvChanged;
+        _frmSettings.Dispose();
         StopPipeline();
     }
 }
