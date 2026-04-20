@@ -282,6 +282,21 @@ public partial class frmMain : Form
         _segmenter.VMax = _frmSettings.VMax;
     }
 
+    // ─── Gán nhãn tỏi ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Mở form gán nhãn tỏi.
+    /// Nếu camera đang chạy, chụp snapshot làm ảnh ban đầu; nếu không thì mở form rỗng.
+    /// </summary>
+    private void btnLabeling_Click(object sender, EventArgs e)
+    {
+        Bitmap? snapshot = _pipeline?.CaptureSnapshot()
+                        ?? (picCamera.Image is Bitmap bmp ? (Bitmap)bmp.Clone() : null);
+
+        var frm = new frmLabeling(snapshot);
+        frm.Show(this);
+    }
+
     // ─── Chọn vùng nhận diện ─────────────────────────────────────────────────
 
     /// <summary>

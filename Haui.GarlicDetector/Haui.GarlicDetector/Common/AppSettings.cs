@@ -56,6 +56,11 @@ public sealed class AppSettings
     public HsvDto? Hsv { get; set; }
 
     /// <summary>
+    /// Thư mục lưu ảnh khi gán nhãn tỏi — nhớ lại lần chọn gần nhất.
+    /// </summary>
+    public string? LabelSaveFolder { get; set; }
+
+    /// <summary>
     /// Ngưỡng circularity tối thiểu ∈ [0, 1] để một vùng được coi là tỏi hợp lệ.
     /// Vùng có circularity thấp hơn ngưỡng này sẽ không được gán nhãn.
     /// Mặc định 0.6 (vừa đủ chấp nhận tỏi oval nhẹ).
