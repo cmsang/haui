@@ -343,7 +343,7 @@ public partial class frmMain : Form
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
             _svmClassifier = null;
-            lblStatus.Text = "Chưa có model SVM — chỉ phân vùng, không phân loại.";
+            lblStatus.Text = "Chưa có model SVM — phân loại theo kích thước (Tỏi to / Tỏi nhỏ).";
             return;
         }
 
