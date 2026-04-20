@@ -43,10 +43,13 @@ partial class frmSettings
     private GroupBox      grpClassification;
     private NumericUpDown nudSizeThreshold;
     private NumericUpDown nudMinContourArea;
+    private NumericUpDown nudRoiPadding;
     private Label         lblSizeThresholdTxt;
     private Label         lblMinContourAreaTxt;
+    private Label         lblRoiPaddingTxt;
     private Label         lblSizeThresholdUnit;
     private Label         lblMinContourAreaUnit;
+    private Label         lblRoiPaddingUnit;
 
     // ─── GroupBox ngưỡng HSV phụ (tỏi hỏng) ─────────────────────────────────
     private GroupBox grpHsvDamaged;
@@ -114,10 +117,13 @@ partial class frmSettings
         grpClassification     = new GroupBox();
         nudSizeThreshold      = new NumericUpDown();
         nudMinContourArea     = new NumericUpDown();
+        nudRoiPadding         = new NumericUpDown();
         lblSizeThresholdTxt   = new Label();
         lblMinContourAreaTxt  = new Label();
+        lblRoiPaddingTxt      = new Label();
         lblSizeThresholdUnit  = new Label();
         lblMinContourAreaUnit = new Label();
+        lblRoiPaddingUnit     = new Label();
 
         grpHsvDamaged = new GroupBox();
         trkH2Min    = new TrackBar();
@@ -150,6 +156,7 @@ partial class frmSettings
         grpClassification.SuspendLayout();
         nudSizeThreshold.BeginInit();
         nudMinContourArea.BeginInit();
+        nudRoiPadding.BeginInit();
         grpHsvDamaged.SuspendLayout();
         trkH2Min.BeginInit();
         trkH2Max.BeginInit();
@@ -382,13 +389,14 @@ partial class frmSettings
         grpClassification.Name      = "grpClassification";
         grpClassification.Text      = "Phân loại kích thước";
         grpClassification.Dock      = DockStyle.Top;
-        grpClassification.Height    = 100;
+        grpClassification.Height    = 136;
         grpClassification.ForeColor = Color.White;
         grpClassification.Padding   = new Padding(10, 8, 10, 8);
         grpClassification.Controls.AddRange(new Control[]
         {
             lblSizeThresholdTxt,  nudSizeThreshold,  lblSizeThresholdUnit,
             lblMinContourAreaTxt, nudMinContourArea,  lblMinContourAreaUnit,
+            lblRoiPaddingTxt,     nudRoiPadding,      lblRoiPaddingUnit,
         });
 
         // ── Size Threshold (tỏi to ≥) ─────────────────────────────────────────
@@ -446,6 +454,34 @@ partial class frmSettings
         lblMinContourAreaUnit.Height    = 22;
         lblMinContourAreaUnit.Location  = new Point(170, 62);
         lblMinContourAreaUnit.ForeColor = Color.LightGray;
+
+        // ── ROI Padding (mở rộng khung SVM + vẽ) ────────────────────────────
+        lblRoiPaddingTxt.Name      = "lblRoiPaddingTxt";
+        lblRoiPaddingTxt.Text      = "Padding";
+        lblRoiPaddingTxt.AutoSize  = false;
+        lblRoiPaddingTxt.Width     = 52;
+        lblRoiPaddingTxt.Height    = 22;
+        lblRoiPaddingTxt.Location  = new Point(10, 98);
+        lblRoiPaddingTxt.ForeColor = Color.LightGray;
+
+        nudRoiPadding.Name          = "nudRoiPadding";
+        nudRoiPadding.Minimum       = 0;
+        nudRoiPadding.Maximum       = 100;
+        nudRoiPadding.Increment     = 5;
+        nudRoiPadding.Value         = 20;
+        nudRoiPadding.Location      = new Point(66, 96);
+        nudRoiPadding.Width         = 100;
+        nudRoiPadding.BackColor     = Color.FromArgb(45, 45, 48);
+        nudRoiPadding.ForeColor     = Color.Yellow;
+        nudRoiPadding.ValueChanged += nudClassification_ValueChanged;
+
+        lblRoiPaddingUnit.Name      = "lblRoiPaddingUnit";
+        lblRoiPaddingUnit.Text      = "px";
+        lblRoiPaddingUnit.AutoSize  = false;
+        lblRoiPaddingUnit.Width     = 28;
+        lblRoiPaddingUnit.Height    = 22;
+        lblRoiPaddingUnit.Location  = new Point(170, 98);
+        lblRoiPaddingUnit.ForeColor = Color.LightGray;
 
         // ── grpHsvDamaged ─────────────────────────────────────────────────────
         grpHsvDamaged.Name      = "grpHsvDamaged";
@@ -528,8 +564,8 @@ partial class frmSettings
         // ── Form ──────────────────────────────────────────────────────────────
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode       = AutoScaleMode.Font;
-        // Chiều cao = pnlBottom(48) + grpHsvDamaged(270) + grpClassification(100) + grpSegmentation(80) + grpHsv(270)
-        ClientSize          = new Size(274, 790);
+        // Chiều cao = pnlBottom(48) + grpHsvDamaged(270) + grpClassification(136) + grpSegmentation(80) + grpHsv(270)
+        ClientSize          = new Size(274, 826);
         FormBorderStyle     = FormBorderStyle.FixedDialog;
         MaximizeBox         = false;
         MinimizeBox         = false;
@@ -559,6 +595,7 @@ partial class frmSettings
         trkCircularity.EndInit();
         nudSizeThreshold.EndInit();
         nudMinContourArea.EndInit();
+        nudRoiPadding.EndInit();
         trkH2Min.EndInit();
         trkH2Max.EndInit();
         trkS2Min.EndInit();

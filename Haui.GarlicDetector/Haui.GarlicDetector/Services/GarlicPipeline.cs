@@ -280,12 +280,13 @@ public sealed class GarlicPipeline : IDisposable
                 {
                     try
                     {
-                        // Crop ROI BGR từ mat gốc (tọa độ local của matToProcess)
-                        var roiRect  = new Rect(
-                            Math.Clamp(r.BoundingRect.X, 0, matToProcess.Width  - 1),
-                            Math.Clamp(r.BoundingRect.Y, 0, matToProcess.Height - 1),
-                            Math.Clamp(r.BoundingRect.Width,  1, matToProcess.Width  - Math.Clamp(r.BoundingRect.X, 0, matToProcess.Width  - 1)),
-                            Math.Clamp(r.BoundingRect.Height, 1, matToProcess.Height - Math.Clamp(r.BoundingRect.Y, 0, matToProcess.Height - 1)));
+                        // Crop ROI BGR từ mat gốc — mở rộng thêm RoiPaddingPx mỗi chiều để SVM có thêm ngữ cảnh
+                        int pad = AppSettings.Instance.RoiPaddingPx;
+                        int rx = Math.Clamp(r.BoundingRect.X - pad, 0, matToProcess.Width  - 1);
+                        int ry = Math.Clamp(r.BoundingRect.Y - pad, 0, matToProcess.Height - 1);
+                        int rw = Math.Clamp(r.BoundingRect.Width  + pad * 2, 1, matToProcess.Width  - rx);
+                        int rh = Math.Clamp(r.BoundingRect.Height + pad * 2, 1, matToProcess.Height - ry);
+                        var roiRect  = new Rect(rx, ry, rw, rh);
 
                         using var cropRoi  = new Mat(matToProcess, roiRect);
                         float[]   features = _featureExtractor.Extract(cropRoi);
@@ -330,7 +331,14 @@ public sealed class GarlicPipeline : IDisposable
 
         foreach (var region in regions)
         {
-            var box = region.BoundingBox;
+            var p   = AppSettings.Instance.RoiPaddingPx;
+            var raw = region.BoundingBox;
+            // Mở rộng khung vẽ ra ngoài giống padding dùng khi crop SVM
+            var box = Rectangle.FromLTRB(
+                Math.Max(0, raw.Left   - p),
+                Math.Max(0, raw.Top    - p),
+                Math.Min(bitmap.Width,  raw.Right  + p),
+                Math.Min(bitmap.Height, raw.Bottom + p));
 
             // Chọn màu khung và nhãn text theo FinalLabel
             Color penColor;

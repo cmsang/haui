@@ -31,6 +31,9 @@ public partial class frmSettings : Form
     /// <summary>Diện tích contour tối thiểu để coi là tỏi hợp lệ (px²).</summary>
     public int MinContourArea => (int)nudMinContourArea.Value;
 
+    /// <summary>Số pixel mở rộng mỗi chiều khi crop ROI vào SVM và khi vẽ khung.</summary>
+    public int RoiPaddingPx => (int)nudRoiPadding.Value;
+
     // ─── Ngưỡng HSV phụ (tỏi hỏng) ─────────────────────────────────────────
     public int H2Min => trkH2Min.Value;
     public int H2Max => trkH2Max.Value;
@@ -68,6 +71,9 @@ public partial class frmSettings : Form
         nudMinContourArea.Value = Math.Clamp(AppSettings.Instance.MinContourArea,
                                              (int)nudMinContourArea.Minimum,
                                              (int)nudMinContourArea.Maximum);
+        nudRoiPadding.Value     = Math.Clamp(AppSettings.Instance.RoiPaddingPx,
+                                             (int)nudRoiPadding.Minimum,
+                                             (int)nudRoiPadding.Maximum);
 
         // Khôi phục ngưỡng HSV phụ (tỏi hỏng)
         var hsv2 = AppSettings.Instance.HsvDamaged ?? HsvDto.DefaultDamaged;
@@ -109,6 +115,7 @@ public partial class frmSettings : Form
         s.MinCircularity  = MinCircularity;
         s.SizeThresholdPx = SizeThresholdPx;
         s.MinContourArea  = MinContourArea;
+        s.RoiPaddingPx    = RoiPaddingPx;
         s.Save();
     }
 
@@ -150,6 +157,7 @@ public partial class frmSettings : Form
 
         nudSizeThreshold.Value  = 5_000;
         nudMinContourArea.Value = 500;
+        nudRoiPadding.Value     = 20;
 
         nudSizeThreshold.ValueChanged  += nudClassification_ValueChanged;
         nudMinContourArea.ValueChanged += nudClassification_ValueChanged;
