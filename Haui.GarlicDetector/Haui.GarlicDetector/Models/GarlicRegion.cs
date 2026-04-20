@@ -17,4 +17,10 @@ public sealed class GarlicRegion
 
     /// <summary>Thời điểm phát hiện vùng này.</summary>
     public DateTime DetectedAt { get; init; } = DateTime.Now;
+
+    /// <summary>
+    /// Nhãn phân loại cuối cùng sau 2 giai đoạn SVM + phân kích thước.
+    /// <c>null</c> khi model SVM chưa được nạp hoặc chưa phân loại.
+    /// </summary>
+    public GarlicLabel? FinalLabel { get; set; }
 }

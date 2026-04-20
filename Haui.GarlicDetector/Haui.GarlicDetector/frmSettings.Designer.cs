@@ -33,11 +33,44 @@ partial class frmSettings
     private Button btnReset;
     private Button btnClose;
 
-    // ─── GroupBox phân vùng (circularity) ───────────────────────────────────────
+    // ─── GroupBox phân vùng (circularity) ────────────────────────────────────
     private GroupBox grpSegmentation;
     private TrackBar trkCircularity;
     private Label    lblCircularity;
     private Label    lblCircularityTxt;
+
+    // ─── GroupBox phân loại kích thước ───────────────────────────────────────
+    private GroupBox      grpClassification;
+    private NumericUpDown nudSizeThreshold;
+    private NumericUpDown nudMinContourArea;
+    private Label         lblSizeThresholdTxt;
+    private Label         lblMinContourAreaTxt;
+    private Label         lblSizeThresholdUnit;
+    private Label         lblMinContourAreaUnit;
+
+    // ─── GroupBox ngưỡng HSV phụ (tỏi hỏng) ─────────────────────────────────
+    private GroupBox grpHsvDamaged;
+
+    private TrackBar trkH2Min;
+    private TrackBar trkH2Max;
+    private TrackBar trkS2Min;
+    private TrackBar trkS2Max;
+    private TrackBar trkV2Min;
+    private TrackBar trkV2Max;
+
+    private Label lblH2Min;
+    private Label lblH2Max;
+    private Label lblS2Min;
+    private Label lblS2Max;
+    private Label lblV2Min;
+    private Label lblV2Max;
+
+    private Label lblH2MinTxt;
+    private Label lblH2MaxTxt;
+    private Label lblS2MinTxt;
+    private Label lblS2MaxTxt;
+    private Label lblV2MinTxt;
+    private Label lblV2MaxTxt;
 
     protected override void Dispose(bool disposing)
     {
@@ -78,6 +111,34 @@ partial class frmSettings
         lblCircularity    = new Label();
         lblCircularityTxt = new Label();
 
+        grpClassification     = new GroupBox();
+        nudSizeThreshold      = new NumericUpDown();
+        nudMinContourArea     = new NumericUpDown();
+        lblSizeThresholdTxt   = new Label();
+        lblMinContourAreaTxt  = new Label();
+        lblSizeThresholdUnit  = new Label();
+        lblMinContourAreaUnit = new Label();
+
+        grpHsvDamaged = new GroupBox();
+        trkH2Min    = new TrackBar();
+        trkH2Max    = new TrackBar();
+        trkS2Min    = new TrackBar();
+        trkS2Max    = new TrackBar();
+        trkV2Min    = new TrackBar();
+        trkV2Max    = new TrackBar();
+        lblH2Min    = new Label();
+        lblH2Max    = new Label();
+        lblS2Min    = new Label();
+        lblS2Max    = new Label();
+        lblV2Min    = new Label();
+        lblV2Max    = new Label();
+        lblH2MinTxt = new Label();
+        lblH2MaxTxt = new Label();
+        lblS2MinTxt = new Label();
+        lblS2MaxTxt = new Label();
+        lblV2MinTxt = new Label();
+        lblV2MaxTxt = new Label();
+
         grpHsv.SuspendLayout();
         trkCircularity.BeginInit();
         trkHMin.BeginInit();
@@ -86,6 +147,16 @@ partial class frmSettings
         trkSMax.BeginInit();
         trkVMin.BeginInit();
         trkVMax.BeginInit();
+        grpClassification.SuspendLayout();
+        nudSizeThreshold.BeginInit();
+        nudMinContourArea.BeginInit();
+        grpHsvDamaged.SuspendLayout();
+        trkH2Min.BeginInit();
+        trkH2Max.BeginInit();
+        trkS2Min.BeginInit();
+        trkS2Max.BeginInit();
+        trkV2Min.BeginInit();
+        trkV2Max.BeginInit();
         pnlBottom.SuspendLayout();
         SuspendLayout();
 
@@ -307,7 +378,123 @@ partial class frmSettings
         lblCircularity.ForeColor = Color.Yellow;
         lblCircularity.TextAlign = ContentAlignment.MiddleRight;
 
-        // ── pnlBottom
+        // ── grpClassification ─────────────────────────────────────────────────
+        grpClassification.Name      = "grpClassification";
+        grpClassification.Text      = "Phân loại kích thước";
+        grpClassification.Dock      = DockStyle.Top;
+        grpClassification.Height    = 100;
+        grpClassification.ForeColor = Color.White;
+        grpClassification.Padding   = new Padding(10, 8, 10, 8);
+        grpClassification.Controls.AddRange(new Control[]
+        {
+            lblSizeThresholdTxt,  nudSizeThreshold,  lblSizeThresholdUnit,
+            lblMinContourAreaTxt, nudMinContourArea,  lblMinContourAreaUnit,
+        });
+
+        // ── Size Threshold (tỏi to ≥) ─────────────────────────────────────────
+        lblSizeThresholdTxt.Name      = "lblSizeThresholdTxt";
+        lblSizeThresholdTxt.Text      = "Tỏi to ≥";
+        lblSizeThresholdTxt.AutoSize  = false;
+        lblSizeThresholdTxt.Width     = 52;
+        lblSizeThresholdTxt.Height    = 22;
+        lblSizeThresholdTxt.Location  = new Point(10, 28);
+        lblSizeThresholdTxt.ForeColor = Color.LightGray;
+
+        nudSizeThreshold.Name          = "nudSizeThreshold";
+        nudSizeThreshold.Minimum       = 100;
+        nudSizeThreshold.Maximum       = 200_000;
+        nudSizeThreshold.Increment     = 500;
+        nudSizeThreshold.Value         = 5_000;
+        nudSizeThreshold.Location      = new Point(66, 26);
+        nudSizeThreshold.Width         = 100;
+        nudSizeThreshold.BackColor     = Color.FromArgb(45, 45, 48);
+        nudSizeThreshold.ForeColor     = Color.Yellow;
+        nudSizeThreshold.ValueChanged += nudClassification_ValueChanged;
+
+        lblSizeThresholdUnit.Name      = "lblSizeThresholdUnit";
+        lblSizeThresholdUnit.Text      = "px²";
+        lblSizeThresholdUnit.AutoSize  = false;
+        lblSizeThresholdUnit.Width     = 28;
+        lblSizeThresholdUnit.Height    = 22;
+        lblSizeThresholdUnit.Location  = new Point(170, 28);
+        lblSizeThresholdUnit.ForeColor = Color.LightGray;
+
+        // ── Min Contour Area (diện tích nhận tối thiểu) ───────────────────────
+        lblMinContourAreaTxt.Name      = "lblMinContourAreaTxt";
+        lblMinContourAreaTxt.Text      = "Nhỏ nhất ≥";
+        lblMinContourAreaTxt.AutoSize  = false;
+        lblMinContourAreaTxt.Width     = 52;
+        lblMinContourAreaTxt.Height    = 22;
+        lblMinContourAreaTxt.Location  = new Point(10, 62);
+        lblMinContourAreaTxt.ForeColor = Color.LightGray;
+
+        nudMinContourArea.Name          = "nudMinContourArea";
+        nudMinContourArea.Minimum       = 50;
+        nudMinContourArea.Maximum       = 50_000;
+        nudMinContourArea.Increment     = 100;
+        nudMinContourArea.Value         = 500;
+        nudMinContourArea.Location      = new Point(66, 60);
+        nudMinContourArea.Width         = 100;
+        nudMinContourArea.BackColor     = Color.FromArgb(45, 45, 48);
+        nudMinContourArea.ForeColor     = Color.Yellow;
+        nudMinContourArea.ValueChanged += nudClassification_ValueChanged;
+
+        lblMinContourAreaUnit.Name      = "lblMinContourAreaUnit";
+        lblMinContourAreaUnit.Text      = "px²";
+        lblMinContourAreaUnit.AutoSize  = false;
+        lblMinContourAreaUnit.Width     = 28;
+        lblMinContourAreaUnit.Height    = 22;
+        lblMinContourAreaUnit.Location  = new Point(170, 62);
+        lblMinContourAreaUnit.ForeColor = Color.LightGray;
+
+        // ── grpHsvDamaged ─────────────────────────────────────────────────────
+        grpHsvDamaged.Name      = "grpHsvDamaged";
+        grpHsvDamaged.Text      = "Ngưỡng HSV tỏi hỏng (nâu/tối)";
+        grpHsvDamaged.Dock      = DockStyle.Top;
+        grpHsvDamaged.Height    = 270;
+        grpHsvDamaged.ForeColor = Color.Salmon;
+        grpHsvDamaged.Padding   = new Padding(10, 8, 10, 8);
+        grpHsvDamaged.Controls.AddRange(new Control[]
+        {
+            lblH2MinTxt, trkH2Min, lblH2Min,
+            lblH2MaxTxt, trkH2Max, lblH2Max,
+            lblS2MinTxt, trkS2Min, lblS2Min,
+            lblS2MaxTxt, trkS2Max, lblS2Max,
+            lblV2MinTxt, trkV2Min, lblV2Min,
+            lblV2MaxTxt, trkV2Max, lblV2Max,
+        });
+
+        // H2Min
+        lblH2MinTxt.Name = "lblH2MinTxt"; lblH2MinTxt.Text = "H min"; lblH2MinTxt.AutoSize = false; lblH2MinTxt.Width = 40; lblH2MinTxt.Height = 15; lblH2MinTxt.Location = new Point(10,  22); lblH2MinTxt.ForeColor = Color.LightGray;
+        trkH2Min.Name = "trkH2Min"; trkH2Min.Minimum = 0; trkH2Min.Maximum = 179; trkH2Min.Value = 5;   trkH2Min.TickFrequency = 18; trkH2Min.Location = new Point(54,  16); trkH2Min.Width = 172; trkH2Min.AutoSize = false; trkH2Min.Height = 28; trkH2Min.ValueChanged += trkHsv_ValueChanged;
+        lblH2Min.Name = "lblH2Min"; lblH2Min.AutoSize = false; lblH2Min.Width = 28; lblH2Min.Height = 15; lblH2Min.Location = new Point(230, 22); lblH2Min.ForeColor = Color.Yellow;
+
+        // H2Max
+        lblH2MaxTxt.Name = "lblH2MaxTxt"; lblH2MaxTxt.Text = "H max"; lblH2MaxTxt.AutoSize = false; lblH2MaxTxt.Width = 40; lblH2MaxTxt.Height = 15; lblH2MaxTxt.Location = new Point(10,  58); lblH2MaxTxt.ForeColor = Color.LightGray;
+        trkH2Max.Name = "trkH2Max"; trkH2Max.Minimum = 0; trkH2Max.Maximum = 179; trkH2Max.Value = 25;  trkH2Max.TickFrequency = 18; trkH2Max.Location = new Point(54,  52); trkH2Max.Width = 172; trkH2Max.AutoSize = false; trkH2Max.Height = 28; trkH2Max.ValueChanged += trkHsv_ValueChanged;
+        lblH2Max.Name = "lblH2Max"; lblH2Max.AutoSize = false; lblH2Max.Width = 28; lblH2Max.Height = 15; lblH2Max.Location = new Point(230, 58); lblH2Max.ForeColor = Color.Yellow;
+
+        // S2Min
+        lblS2MinTxt.Name = "lblS2MinTxt"; lblS2MinTxt.Text = "S min"; lblS2MinTxt.AutoSize = false; lblS2MinTxt.Width = 40; lblS2MinTxt.Height = 15; lblS2MinTxt.Location = new Point(10,  94); lblS2MinTxt.ForeColor = Color.LightGray;
+        trkS2Min.Name = "trkS2Min"; trkS2Min.Minimum = 0; trkS2Min.Maximum = 255; trkS2Min.Value = 40;  trkS2Min.TickFrequency = 25; trkS2Min.Location = new Point(54,  88); trkS2Min.Width = 172; trkS2Min.AutoSize = false; trkS2Min.Height = 28; trkS2Min.ValueChanged += trkHsv_ValueChanged;
+        lblS2Min.Name = "lblS2Min"; lblS2Min.AutoSize = false; lblS2Min.Width = 28; lblS2Min.Height = 15; lblS2Min.Location = new Point(230, 94); lblS2Min.ForeColor = Color.Yellow;
+
+        // S2Max
+        lblS2MaxTxt.Name = "lblS2MaxTxt"; lblS2MaxTxt.Text = "S max"; lblS2MaxTxt.AutoSize = false; lblS2MaxTxt.Width = 40; lblS2MaxTxt.Height = 15; lblS2MaxTxt.Location = new Point(10, 130); lblS2MaxTxt.ForeColor = Color.LightGray;
+        trkS2Max.Name = "trkS2Max"; trkS2Max.Minimum = 0; trkS2Max.Maximum = 255; trkS2Max.Value = 255; trkS2Max.TickFrequency = 25; trkS2Max.Location = new Point(54, 124); trkS2Max.Width = 172; trkS2Max.AutoSize = false; trkS2Max.Height = 28; trkS2Max.ValueChanged += trkHsv_ValueChanged;
+        lblS2Max.Name = "lblS2Max"; lblS2Max.AutoSize = false; lblS2Max.Width = 28; lblS2Max.Height = 15; lblS2Max.Location = new Point(230, 130); lblS2Max.ForeColor = Color.Yellow;
+
+        // V2Min
+        lblV2MinTxt.Name = "lblV2MinTxt"; lblV2MinTxt.Text = "V min"; lblV2MinTxt.AutoSize = false; lblV2MinTxt.Width = 40; lblV2MinTxt.Height = 15; lblV2MinTxt.Location = new Point(10, 166); lblV2MinTxt.ForeColor = Color.LightGray;
+        trkV2Min.Name = "trkV2Min"; trkV2Min.Minimum = 0; trkV2Min.Maximum = 255; trkV2Min.Value = 50;  trkV2Min.TickFrequency = 25; trkV2Min.Location = new Point(54, 160); trkV2Min.Width = 172; trkV2Min.AutoSize = false; trkV2Min.Height = 28; trkV2Min.ValueChanged += trkHsv_ValueChanged;
+        lblV2Min.Name = "lblV2Min"; lblV2Min.AutoSize = false; lblV2Min.Width = 28; lblV2Min.Height = 15; lblV2Min.Location = new Point(230, 166); lblV2Min.ForeColor = Color.Yellow;
+
+        // V2Max
+        lblV2MaxTxt.Name = "lblV2MaxTxt"; lblV2MaxTxt.Text = "V max"; lblV2MaxTxt.AutoSize = false; lblV2MaxTxt.Width = 40; lblV2MaxTxt.Height = 15; lblV2MaxTxt.Location = new Point(10, 202); lblV2MaxTxt.ForeColor = Color.LightGray;
+        trkV2Max.Name = "trkV2Max"; trkV2Max.Minimum = 0; trkV2Max.Maximum = 255; trkV2Max.Value = 175; trkV2Max.TickFrequency = 25; trkV2Max.Location = new Point(54, 196); trkV2Max.Width = 172; trkV2Max.AutoSize = false; trkV2Max.Height = 28; trkV2Max.ValueChanged += trkHsv_ValueChanged;
+        lblV2Max.Name = "lblV2Max"; lblV2Max.AutoSize = false; lblV2Max.Width = 28; lblV2Max.Height = 15; lblV2Max.Location = new Point(230, 202); lblV2Max.ForeColor = Color.Yellow;
+
+        // ── pnlBottom ─────────────────────────────────────────────────────────
         pnlBottom.Name      = "pnlBottom";
         pnlBottom.Dock      = DockStyle.Bottom;
         pnlBottom.Height    = 48;
@@ -341,12 +528,13 @@ partial class frmSettings
         // ── Form ──────────────────────────────────────────────────────────────
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode       = AutoScaleMode.Font;
-        ClientSize          = new Size(274, 420);
+        // Chiều cao = pnlBottom(48) + grpHsvDamaged(270) + grpClassification(100) + grpSegmentation(80) + grpHsv(270)
+        ClientSize          = new Size(274, 790);
         FormBorderStyle     = FormBorderStyle.FixedDialog;
         MaximizeBox         = false;
         MinimizeBox         = false;
         Name                = "frmSettings";
-        Text                = "Cài đặt ngưỡng HSV";
+        Text                = "Cài đặt";
         StartPosition       = FormStartPosition.Manual;
         BackColor           = Color.FromArgb(30, 30, 30);
         ForeColor           = Color.White;
@@ -354,8 +542,12 @@ partial class frmSettings
         ShowInTaskbar       = false;
         Load               += frmSettings_Load;
 
+        // Dock=Top: control Add sau sẽ hiển thị phía trên — thứ tự từ trên xuống:
+        // grpHsvDamaged → grpClassification → grpSegmentation → grpHsv
         Controls.Add(grpHsv);
         Controls.Add(grpSegmentation);
+        Controls.Add(grpClassification);
+        Controls.Add(grpHsvDamaged);
         Controls.Add(pnlBottom);
 
         trkHMin.EndInit();
@@ -365,8 +557,18 @@ partial class frmSettings
         trkVMin.EndInit();
         trkVMax.EndInit();
         trkCircularity.EndInit();
+        nudSizeThreshold.EndInit();
+        nudMinContourArea.EndInit();
+        trkH2Min.EndInit();
+        trkH2Max.EndInit();
+        trkS2Min.EndInit();
+        trkS2Max.EndInit();
+        trkV2Min.EndInit();
+        trkV2Max.EndInit();
         grpHsv.ResumeLayout(false);
         grpSegmentation.ResumeLayout(false);
+        grpClassification.ResumeLayout(false);
+        grpHsvDamaged.ResumeLayout(false);
         pnlBottom.ResumeLayout(false);
         ResumeLayout(false);
         PerformLayout();

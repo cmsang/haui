@@ -13,8 +13,14 @@ public sealed record RegionDto(int X, int Y, int Width, int Height)
 /// <summary>DTO lưu ngưỡng HSV cho bộ phân vùng tỏi.</summary>
 public sealed record HsvDto(int HMin, int HMax, int SMin, int SMax, int VMin, int VMax)
 {
-    /// <summary>Giá trị mặc định cho tỏi trắng/kem.</summary>
+    /// <summary>Giá trị mặc định cho tỏi trắng/kem (bình thường).</summary>
     public static HsvDto Default => new(0, 179, 0, 60, 170, 255);
+
+    /// <summary>
+    /// Giá trị mặc định cho tỏi hỏng (nâu/tối).
+    /// H=5–25: vàng→nâu nhạt; S=40–255: đủ bão hòa; V=50–175: tối hơn tỏi lành.
+    /// </summary>
+    public static HsvDto DefaultDamaged => new(5, 25, 40, 255, 50, 175);
 }
 
 /// <summary>
@@ -56,6 +62,13 @@ public sealed class AppSettings
     public HsvDto? Hsv { get; set; }
 
     /// <summary>
+    /// Ngưỡng HSV thứ 2 dành cho tỏi hỏng (tối màu / nâu).
+    /// Mask này được OR với mask chính để bắt cả tỏi hỏng không qua được ngưỡng trắng.
+    /// <c>null</c> = dùng giá trị mặc định (<see cref="HsvDto.DefaultDamaged"/>).
+    /// </summary>
+    public HsvDto? HsvDamaged { get; set; }
+
+    /// <summary>
     /// Thư mục lưu ảnh khi gán nhãn tỏi — nhớ lại lần chọn gần nhất.
     /// </summary>
     public string? LabelSaveFolder { get; set; }
@@ -63,9 +76,25 @@ public sealed class AppSettings
     /// <summary>
     /// Ngưỡng circularity tối thiểu ∈ [0, 1] để một vùng được coi là tỏi hợp lệ.
     /// Vùng có circularity thấp hơn ngưỡng này sẽ không được gán nhãn.
-    /// Mặc định 0.6 (vừa đủ chấp nhận tỏi oval nhẹ).
+    /// Mặc định 0.4 (vừa đủ chấp nhận tỏi oval nhẹ).
     /// </summary>
     public double MinCircularity { get; set; } = 0.4;
+
+    // ─── Phân loại kích thước ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Ngưỡng diện tích (px²) phân biệt tỏi to và tỏi nhỏ.
+    /// Contour area ≥ giá trị này → Tỏi to; ngược lại → Tỏi nhỏ.
+    /// Mặc định 5000 px².
+    /// </summary>
+    public int SizeThresholdPx { get; set; } = 5_000;
+
+    /// <summary>
+    /// Diện tích contour tối thiểu (px²) để một vùng được coi là tỏi hợp lệ.
+    /// Vùng nhỏ hơn giá trị này bị loại bỏ khỏi kết quả phân vùng.
+    /// Mặc định 500 px².
+    /// </summary>
+    public int MinContourArea { get; set; } = 500;
 
     // ─── SVM / Huấn luyện ────────────────────────────────────────────────────
 
