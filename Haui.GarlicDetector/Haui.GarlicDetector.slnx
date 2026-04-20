@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path=".github/copilot-instructions.md" />
+    <File Path="GarlicImages/garlic_svm.xml" />
   </Folder>
   <Project Path="Haui.GarlicDetector/Haui.GarlicDetector.csproj" />
 </Solution>
