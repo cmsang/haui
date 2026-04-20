@@ -67,6 +67,23 @@ public sealed class AppSettings
     /// </summary>
     public double MinCircularity { get; set; } = 0.4;
 
+    // ─── SVM / Huấn luyện ────────────────────────────────────────────────────
+
+    /// <summary>Thư mục chứa ảnh đã gán nhãn dùng để huấn luyện SVM.</summary>
+    public string? TrainDataFolder { get; set; }
+
+    /// <summary>Đường dẫn đầy đủ đến file model SVM đã lưu (<c>.xml</c>).</summary>
+    public string? SvmModelPath { get; set; }
+
+    /// <summary>Tham số C (regularization) của SVM RBF. Mặc định 10.</summary>
+    public double SvmC { get; set; } = 10.0;
+
+    /// <summary>Tham số Gamma của SVM RBF. Mặc định 0.5.</summary>
+    public double SvmGamma { get; set; } = 0.5;
+
+    /// <summary>Kích thước ảnh ROI (cạnh) khi trích xuất đặc trưng. Mặc định 64.</summary>
+    public int SvmTrainImageSize { get; set; } = 64;
+
     // ─── Load / Save
 
     /// <summary>Đọc cài đặt từ <c>settings.json</c>. Trả về instance rỗng nếu file không tồn tại.</summary>

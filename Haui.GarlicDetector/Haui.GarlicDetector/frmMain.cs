@@ -297,6 +297,15 @@ public partial class frmMain : Form
         frm.Show(this);
     }
 
+    // ─── Huấn luyện SVM ──────────────────────────────────────────────────────
+
+    /// <summary>Mở form huấn luyện SVM.</summary>
+    private void btnTrainSvm_Click(object sender, EventArgs e)
+    {
+        var frm = new frmTrainSvm();
+        frm.ShowDialog(this);
+    }
+
     // ─── Chọn vùng nhận diện ─────────────────────────────────────────────────
 
     /// <summary>

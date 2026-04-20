@@ -15,6 +15,7 @@ partial class frmMain
     private Button btnSelectRegion;
     private Button btnLabeling;
     private Button btnSettings;
+    private Button btnTrainSvm;
     private Label lblStatus;
 
     // ─── Khung hiển thị ảnh camera ───────────────────────────────────────────
@@ -42,6 +43,7 @@ partial class frmMain
         btnSelectRegion = new Button();
         btnLabeling     = new Button();
         btnSettings     = new Button();
+        btnTrainSvm     = new Button();
         lblStatus     = new Label();
 
         picCamera = new PictureBox();
@@ -61,7 +63,7 @@ partial class frmMain
         {
             lblCamera, cmbCameras,
             lblResolution, cmbResolution,
-            btnStart, btnStop, btnSelectRegion, btnLabeling, btnSettings, lblStatus,
+            btnStart, btnStop, btnSelectRegion, btnLabeling, btnSettings, btnTrainSvm, lblStatus,
         });
 
         // lblCamera
@@ -157,6 +159,18 @@ partial class frmMain
         btnSettings.FlatAppearance.BorderSize = 0;
         btnSettings.Click                    += btnSettings_Click;
 
+        // btnTrainSvm
+        btnTrainSvm.Name                      = "btnTrainSvm";
+        btnTrainSvm.Text                      = "🤖 Train SVM";
+        btnTrainSvm.Width                     = 115;
+        btnTrainSvm.Height                    = 30;
+        btnTrainSvm.Location                  = new Point(1132, 11);
+        btnTrainSvm.BackColor                 = Color.FromArgb(80, 40, 120);
+        btnTrainSvm.ForeColor                 = Color.White;
+        btnTrainSvm.FlatStyle                 = FlatStyle.Flat;
+        btnTrainSvm.FlatAppearance.BorderSize = 0;
+        btnTrainSvm.Click                    += btnTrainSvm_Click;
+
         // lblStatus
         lblStatus.Name      = "lblStatus";
         lblStatus.Text      = "Sẵn sàng.";
@@ -164,7 +178,7 @@ partial class frmMain
         lblStatus.Width     = 250;
         lblStatus.Height    = 20;
         lblStatus.ForeColor = Color.LightGray;
-        lblStatus.Location  = new Point(1132, 17);
+        lblStatus.Location  = new Point(1260, 17);
 
         // ── picCamera ─────────────────────────────────────────────────────────
         picCamera.Name      = "picCamera";
