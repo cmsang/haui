@@ -2,6 +2,7 @@ using Haui.ShapesDetector.Common;
 using Haui.ShapesDetector.Models;
 using Haui.ShapesDetector.Services;
 using System.IO.Ports;
+using System.Text;
 
 namespace Haui.ShapesDetector
 {
@@ -11,6 +12,8 @@ namespace Haui.ShapesDetector
         private readonly RobotService _robotService;
         private SerialPort Robot = new SerialPort();
 
+        private readonly StringBuilder _serialBuffer = new StringBuilder();
+
         private readonly List<DetectionResult> _allDetections = new();
         private bool RobotArm_isReady = false;
         private bool RobotArm_doneS1 = false;
@@ -18,12 +21,13 @@ namespace Haui.ShapesDetector
         private bool CameraWait = false;
         private bool RobotArmWait = false;
         private string _material = string.Empty;
+        private string _oldMaterial = string.Empty;
 
         public frmMain()
         {
             InitializeComponent();
 
-            _pipeline     = new DetectionPipeline(new YoloV11DetectionService(), new CameraService());
+            _pipeline = new DetectionPipeline(new YoloV11DetectionService(), new CameraService());
             _robotService = new RobotService();
 
             SetupEventHandlers();
@@ -31,9 +35,9 @@ namespace Haui.ShapesDetector
 
         private void SetupEventHandlers()
         {
-            _pipeline.FrameReady         += OnFrameReady;
-            _pipeline.DetectionCompleted  += OnDetectionCompleted;
-            _pipeline.ErrorOccurred       += (_, msg) =>
+            _pipeline.FrameReady += OnFrameReady;
+            _pipeline.DetectionCompleted += OnDetectionCompleted;
+            _pipeline.ErrorOccurred += (_, msg) =>
             {
                 if (IsHandleCreated) BeginInvoke(() => UpdateStatus(msg, Color.Red));
             };
@@ -71,13 +75,13 @@ namespace Haui.ShapesDetector
                     return;
                 }
 
-                //if (!Robot.IsOpen)
-                //{
-                //    Robot.PortName = clsFileIO.ReadValue("COM_ROBOT");
-                //    Robot.BaudRate = int.Parse(clsFileIO.ReadValue("BAURATE_ROBOT"));
-                //    Robot.Open();
-                //    Robot.DataReceived += Robot_DataReceived;
-                //}
+                if (!Robot.IsOpen)
+                {
+                    Robot.PortName = clsFileIO.ReadValue("COM_ROBOT");
+                    Robot.BaudRate = int.Parse(clsFileIO.ReadValue("BAURATE_ROBOT"));
+                    Robot.Open();
+                    Robot.DataReceived += Robot_DataReceived;
+                }
 
                 await _pipeline.InitializeAsync(modelPath, classesPath);
 
@@ -128,17 +132,47 @@ namespace Haui.ShapesDetector
         {
             try
             {
-                if (Robot.BytesToRead > 500)
+                // Defensive checks
+                if (Robot == null || !Robot.IsOpen) return;
+
+                int bytes = Robot.BytesToRead;
+                if (bytes == 0) return;
+
+                // Guard against huge bursts
+                if (bytes > 500)
                 {
                     Robot.DiscardInBuffer();
                     return;
                 }
-                string data = Robot.ReadTo("x");
 
-                data = data.Trim();
-                RobotDataAnalys(data);
+                // Non-blocking read of whatever is available right now
+                var chunk = Robot.ReadExisting();
+                if (string.IsNullOrEmpty(chunk)) return;
 
+                // Accumulate fragment(s) into buffer
+                lock (_serialBuffer)
+                {
+                    _serialBuffer.Append(chunk);
 
+                    // Messages terminated by 'x' (as used previously with ReadTo("x"))
+                    string bufferContent = _serialBuffer.ToString();
+                    int delimIndex;
+                    while ((delimIndex = bufferContent.IndexOf('x')) >= 0)
+                    {
+                        string message = bufferContent.Substring(0, delimIndex).Trim();
+                        if (!string.IsNullOrEmpty(message))
+                        {
+                            // Marshal to UI thread for further processing
+                            if (IsHandleCreated)
+                                BeginInvoke(() => RobotDataAnalys(message));
+                            else
+                                RobotDataAnalys(message);
+                        }
+                        bufferContent = bufferContent.Substring(delimIndex + 1);
+                    }
+                    _serialBuffer.Clear();
+                    _serialBuffer.Append(bufferContent);
+                }
             }
             catch (Exception ee)
             {
@@ -207,10 +241,12 @@ namespace Haui.ShapesDetector
             if (!string.IsNullOrEmpty(_material) != null)
             {
                 string dest = string.Empty;
-                if (step == 1 && CameraWait)
+                if (step == 1 && CameraWait && _material != _oldMaterial)
                 {
                     CallConveyer("d1");
                     RobotarmControl(2);
+                    _oldMaterial = _material;
+                    CameraWait = false;
                 }
                 else if (step == 2) //gọi cánh tay đi lấy hàng
                 {
@@ -229,23 +265,23 @@ namespace Haui.ShapesDetector
                 {
                     switch (_material)
                     {
-                        case "1":
+                        case "cylinder": //trụ
                             dest = _robotService.GetRobotDest("POS1");
                             CallRobotarm(dest);
                             break;
-                        case "2":
+                        case "pentagonal_prism": //ngũ giác
                             dest = _robotService.GetRobotDest("POS2");
                             CallRobotarm(dest);
                             break;
-                        case "3":
+                        case "hexagonal_prism": //lục giác
                             dest = _robotService.GetRobotDest("POS3");
                             CallRobotarm(dest);
                             break;
-                        case "4":
+                        case "star6": //sao 6 cánh
                             dest = _robotService.GetRobotDest("POS4");
                             CallRobotarm(dest);
                             break;
-                        case "5":
+                        case "cuboid": //hình hộp chữ nhật
                             dest = _robotService.GetRobotDest("POS5");
                             CallRobotarm(dest);
                             break;
@@ -290,6 +326,11 @@ namespace Haui.ShapesDetector
                 {
                     detectionPanel.UpdateFrame(e.Frame, e.Detections);
                     UpdateResultsGrid(e.Detections);
+                    if (e.Detections.Count > 0)
+                    {
+                        _material = e.Detections[0].ClassName.ToLower().Trim();
+                        RobotarmControl(1);
+                    }
                 });
         }
 
@@ -310,13 +351,13 @@ namespace Haui.ShapesDetector
                     detection.ClassName,
                     $"{detection.Confidence:P0}",
                     detection.DetectedAt.ToString("HH:mm:ss")
-                );
+                );             
             }
         }
 
         private void UpdateStatus(string message, Color color)
         {
-            lblStatus.Text      = $"● {message}";
+            lblStatus.Text = $"● {message}";
             lblStatus.ForeColor = color;
         }
 
@@ -327,10 +368,9 @@ namespace Haui.ShapesDetector
                 MessageBox.Show("YOLO model not initialized", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-
             _pipeline.Start();
             btnStartCamera.Enabled = false;
-            btnStop.Enabled        = true;
+            btnStop.Enabled = true;
             UpdateStatus("Camera running", Color.LimeGreen);
         }
 
@@ -338,7 +378,7 @@ namespace Haui.ShapesDetector
         {
             _pipeline.Stop();
             btnStartCamera.Enabled = true;
-            btnStop.Enabled        = false;
+            btnStop.Enabled = false;
             UpdateStatus("Camera stopped", Color.Orange);
         }
 
@@ -368,7 +408,6 @@ namespace Haui.ShapesDetector
                 }
             }
         }
-
 
         private void btnSaveResults_Click(object sender, EventArgs e)
         {
@@ -411,8 +450,12 @@ namespace Haui.ShapesDetector
 
         private void btnSettings_Click(object sender, EventArgs e)
         {
-            using var frm = new frmSettings(_pipeline);
-            frm.ShowDialog(this);
+            frmRobotTurning frm = new frmRobotTurning();
+            Robot.Close();
+            if (frm.ShowDialog() == DialogResult.OK)
+            {
+                Robot.Open();
+            }
         }
 
         private void btnTest_Click(object sender, EventArgs e)

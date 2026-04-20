@@ -62,8 +62,8 @@ public class CameraService : IDisposable
             }
 
             // Set camera properties
-            _capture.Set(VideoCaptureProperties.FrameWidth, 1280);
-            _capture.Set(VideoCaptureProperties.FrameHeight, 720);
+            //_capture.Set(VideoCaptureProperties.FrameWidth, 1280);
+            //_capture.Set(VideoCaptureProperties.FrameHeight, 720);
             _capture.Set(VideoCaptureProperties.Fps, 30);
 
             _cts = new CancellationTokenSource();
