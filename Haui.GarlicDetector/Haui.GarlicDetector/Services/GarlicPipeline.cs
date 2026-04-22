@@ -1,4 +1,5 @@
 using Haui.GarlicDetector.Common;
+using Haui.GarlicDetector.ML;
 using Haui.GarlicDetector.Models;
 using Haui.GarlicDetector.Vision;
 using OpenCvSharp;
@@ -22,9 +23,11 @@ public sealed record SegmentationCompletedEventArgs(Bitmap Frame, List<GarlicReg
 /// </summary>
 public sealed class GarlicPipeline : IDisposable
 {
-    private readonly CameraService    _cameraService;
+    private readonly CameraService _cameraService;
     private readonly IImagePreprocessor _preprocessor;
-    private readonly IGarlicSegmentor   _segmenter;
+    private readonly IGarlicSegmentor _segmenter;
+    private readonly IPredictor? _predictor;
+    private readonly IFeatureExtractor? _featureExtractor;
 
     // Frame gốc mới nhất — dùng để overlay kết quả phân vùng
     private Bitmap? _latestRawFrame;
@@ -73,13 +76,17 @@ public sealed class GarlicPipeline : IDisposable
     public Rectangle? DetectionRegion { get; set; }
 
     public GarlicPipeline(
-        CameraService      cameraService,
+        CameraService cameraService,
         IImagePreprocessor preprocessor,
-        IGarlicSegmentor   segmenter)
+        IGarlicSegmentor segmenter,
+        IPredictor? predictor = null,
+        IFeatureExtractor? featureExtractor = null)
     {
         _cameraService = cameraService;
-        _preprocessor  = preprocessor;
-        _segmenter     = segmenter;
+        _preprocessor = preprocessor;
+        _segmenter = segmenter;
+        _predictor = predictor;
+        _featureExtractor = featureExtractor;
 
         // Đăng ký sự kiện từ camera service
         _cameraService.FrameCaptured += OnFrameCaptured;
@@ -121,13 +128,13 @@ public sealed class GarlicPipeline : IDisposable
     private void OnFrameCaptured(object? sender, Bitmap bitmap)
     {
         // Tạo hai bản clone độc lập: rawClone (hiển thị) và pendingClone (phân vùng)
-        var rawClone     = (Bitmap)bitmap.Clone();
+        var rawClone = (Bitmap)bitmap.Clone();
         var pendingClone = (Bitmap)bitmap.Clone();
         Bitmap? oldRaw;
 
         lock (_frameLock)
         {
-            oldRaw          = _latestRawFrame;
+            oldRaw = _latestRawFrame;
             _latestRawFrame = rawClone;
 
             // Loại bỏ frame cũ đang chờ — thay bằng frame mới hơn
@@ -154,7 +161,7 @@ public sealed class GarlicPipeline : IDisposable
                 Bitmap? frame;
                 lock (_frameLock)
                 {
-                    frame         = _pendingFrame;
+                    frame = _pendingFrame;
                     _pendingFrame = null;
                 }
 
@@ -174,7 +181,7 @@ public sealed class GarlicPipeline : IDisposable
                 try
                 {
                     // Snapshot DetectionRegion để tránh thay đổi giữa chừng
-                    var region  = DetectionRegion;
+                    var region = DetectionRegion;
 
                     // Chạy phân vùng HSV trên thread-pool
                     var regions = await Task.Run(() => SegmentFrame(frame, region));
@@ -219,28 +226,28 @@ public sealed class GarlicPipeline : IDisposable
     {
         using var bgrMat = BitmapConverter.ToMat(bitmap);
 
-        int  offsetX     = 0;
-        int  offsetY     = 0;
-        Mat  matToProcess;
-        Mat? roiMat      = null;
+        int offsetX = 0;
+        int offsetY = 0;
+        Mat matToProcess;
+        Mat? roiMat = null;
 
         if (detectionRegion.HasValue)
         {
             var dr = detectionRegion.Value;
 
             // Clamp vùng vào kích thước frame thực tế
-            int x = Math.Clamp(dr.X,      0, bgrMat.Width  - 1);
-            int y = Math.Clamp(dr.Y,      0, bgrMat.Height - 1);
-            int w = Math.Clamp(dr.Width,  1, bgrMat.Width  - x);
+            int x = Math.Clamp(dr.X, 0, bgrMat.Width - 1);
+            int y = Math.Clamp(dr.Y, 0, bgrMat.Height - 1);
+            int w = Math.Clamp(dr.Width, 1, bgrMat.Width - x);
             int h = Math.Clamp(dr.Height, 1, bgrMat.Height - y);
 
             // Bỏ qua ROI quá nhỏ để tránh lỗi OpenCV (kernel > image)
             if (w < 20 || h < 20) return [];
 
-            roiMat       = new Mat(bgrMat, new Rect(x, y, w, h));
+            roiMat = new Mat(bgrMat, new Rect(x, y, w, h));
             matToProcess = roiMat;
-            offsetX      = x;
-            offsetY      = y;
+            offsetX = x;
+            offsetY = y;
         }
         else
         {
@@ -250,20 +257,48 @@ public sealed class GarlicPipeline : IDisposable
         try
         {
             using var preprocessedMat = _preprocessor.Preprocess(matToProcess);
-            var segmentResults        = _segmenter.Segment(preprocessedMat);
+            var segmentResults = _segmenter.Segment(preprocessedMat);
 
-            return segmentResults.Select(r => new GarlicRegion
+            var regions = new List<GarlicRegion>(segmentResults.Count);
+            foreach (var r in segmentResults)
             {
-                // Cộng offset để bounding box luôn ở tọa độ frame gốc
-                BoundingBox = new Rectangle(
-                    r.BoundingRect.X + offsetX,
-                    r.BoundingRect.Y + offsetY,
-                    r.BoundingRect.Width,
-                    r.BoundingRect.Height),
-                Area        = r.Area,
-                Circularity = r.Circularity,
-                DetectedAt  = DateTime.Now,
-            }).ToList();
+                var region = new GarlicRegion
+                {
+                    // Cộng offset để bounding box luôn ở tọa độ frame gốc
+                    BoundingBox = new Rectangle(
+                        r.BoundingRect.X + offsetX,
+                        r.BoundingRect.Y + offsetY,
+                        r.BoundingRect.Width,
+                        r.BoundingRect.Height),
+                    Area = r.Area,
+                    Circularity = r.Circularity,
+                    DetectedAt = DateTime.Now,
+                };
+
+                // ── Stage 1: SVM phân loại bình thường / hỏng ────────────────
+                // Crop ROI BGR từ mat gốc — mở rộng thêm RoiPaddingPx mỗi chiều để SVM có thêm ngữ cảnh
+                int pad = AppSettings.Instance.RoiPaddingPx;
+                int rx = Math.Clamp(r.BoundingRect.X - pad, 0, matToProcess.Width - 1);
+                int ry = Math.Clamp(r.BoundingRect.Y - pad, 0, matToProcess.Height - 1);
+                int rw = Math.Clamp(r.BoundingRect.Width + pad * 2, 1, matToProcess.Width - rx);
+                int rh = Math.Clamp(r.BoundingRect.Height + pad * 2, 1, matToProcess.Height - ry);
+                var roiRect = new Rect(rx, ry, rw, rh);
+
+                using var cropRoi = new Mat(matToProcess, roiRect);
+                float[] features = _featureExtractor.Extract(cropRoi);
+                int svmLabel = _predictor.Predict(features);
+
+                // ── Stage 2: phân kích thước (chỉ khi bình thường) ───
+                region.FinalLabel = svmLabel == 1
+                    ? GarlicLabel.ToHong
+                    : (r.Area >= AppSettings.Instance.SizeThresholdPx
+                        ? GarlicLabel.ToTo
+                        : GarlicLabel.ToNho);
+
+                regions.Add(region);
+            }
+
+            return regions;
         }
         finally
         {
@@ -272,35 +307,71 @@ public sealed class GarlicPipeline : IDisposable
     }
 
     /// <summary>
-    /// Vẽ bounding box vàng + nhãn thông tin từng vùng tỏi lên bitmap (in-place).
+    /// Vẽ bounding box màu theo nhãn phân loại + text nhãn lên bitmap (in-place).<br/>
+    /// • Tỏi to   → khung xanh lá<br/>
+    /// • Tỏi nhỏ  → khung vàng<br/>
+    /// • Tỏi hỏng → khung đỏ<br/>
+    /// • Chưa phân loại (null) → khung trắng (model chưa nạp)<br/>
     /// Viền vùng nhận diện được vẽ riêng qua <c>PicCamera_Paint</c> trên UI thread.
     /// </summary>
     public static void DrawRegions(Bitmap bitmap, List<GarlicRegion> regions)
     {
-        using var g   = Graphics.FromImage(bitmap);
-        using var pen = new Pen(Color.Yellow, 2);
+        using var g = Graphics.FromImage(bitmap);
+        var font = SystemFonts.SmallCaptionFont ?? SystemFonts.DefaultFont;
 
-        // Vẽ bounding box từng vùng tỏi
         foreach (var region in regions)
         {
-            var box = region.BoundingBox;
+            var p = AppSettings.Instance.RoiPaddingPx;
+            var raw = region.BoundingBox;
+            // Mở rộng khung vẽ ra ngoài giống padding dùng khi crop SVM
+            var box = Rectangle.FromLTRB(
+                Math.Max(0, raw.Left - p),
+                Math.Max(0, raw.Top - p),
+                Math.Min(bitmap.Width, raw.Right + p),
+                Math.Min(bitmap.Height, raw.Bottom + p));
+
+            // Chọn màu khung và nhãn text theo FinalLabel
+            Color penColor;
+            string labelText;
+
+            switch (region.FinalLabel)
+            {
+                case GarlicLabel.ToTo:
+                    penColor = Color.LimeGreen;
+                    labelText = "Tỏi to";
+                    break;
+                case GarlicLabel.ToNho:
+                    penColor = Color.Yellow;
+                    labelText = "Tỏi nhỏ";
+                    break;
+                case GarlicLabel.ToHong:
+                    penColor = Color.Red;
+                    labelText = "Tỏi hỏng";
+                    break;
+                default:
+                    // Model SVM chưa được nạp — vẽ khung trắng, hiện diện tích
+                    penColor = Color.White;
+                    labelText = $"A:{region.Area:N0}px²";
+                    break;
+            }
+
+            using var pen = new Pen(penColor, 2);
             g.DrawRectangle(pen, box);
 
-            // Vùng có circularity thấp hơn ngưỡng cài đặt — chỉ vẽ khung, không gán nhãn
+            // Bỏ qua nhãn text nếu circularity quá thấp
             if (region.Circularity < AppSettings.Instance.MinCircularity) continue;
 
-            string label    = $"Tỏi | A: {region.Area:N0}px²  C: {region.Circularity:F2}";
-            var    font     = SystemFonts.SmallCaptionFont ?? SystemFonts.DefaultFont;
-            var    textSize = g.MeasureString(label, font);
-            var    labelRect = new RectangleF(
+            var textSize = g.MeasureString(labelText, font);
+            var labelRect = new RectangleF(
                 box.X, box.Y - textSize.Height,
                 textSize.Width + 4, textSize.Height);
 
             if (labelRect.Y < 0) labelRect.Y = box.Y;
 
-            using var bgBrush = new SolidBrush(Color.FromArgb(140, Color.Black));
+            using var bgBrush = new SolidBrush(Color.FromArgb(160, Color.Black));
+            using var textBrush = new SolidBrush(penColor);
             g.FillRectangle(bgBrush, labelRect);
-            g.DrawString(label, font, Brushes.Yellow, labelRect.Location);
+            g.DrawString(labelText, font, textBrush, labelRect.Location);
         }
     }
 
@@ -316,7 +387,7 @@ public sealed class GarlicPipeline : IDisposable
             _latestRawFrame?.Dispose();
             _pendingFrame?.Dispose();
             _latestRawFrame = null;
-            _pendingFrame   = null;
+            _pendingFrame = null;
         }
     }
 }

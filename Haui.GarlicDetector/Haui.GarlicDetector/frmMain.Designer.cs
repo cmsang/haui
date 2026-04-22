@@ -13,7 +13,9 @@ partial class frmMain
     private Button btnStart;
     private Button btnStop;
     private Button btnSelectRegion;
+    private Button btnLabeling;
     private Button btnSettings;
+    private Button btnTrainSvm;
     private Label lblStatus;
 
     // ─── Khung hiển thị ảnh camera ───────────────────────────────────────────
@@ -39,7 +41,9 @@ partial class frmMain
         btnStart      = new Button();
         btnStop       = new Button();
         btnSelectRegion = new Button();
-        btnSettings   = new Button();
+        btnLabeling     = new Button();
+        btnSettings     = new Button();
+        btnTrainSvm     = new Button();
         lblStatus     = new Label();
 
         picCamera = new PictureBox();
@@ -59,7 +63,7 @@ partial class frmMain
         {
             lblCamera, cmbCameras,
             lblResolution, cmbResolution,
-            btnStart, btnStop, btnSelectRegion, btnSettings, lblStatus,
+            btnStart, btnStop, btnSelectRegion, btnLabeling, btnSettings, btnTrainSvm, lblStatus,
         });
 
         // lblCamera
@@ -131,17 +135,41 @@ partial class frmMain
         btnSelectRegion.FlatAppearance.BorderSize = 0;
         btnSelectRegion.Click                    += btnSelectRegion_Click;
 
+        // btnLabeling
+        btnLabeling.Name                      = "btnLabeling";
+        btnLabeling.Text                      = "🏷 Gán nhãn";
+        btnLabeling.Width                     = 110;
+        btnLabeling.Height                    = 30;
+        btnLabeling.Location                  = new Point(898, 11);
+        btnLabeling.BackColor                 = Color.FromArgb(120, 80, 0);
+        btnLabeling.ForeColor                 = Color.White;
+        btnLabeling.FlatStyle                 = FlatStyle.Flat;
+        btnLabeling.FlatAppearance.BorderSize = 0;
+        btnLabeling.Click                    += btnLabeling_Click;
+
         // btnSettings
         btnSettings.Name                      = "btnSettings";
         btnSettings.Text                      = "⚙ Cài đặt";
         btnSettings.Width                     = 100;
         btnSettings.Height                    = 30;
-        btnSettings.Location                  = new Point(898, 11);
+        btnSettings.Location                  = new Point(1020, 11);
         btnSettings.BackColor                 = Color.FromArgb(60, 60, 60);
         btnSettings.ForeColor                 = Color.White;
         btnSettings.FlatStyle                 = FlatStyle.Flat;
         btnSettings.FlatAppearance.BorderSize = 0;
         btnSettings.Click                    += btnSettings_Click;
+
+        // btnTrainSvm
+        btnTrainSvm.Name                      = "btnTrainSvm";
+        btnTrainSvm.Text                      = "🤖 Train SVM";
+        btnTrainSvm.Width                     = 115;
+        btnTrainSvm.Height                    = 30;
+        btnTrainSvm.Location                  = new Point(1132, 11);
+        btnTrainSvm.BackColor                 = Color.FromArgb(80, 40, 120);
+        btnTrainSvm.ForeColor                 = Color.White;
+        btnTrainSvm.FlatStyle                 = FlatStyle.Flat;
+        btnTrainSvm.FlatAppearance.BorderSize = 0;
+        btnTrainSvm.Click                    += btnTrainSvm_Click;
 
         // lblStatus
         lblStatus.Name      = "lblStatus";
@@ -150,7 +178,7 @@ partial class frmMain
         lblStatus.Width     = 250;
         lblStatus.Height    = 20;
         lblStatus.ForeColor = Color.LightGray;
-        lblStatus.Location  = new Point(1010, 17);
+        lblStatus.Location  = new Point(1260, 17);
 
         // ── picCamera ─────────────────────────────────────────────────────────
         picCamera.Name      = "picCamera";

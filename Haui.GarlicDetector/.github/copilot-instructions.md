@@ -2,7 +2,11 @@
 
 ## Project Context
 This is a C# WinForms application for **garlic quality detection** using Support Vector Machine (SVM).  
-The system segments garlic bulbs from images and classifies each detected bulb into one of three categories:
+The system segments garlic bulbs from images and classifies each detected bulb using a **two-stage pipeline**:
+1. **SVM** classifies whether a bulb is **tỏi bình thường** (normal) or **tỏi hỏng** (damaged)
+2. If the bulb is **normal**, its **pixel size (contour area / bounding box)** determines whether it is **tỏi to** (large) or **tỏi nhỏ** (small)
+
+Final output labels:
 - **Tỏi to** (Large garlic) — label `0`
 - **Tỏi nhỏ** (Small garlic) — label `1`
 - **Tỏi hỏng** (Damaged/defective garlic) — label `2`
@@ -16,19 +20,37 @@ The system segments garlic bulbs from images and classifies each detected bulb i
 - UI: Windows Forms (`UseWindowsForms`)
 
 ## Domain Knowledge — Garlic Classification
-- **Tỏi to (Large)**: large contour area, roughly circular/oval shape, uniform bright color (whitish/cream)
-- **Tỏi nhỏ (Small)**: small contour area, similar shape to large but smaller bounding box
-- **Tỏi hỏng (Damaged)**: irregular shape, dark spots, discoloration, shriveled or broken appearance
-- Segmentation should isolate individual garlic bulbs from background using HSV/Lab color thresholding + morphological operations
-- Size classification is based on contour area or bounding box dimensions relative to a calibrated threshold
-- Damage detection relies on texture irregularity (HOG), color anomaly (dark/brown regions), and shape deformation
+
+### Stage 1 — SVM: Normal vs Damaged
+- **SVM input features per ROI**: HOG descriptor (texture), Hu Moments (shape), mean & stddev color in HSV (color health)
+- **Tỏi bình thường (Normal)**: regular shape, uniform bright/cream color, smooth texture → SVM label `0`
+- **Tỏi hỏng (Damaged)**: irregular shape, dark/brown spots, discoloration, shriveled or broken → SVM label `1`
+- Damage detection relies on texture irregularity (HOG), color anomaly (dark/brown regions in HSV), and shape deformation (Hu Moments)
+
+### Stage 2 — Size Rule: Large vs Small (normal bulbs only)
+- After SVM confirms a bulb is **normal**, apply a pixel-area threshold on the contour area (or bounding box dimensions)
+- **Tỏi to (Large)**: contour area ≥ `SIZE_THRESHOLD_PX` → final label `0`
+- **Tỏi nhỏ (Small)**: contour area < `SIZE_THRESHOLD_PX` → final label `1`
+- `SIZE_THRESHOLD_PX` is a calibrated `const` (e.g. `5000` px²), adjustable per camera/setup
+
+### Segmentation
+- Isolate individual garlic bulbs from background using HSV/Lab color thresholding + morphological open/close operations
+- Each contour that passes the minimum area filter is treated as one garlic ROI
 
 ## Classification Labels
-| Label | Vietnamese | Description |
-|-------|-----------|-------------|
-| `0`   | Tỏi to    | Large garlic bulb |
-| `1`   | Tỏi nhỏ   | Small garlic bulb |
-| `2`   | Tỏi hỏng  | Damaged / defective garlic bulb |
+
+### SVM output (Stage 1)
+| SVM Label | Meaning | Description |
+|-----------|---------|-------------|
+| `0` | Tỏi bình thường | Normal garlic bulb (proceed to Stage 2) |
+| `1` | Tỏi hỏng | Damaged / defective garlic bulb (final) |
+
+### Final output labels (after Stage 2 size check)
+| Final Label | Vietnamese | Description |
+|-------------|-----------|-------------|
+| `0` | Tỏi to | Large normal garlic bulb (area ≥ threshold) |
+| `1` | Tỏi nhỏ | Small normal garlic bulb (area < threshold) |
+| `2` | Tỏi hỏng | Damaged / defective garlic bulb |
 
 ## Architecture Principles (SOLID)
 Follow SOLID principles strictly when generating code:
@@ -76,13 +98,18 @@ Follow SOLID principles strictly when generating code:
 1. **Input**: raw image (from file or camera)
 2. **Preprocessing**: convert to HSV/Lab, resize, normalize
 3. **Segmentation**: HSV/Lab threshold → binary mask → morphological open/close → find contours → extract each garlic ROI
-4. **Feature extraction per ROI**:
+4. **Feature extraction per ROI** (inputs to SVM):
    - HOG descriptor (texture)
    - Hu Moments (shape)
-   - Contour area & perimeter (size)
    - Mean color and standard deviation in HSV (color health)
-5. **Classification**: SVM (RBF kernel) predicts label `0` (tỏi to), `1` (tỏi nhỏ), or `2` (tỏi hỏng)
-6. **Output**: annotated image with bounding boxes labeled as "Tỏi to", "Tỏi nhỏ", or "Tỏi hỏng"
+5. **Stage 1 — SVM classification** (RBF kernel):
+   - Predicts `0` = tỏi bình thường (normal) or `1` = tỏi hỏng (damaged)
+   - If damaged → assign final label `2` (Tỏi hỏng), skip Stage 2
+6. **Stage 2 — Size-based classification** (normal bulbs only):
+   - Compute contour area (px²) from the segmented ROI
+   - If area ≥ `SIZE_THRESHOLD_PX` → final label `0` (Tỏi to)
+   - If area < `SIZE_THRESHOLD_PX` → final label `1` (Tỏi nhỏ)
+7. **Output**: annotated image with bounding boxes labeled as "Tỏi to", "Tỏi nhỏ", or "Tỏi hỏng"
 - Avoid blocking UI thread
 
 ## Expected Structure
@@ -99,8 +126,13 @@ Follow SOLID principles strictly when generating code:
   - `SvmClassifier` — SVM train/predict with labels 0, 1, 2
 
 - Models / DTOs:
-  - `GarlicRegion` — holds contour, bounding rect, ROI Mat, and predicted label
+  - `GarlicRegion` — holds contour, bounding rect, ROI Mat, contour area (px²), SVM prediction, and final label
   - `GarlicLabel` enum: `ToTo = 0`, `ToNho = 1`, `ToHong = 2`
+  - `SvmLabel` enum: `BinhThuong = 0`, `Hong = 1` (internal, Stage 1 only)
+
+- Constants (in `GarlicConstants` static class):
+  - `SIZE_THRESHOLD_PX` — pixel area threshold separating tỏi to from tỏi nhỏ (default `5000`)
+  - `MIN_CONTOUR_AREA` — minimum contour area to be considered a garlic bulb (default `500`)
 
 ## Code Style
 - PascalCase for public methods

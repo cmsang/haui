@@ -1,4 +1,5 @@
 using Haui.GarlicDetector.Common;
+using Haui.GarlicDetector.ML;
 using Haui.GarlicDetector.Models;
 using Haui.GarlicDetector.Services;
 using Haui.GarlicDetector.Vision;
@@ -7,8 +8,9 @@ namespace Haui.GarlicDetector;
 
 public partial class frmMain : Form
 {
-    private GarlicPipeline? _pipeline;
-    private HsvSegmenter?   _segmenter;
+    private GarlicPipeline?    _pipeline;
+    private HsvSegmenter?      _segmenter;
+    private SvmClassifier?     _svmClassifier;
     private readonly frmSettings _frmSettings = new();
 
     public frmMain()
@@ -31,6 +33,9 @@ public partial class frmMain : Form
 
         // Đăng ký Paint overlay cho vùng nhận diện
         picCamera.Paint += PicCamera_Paint;
+
+        // Nạp model SVM nếu đã có đường dẫn trong settings
+        LoadSvmModel();
 
         // Hiển thị trạng thái vùng nhận diện đã lưu
         UpdateRegionStatus();
@@ -65,10 +70,19 @@ public partial class frmMain : Form
     {
         if (_pipeline != null) return;
 
-        var camService  = new CameraService();
-        _segmenter      = new HsvSegmenter();
+        var camService   = new CameraService();
+        _segmenter       = new HsvSegmenter();
         var preprocessor = new HsvGarlicPreprocessor();
-        _pipeline       = new GarlicPipeline(camService, preprocessor, _segmenter);
+
+        // Khởi tạo feature extractor với kích thước ảnh đã lưu trong settings
+        var featureExtractor = new GarlicFeatureExtractor(AppSettings.Instance.SvmTrainImageSize);
+
+        _pipeline = new GarlicPipeline(
+            camService,
+            preprocessor,
+            _segmenter,
+            _svmClassifier,
+            featureExtractor);
 
         // Đăng ký sự kiện từ pipeline
         _pipeline.FrameReady            += OnFrameReady;
@@ -269,17 +283,81 @@ public partial class frmMain : Form
     /// <summary>Nhận thông báo từ frmSettings mỗi khi giá trị HSV thay đổi.</summary>
     private void frmSettings_HsvChanged(object? sender, EventArgs e) => SyncHsvToSegmenter();
 
-    /// <summary>Đồng bộ giá trị HSV từ frmSettings vào HsvSegmenter đang chạy.</summary>
+    /// <summary>Đồng bộ giá trị HSV (cả 2 ngưỡng) từ frmSettings vào HsvSegmenter đang chạy.</summary>
     private void SyncHsvToSegmenter()
     {
         if (_segmenter == null) return;
 
-        _segmenter.HMin = _frmSettings.HMin;
-        _segmenter.HMax = _frmSettings.HMax;
-        _segmenter.SMin = _frmSettings.SMin;
-        _segmenter.SMax = _frmSettings.SMax;
-        _segmenter.VMin = _frmSettings.VMin;
-        _segmenter.VMax = _frmSettings.VMax;
+        // Ngưỡng chính — tỏi trắng / bình thường
+        _segmenter.HMin  = _frmSettings.HMin;
+        _segmenter.HMax  = _frmSettings.HMax;
+        _segmenter.SMin  = _frmSettings.SMin;
+        _segmenter.SMax  = _frmSettings.SMax;
+        _segmenter.VMin  = _frmSettings.VMin;
+        _segmenter.VMax  = _frmSettings.VMax;
+
+        // Ngưỡng phụ — tỏi hỏng / nâu / tối
+        _segmenter.H2Min = _frmSettings.H2Min;
+        _segmenter.H2Max = _frmSettings.H2Max;
+        _segmenter.S2Min = _frmSettings.S2Min;
+        _segmenter.S2Max = _frmSettings.S2Max;
+        _segmenter.V2Min = _frmSettings.V2Min;
+        _segmenter.V2Max = _frmSettings.V2Max;
+    }
+
+    // ─── Gán nhãn tỏi ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Mở form gán nhãn tỏi.
+    /// Nếu camera đang chạy, chụp snapshot làm ảnh ban đầu; nếu không thì mở form rỗng.
+    /// </summary>
+    private void btnLabeling_Click(object sender, EventArgs e)
+    {
+        Bitmap? snapshot = _pipeline?.CaptureSnapshot()
+                        ?? (picCamera.Image is Bitmap bmp ? (Bitmap)bmp.Clone() : null);
+
+        var frm = new frmLabeling(snapshot);
+        frm.Show(this);
+    }
+
+    // ─── Huấn luyện SVM ──────────────────────────────────────────────────────
+
+    /// <summary>Mở form huấn luyện SVM.</summary>
+    private void btnTrainSvm_Click(object sender, EventArgs e)
+    {
+        var frm = new frmTrainSvm();
+        frm.ShowDialog(this);
+
+        // Sau khi train xong, tự động thử nạp lại model (path có thể vừa được cập nhật)
+        LoadSvmModel();
+    }
+
+    /// <summary>
+    /// Nạp model SVM từ đường dẫn đã lưu trong <see cref="AppSettings.SvmModelPath"/>.
+    /// Hiển thị trạng thái lên <c>lblStatus</c>.
+    /// </summary>
+    private void LoadSvmModel()
+    {
+        var path = AppSettings.Instance.SvmModelPath;
+
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            _svmClassifier = null;
+            lblStatus.Text = "Chưa có model SVM — phân loại theo kích thước (Tỏi to / Tỏi nhỏ).";
+            return;
+        }
+
+        try
+        {
+            _svmClassifier ??= new SvmClassifier();
+            _svmClassifier.Load(path);
+            lblStatus.Text = $"Model SVM đã nạp ✓  ({Path.GetFileName(path)})";
+        }
+        catch (Exception ex)
+        {
+            _svmClassifier = null;
+            lblStatus.Text = $"Lỗi nạp model SVM: {ex.Message}";
+        }
     }
 
     // ─── Chọn vùng nhận diện ─────────────────────────────────────────────────
@@ -339,5 +417,6 @@ public partial class frmMain : Form
         _frmSettings.HsvChanged -= frmSettings_HsvChanged;
         _frmSettings.Dispose();
         StopPipeline();
+        _svmClassifier?.Dispose();
     }
 }

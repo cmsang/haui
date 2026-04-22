@@ -1,3 +1,4 @@
+using Haui.GarlicDetector.Common;
 using Haui.GarlicDetector.Models;
 using OpenCvSharp;
 
@@ -5,12 +6,17 @@ namespace Haui.GarlicDetector.Vision;
 
 /// <summary>
 /// Thuật toán phân vùng màu sắc theo không gian màu HSV để phát hiện tỏi.
-/// Quy trình: lọc ngưỡng HSV → hình thái học (mở + đóng) → tìm contour.
+/// Dùng <b>2 ngưỡng HSV song song</b>:
+/// <list type="bullet">
+///   <item>Ngưỡng chính  — tỏi trắng/kem (bình thường)</item>
+///   <item>Ngưỡng phụ   — tỏi nâu/tối  (hỏng)</item>
+/// </list>
+/// Hai mask được OR lại → segmenter bắt được cả hai loại → SVM phân loại tiếp.
 /// Nhận frame đã được tiền xử lý (HSV) từ <see cref="IImagePreprocessor"/>.
 /// </summary>
 public sealed class HsvSegmenter : IGarlicSegmentor
 {
-    // ─── Ngưỡng HSV ──────────────────────────────────────────────────────────
+    // ─── Ngưỡng HSV chính (tỏi trắng / bình thường) ─────────────────────────
 
     /// <summary>Ngưỡng Hue tối thiểu (0–179).</summary>
     public int HMin { get; set; } = 0;
@@ -27,21 +33,38 @@ public sealed class HsvSegmenter : IGarlicSegmentor
 
     /// <summary>
     /// Ngưỡng Saturation tối đa (0–255).
-    /// Giữ thấp (≤ 60) để chỉ bắt màu trắng/kem có sắc yếu, loại nền màu sắc mạnh.
+    /// Giữ thấp (≤ 60) để chỉ bắt màu trắng/kem có sắc yếu.
     /// </summary>
     public int SMax { get; set; } = 60;
 
     /// <summary>
     /// Ngưỡng Value tối thiểu (0–255).
-    /// Tỏi trắng sáng → V cao; đặt 170 để loại bóng tối và tỏi hỏng tối màu.
+    /// Tỏi trắng sáng → V cao; đặt 170 để loại bóng tối.
     /// </summary>
     public int VMin { get; set; } = 170;
 
     /// <summary>Ngưỡng Value tối đa (0–255).</summary>
     public int VMax { get; set; } = 255;
 
-    /// <summary>Diện tích tối thiểu (pixel²) để vùng được coi là tỏi hợp lệ.</summary>
-    public double MinArea { get; set; } = 800;
+    // ─── Ngưỡng HSV phụ (tỏi hỏng / nâu / tối) ──────────────────────────────
+
+    /// <summary>Hue tối thiểu của ngưỡng tỏi hỏng.</summary>
+    public int H2Min { get; set; } = 5;
+
+    /// <summary>Hue tối đa của ngưỡng tỏi hỏng.</summary>
+    public int H2Max { get; set; } = 25;
+
+    /// <summary>Saturation tối thiểu của ngưỡng tỏi hỏng.</summary>
+    public int S2Min { get; set; } = 40;
+
+    /// <summary>Saturation tối đa của ngưỡng tỏi hỏng.</summary>
+    public int S2Max { get; set; } = 255;
+
+    /// <summary>Value tối thiểu của ngưỡng tỏi hỏng.</summary>
+    public int V2Min { get; set; } = 50;
+
+    /// <summary>Value tối đa của ngưỡng tỏi hỏng.</summary>
+    public int V2Max { get; set; } = 175;
 
     // ─── Phân vùng ───────────────────────────────────────────────────────────
 
@@ -82,13 +105,25 @@ public sealed class HsvSegmenter : IGarlicSegmentor
     /// </returns>
     public List<GarlicSegmentResult> Segment(Mat preprocessedFrame)
     {
-        // Bước 1: Lọc các pixel nằm trong ngưỡng HSV chỉ định
-        using var mask = new Mat();
+        // Bước 1: Mask chính — tỏi trắng/kem (bình thường)
+        using var maskNormal = new Mat();
         Cv2.InRange(
             preprocessedFrame,
-            new Scalar(HMin, SMin, VMin),
-            new Scalar(HMax, SMax, VMax),
-            mask);
+            new Scalar(HMin,  SMin,  VMin),
+            new Scalar(HMax,  SMax,  VMax),
+            maskNormal);
+
+        // Bước 1b: Mask phụ — tỏi hỏng (nâu/tối)
+        // OR với mask chính để bắt được cả tỏi hỏng bị lọc ra bởi ngưỡng trắng
+        using var maskDamaged = new Mat();
+        Cv2.InRange(
+            preprocessedFrame,
+            new Scalar(H2Min, S2Min, V2Min),
+            new Scalar(H2Max, S2Max, V2Max),
+            maskDamaged);
+
+        using var mask = new Mat();
+        Cv2.BitwiseOr(maskNormal, maskDamaged, mask);
 
         // Bước 2: Hình thái học
         using var kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new OpenCvSharp.Size(7, 7));
@@ -106,11 +141,12 @@ public sealed class HsvSegmenter : IGarlicSegmentor
             ContourApproximationModes.ApproxNone);
 
         // Bước 4: Lọc theo diện tích và tính circularity kết hợp
-        var results = new List<GarlicSegmentResult>();
+        var results  = new List<GarlicSegmentResult>();
+        double minArea = AppSettings.Instance.MinContourArea;
         foreach (var contour in contours)
         {
             double area = Cv2.ContourArea(contour);
-            if (area < MinArea) continue;
+            if (area < minArea) continue;
 
             // ── Chỉ số 1: Isoperimetric circularity = 4π·A / P² ──────────────
             // Đo mức độ mượt và tròn của BIÊN contour.
