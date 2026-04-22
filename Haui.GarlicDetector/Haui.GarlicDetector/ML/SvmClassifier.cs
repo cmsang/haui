@@ -13,7 +13,7 @@ namespace Haui.GarlicDetector.ML;
 /// </summary>
 public sealed class SvmClassifier : IPredictor, IDisposable
 {
-    private SVM? _svm;
+    private SVM _svm;
 
     /// <inheritdoc/>
     public bool IsLoaded => _svm != null;
@@ -26,6 +26,7 @@ public sealed class SvmClassifier : IPredictor, IDisposable
 
         _svm?.Dispose();
         _svm = SVM.Load(path);
+        
     }
 
     /// <inheritdoc/>
@@ -40,6 +41,7 @@ public sealed class SvmClassifier : IPredictor, IDisposable
             sample.At<float>(0, i) = features[i];
 
         float result = _svm.Predict(sample);
+        
         return (int)result;
     }
 

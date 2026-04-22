@@ -79,8 +79,8 @@ public sealed class GarlicPipeline : IDisposable
         CameraService cameraService,
         IImagePreprocessor preprocessor,
         IGarlicSegmentor segmenter,
-        IPredictor? predictor = null,
-        IFeatureExtractor? featureExtractor = null)
+        IPredictor predictor,
+        IFeatureExtractor featureExtractor)
     {
         _cameraService = cameraService;
         _preprocessor = preprocessor;

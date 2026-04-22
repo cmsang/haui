@@ -10,9 +10,9 @@ namespace Haui.GarlicDetector;
 
 public partial class frmMain : Form
 {
-    private GarlicPipeline? _pipeline;
-    private HsvSegmenter? _segmenter;
-    private SvmClassifier? _svmClassifier;
+    private GarlicPipeline _pipeline;
+    private HsvSegmenter _segmenter;
+    private SvmClassifier _svmClassifier;
     private readonly frmSettings _frmSettings = new();
     private SerialPort Robot = new SerialPort();
     private readonly StringBuilder _serialBuffer = new StringBuilder();

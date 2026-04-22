@@ -1,4 +1,6 @@
 {
+  "SvmModelPath": "D:\\haui\\Haui.GarlicDetector\\GarlicImages\\garlic_svm.xml",
+  "SvmTrainImageSize": 128,
   "DetectionRegion": null,
   "Hsv": {
     "HMin": 0,

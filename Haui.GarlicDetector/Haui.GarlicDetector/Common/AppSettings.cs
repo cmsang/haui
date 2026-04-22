@@ -118,8 +118,8 @@ public sealed class AppSettings
     /// <summary>Tham số Gamma của SVM RBF. Mặc định 0.5.</summary>
     public double SvmGamma { get; set; } = 0.5;
 
-    /// <summary>Kích thước ảnh ROI (cạnh) khi trích xuất đặc trưng. Mặc định 64.</summary>
-    public int SvmTrainImageSize { get; set; } = 64;
+    /// <summary>Kích thước ảnh ROI (cạnh) khi trích xuất đặc trưng. Mặc định 128.</summary>
+    public int SvmTrainImageSize { get; set; } = 128;
 
     // ─── Robot / Serial Communication ────────────────────────────────────────
 
