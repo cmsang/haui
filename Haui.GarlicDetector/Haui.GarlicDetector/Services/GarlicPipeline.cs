@@ -222,7 +222,7 @@ public sealed class GarlicPipeline : IDisposable
     /// Nếu <paramref name="detectionRegion"/> được đặt, chỉ phân vùng trong vùng đó;
     /// bounding box kết quả được offset về tọa độ frame đầy đủ.
     /// </summary>
-    private List<GarlicRegion> SegmentFrame(Bitmap bitmap, Rectangle? detectionRegion)
+    public List<GarlicRegion> SegmentFrame(Bitmap bitmap, Rectangle? detectionRegion)
     {
         using var bgrMat = BitmapConverter.ToMat(bitmap);
 

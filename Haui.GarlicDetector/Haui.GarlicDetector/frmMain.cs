@@ -3,15 +3,20 @@ using Haui.GarlicDetector.ML;
 using Haui.GarlicDetector.Models;
 using Haui.GarlicDetector.Services;
 using Haui.GarlicDetector.Vision;
+using System.IO.Ports;
+using System.Text;
 
 namespace Haui.GarlicDetector;
 
 public partial class frmMain : Form
 {
-    private GarlicPipeline?    _pipeline;
-    private HsvSegmenter?      _segmenter;
-    private SvmClassifier?     _svmClassifier;
+    private GarlicPipeline? _pipeline;
+    private HsvSegmenter? _segmenter;
+    private SvmClassifier? _svmClassifier;
     private readonly frmSettings _frmSettings = new();
+    private SerialPort Robot = new SerialPort();
+    private readonly StringBuilder _serialBuffer = new StringBuilder();
+    private bool CameraWait = false;
 
     public frmMain()
     {
@@ -39,6 +44,276 @@ public partial class frmMain : Form
 
         // Hiển thị trạng thái vùng nhận diện đã lưu
         UpdateRegionStatus();
+
+        // Khởi tạo kết nối serial với robot
+        if (!Robot.IsOpen)
+        {
+            try
+            {
+                Robot.PortName = AppSettings.Instance.RobotPortName;
+                Robot.BaudRate = AppSettings.Instance.RobotBaudRate;
+                Robot.Open();
+                Robot.DataReceived += Robot_DataReceived;
+                lblStatus.Text = $"Kết nối robot: {Robot.PortName} @ {Robot.BaudRate} baud ✓";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi kết nối robot: {ex.Message}");
+            }
+        }
+    }
+
+    private void Robot_DataReceived(object sender, SerialDataReceivedEventArgs e)
+    {
+        try
+        {
+            // Defensive checks
+            if (Robot == null || !Robot.IsOpen) return;
+
+            int bytes = Robot.BytesToRead;
+            if (bytes == 0) return;
+
+            // Guard against huge bursts
+            if (bytes > 500)
+            {
+                Robot.DiscardInBuffer();
+                return;
+            }
+
+            // Non-blocking read of whatever is available right now
+            var chunk = Robot.ReadExisting();
+            if (string.IsNullOrEmpty(chunk)) return;
+
+            // Accumulate fragment(s) into buffer
+            lock (_serialBuffer)
+            {
+                _serialBuffer.Append(chunk);
+
+                // Messages terminated by 'x' (as used previously with ReadTo("x"))
+                string bufferContent = _serialBuffer.ToString();
+                int delimIndex;
+                while ((delimIndex = bufferContent.IndexOf('x')) >= 0)
+                {
+                    string message = bufferContent.Substring(0, delimIndex).Trim();
+                    if (!string.IsNullOrEmpty(message))
+                    {
+                        // Marshal to UI thread for further processing
+                        if (IsHandleCreated)
+                            BeginInvoke(() => RobotDataAnalys(message));
+                        else
+                            RobotDataAnalys(message);
+                    }
+                    bufferContent = bufferContent.Substring(delimIndex + 1);
+                }
+                _serialBuffer.Clear();
+                _serialBuffer.Append(bufferContent);
+            }
+        }
+        catch (Exception ee)
+        {
+            MessageBox.Show(ee.ToString(), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    /// <summary>
+    /// Phân tích dữ liệu nhận từ robot.
+    /// </summary>
+    /// <param name="data">Dữ liệu từ robot</param>
+    private void RobotDataAnalys(string data)
+    {
+        data = data.Trim();
+
+        // Hàng ở vị trí chụp ảnh
+        if (data.Contains("S1"))
+        {
+            ImageDetect(retryCount: 0);
+        }
+    }
+
+    /// <summary>
+    /// Thực hiện nhận dạng và phân loại tỏi trong hình ảnh hiện tại.
+    /// Được gọi khi robot gửi tín hiệu "S1" (hàng ở vị trí chụp ảnh).
+    /// Chỉ xử lý 1 củ tỏi duy nhất (lấy vùng lớn nhất).
+    /// Tận dụng luồng xử lý có sẵn trong GarlicPipeline.SegmentFrame().
+    /// </summary>
+    /// <param name="retryCount">Số lần đã thử (0-2), tối đa 3 lần</param>
+    private void ImageDetect(int retryCount = 0)
+    {
+        const int MAX_RETRY = 3;
+
+        if (_pipeline == null)
+        {
+            BeginInvoke(() =>
+            {
+                lblStatus.Text = "Lỗi: Camera chưa khởi động.";
+                MessageBox.Show("Lỗi: Camera chưa khởi động.", "Lỗi hệ thống", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            });
+            ConveyerRun();
+            return;
+        }
+
+        try
+        {
+            // Chụp snapshot từ camera
+            var snapshot = _pipeline.CaptureSnapshot();
+            if (snapshot == null)
+            {
+                // Retry nếu chưa vượt quá giới hạn
+                if (retryCount < MAX_RETRY - 1)
+                {
+                    BeginInvoke(() => lblStatus.Text = $"Không thể chụp ảnh. Thử lại... ({retryCount + 1}/{MAX_RETRY})");
+                    Thread.Sleep(500); // Đợi 500ms trước khi thử lại
+                    ImageDetect(retryCount + 1);
+                    return;
+                }
+
+                // Đã thử 3 lần vẫn lỗi
+                BeginInvoke(() =>
+                {
+                    lblStatus.Text = "Lỗi: Không thể chụp ảnh sau 3 lần thử.";
+                    MessageBox.Show(
+                        "Không thể chụp ảnh từ camera sau 3 lần thử.\nVui lòng kiểm tra lại camera.",
+                        "Lỗi chụp ảnh",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                });
+                SendResultToRobot(null);
+                ConveyerRun();
+                return;
+            }
+
+            // Tận dụng luồng xử lý có sẵn trong GarlicPipeline
+            // (preprocess → segment → classify với SVM → phân kích thước)
+            var regions = _pipeline.SegmentFrame(snapshot, _pipeline.DetectionRegion);
+
+            // Kiểm tra có phát hiện củ tỏi không
+            if (regions.Count == 0)
+            {
+                // Retry nếu chưa vượt quá giới hạn
+                if (retryCount < MAX_RETRY - 1)
+                {
+                    BeginInvoke(() => lblStatus.Text = $"Không phát hiện tỏi. Thử lại... ({retryCount + 1}/{MAX_RETRY})");
+                    snapshot.Dispose();
+                    Thread.Sleep(500); // Đợi 500ms trước khi thử lại
+                    ImageDetect(retryCount + 1);
+                    return;
+                }
+
+                // Đã thử 3 lần vẫn không phát hiện
+                BeginInvoke(() =>
+                {
+                    lblStatus.Text = "Cảnh báo: Không phát hiện tỏi sau 3 lần thử.";
+                    MessageBox.Show(
+                        "Không phát hiện củ tỏi nào trong khung hình sau 3 lần thử.\n" +
+                        "Có thể không có tỏi hoặc ngưỡng HSV chưa phù hợp.",
+                        "Cảnh báo",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                });
+                SendResultToRobot(null);
+                ConveyerRun();
+                snapshot.Dispose();
+                return;
+            }
+
+            // Lấy vùng tỏi lớn nhất (bỏ qua nhiễu nhỏ)
+            var largestRegion = regions.OrderByDescending(r => r.Area).First();
+            var garlicLabel = largestRegion.FinalLabel ?? GarlicLabel.ToNho;
+
+            // Vẽ kết quả lên ảnh
+            var resultBitmap = (Bitmap)snapshot.Clone();
+            GarlicPipeline.DrawRegions(resultBitmap, new List<GarlicRegion> { largestRegion });
+
+            // Tên loại tỏi để hiển thị
+            string labelText = garlicLabel switch
+            {
+                GarlicLabel.ToTo => "Tỏi to",
+                GarlicLabel.ToNho => "Tỏi nhỏ",
+                GarlicLabel.ToHong => "Tỏi hỏng",
+                _ => "Không xác định"
+            };
+
+            // Hiển thị kết quả lên UI
+            BeginInvoke(() =>
+            {
+                lblStatus.Text = $"✓ Phát hiện: {labelText} (Area: {largestRegion.Area:F0} px², Circ: {largestRegion.Circularity:F2})";
+                SetFrame(resultBitmap);
+            });
+
+            // Gửi kết quả về robot
+            SendResultToRobot(garlicLabel);
+
+            // Tiếp tục chạy băng tải
+            ConveyerRun();
+
+            // Dọn dẹp
+            snapshot.Dispose();
+        }
+        catch (Exception ex)
+        {
+            // Retry nếu chưa vượt quá giới hạn
+            if (retryCount < MAX_RETRY - 1)
+            {
+                BeginInvoke(() => lblStatus.Text = $"Lỗi xử lý. Thử lại... ({retryCount + 1}/{MAX_RETRY})");
+                Thread.Sleep(500); // Đợi 500ms trước khi thử lại
+                ImageDetect(retryCount + 1);
+                return;
+            }
+
+            // Đã thử 3 lần vẫn lỗi
+            BeginInvoke(() =>
+            {
+                lblStatus.Text = $"Lỗi nghiêm trọng: {ex.Message}";
+                MessageBox.Show(
+                    $"Lỗi nhận dạng sau 3 lần thử:\n{ex.Message}\n\nVui lòng kiểm tra lại hệ thống.",
+                    "Lỗi nghiêm trọng",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            });
+            SendResultToRobot(null);
+            ConveyerRun();
+        }
+    }
+
+    /// <summary>
+    /// Gửi tín hiệu cho robot để tiếp tục chạy băng tải.
+    /// </summary>
+    private void ConveyerRun()
+    {
+        if (!Robot.IsOpen) return;
+
+        try
+        {
+            // Gửi tín hiệu tiếp tục băng tải
+            Robot.Write("C:1x"); // C:1 = Continue conveyer
+            BeginInvoke(() => lblStatus.Text = "Băng tải tiếp tục...");
+        }
+        catch (Exception ex)
+        {
+            BeginInvoke(() => lblStatus.Text = $"Lỗi điều khiển băng tải: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Gửi kết quả phân loại về robot qua cổng serial.
+    /// </summary>
+    /// <param name="garlicLabel">Loại tỏi được phát hiện (null nếu không có tỏi)</param>
+    private void SendResultToRobot(GarlicLabel? garlicLabel)
+    {
+        if (!Robot.IsOpen) return;
+
+        try
+        {
+            // Format: "R:<loại tỏi>x" 
+            // 0 = Tỏi to, 1 = Tỏi nhỏ, 2 = Tỏi hỏng, -1 = Không có tỏi
+            int labelValue = garlicLabel.HasValue ? (int)garlicLabel.Value : -1;
+            string message = $"R:{labelValue}x";
+            Robot.Write(message);
+        }
+        catch (Exception ex)
+        {
+            BeginInvoke(() => lblStatus.Text = $"Lỗi gửi dữ liệu: {ex.Message}");
+        }
     }
 
     /// <summary>Quét và điền danh sách camera khả dụng vào combobox.</summary>
@@ -70,8 +345,8 @@ public partial class frmMain : Form
     {
         if (_pipeline != null) return;
 
-        var camService   = new CameraService();
-        _segmenter       = new HsvSegmenter();
+        var camService = new CameraService();
+        _segmenter = new HsvSegmenter();
         var preprocessor = new HsvGarlicPreprocessor();
 
         // Khởi tạo feature extractor với kích thước ảnh đã lưu trong settings
@@ -85,9 +360,9 @@ public partial class frmMain : Form
             featureExtractor);
 
         // Đăng ký sự kiện từ pipeline
-        _pipeline.FrameReady            += OnFrameReady;
+        _pipeline.FrameReady += OnFrameReady;
         _pipeline.SegmentationCompleted += OnSegmentationCompleted;
-        _pipeline.ErrorOccurred         += OnErrorOccurred;
+        _pipeline.ErrorOccurred += OnErrorOccurred;
 
         // Áp dụng vùng nhận diện đã lưu trong AppSettings
         _pipeline.DetectionRegion = AppSettings.Instance.DetectionRectangle;
@@ -96,14 +371,14 @@ public partial class frmMain : Form
         SyncHsvToSegmenter();
 
         // Lấy camera và độ phân giải đã chọn
-        int camIndex   = cmbCameras.SelectedItem is CameraInfo cam ? cam.Index : 0;
+        int camIndex = cmbCameras.SelectedItem is CameraInfo cam ? cam.Index : 0;
         var resolution = cmbResolution.SelectedItem as CameraResolution;
 
         _pipeline.Start(camIndex, resolution);
 
         btnStart.Enabled = false;
-        btnStop.Enabled  = true;
-        lblStatus.Text   = "Đang chạy...";
+        btnStop.Enabled = true;
+        lblStatus.Text = "Đang chạy...";
     }
 
     /// <summary>Dừng pipeline khi nhấn nút Dừng.</summary>
@@ -114,13 +389,13 @@ public partial class frmMain : Form
     {
         if (_pipeline == null) return;
 
-        _pipeline.FrameReady            -= OnFrameReady;
+        _pipeline.FrameReady -= OnFrameReady;
         _pipeline.SegmentationCompleted -= OnSegmentationCompleted;
-        _pipeline.ErrorOccurred         -= OnErrorOccurred;
+        _pipeline.ErrorOccurred -= OnErrorOccurred;
 
         _pipeline.Stop();
         _pipeline.Dispose();
-        _pipeline  = null;
+        _pipeline = null;
         _segmenter = null;
 
         // Xóa ảnh đang hiển thị
@@ -128,8 +403,8 @@ public partial class frmMain : Form
         picCamera.Image = null;
 
         btnStart.Enabled = true;
-        btnStop.Enabled  = false;
-        lblStatus.Text   = "Đã dừng.";
+        btnStop.Enabled = false;
+        lblStatus.Text = "Đã dừng.";
     }
 
     /// <summary>
@@ -182,7 +457,7 @@ public partial class frmMain : Form
 
         var text = $"Phát hiện {e.Regions.Count} vùng tỏi.";
         if (InvokeRequired) BeginInvoke(() => lblStatus.Text = text);
-        else                 lblStatus.Text = text;
+        else lblStatus.Text = text;
     }
 
     /// <summary>Hiển thị thông báo lỗi từ pipeline lên thanh trạng thái.</summary>
@@ -190,7 +465,7 @@ public partial class frmMain : Form
     {
         var text = $"Lỗi: {message}";
         if (InvokeRequired) BeginInvoke(() => lblStatus.Text = text);
-        else                 lblStatus.Text = text;
+        else lblStatus.Text = text;
     }
 
     /// <summary>Cập nhật PictureBox trên UI thread, giải phóng ảnh cũ.</summary>
@@ -225,14 +500,14 @@ public partial class frmMain : Form
         var ir = GetPicBoxImageRect(picCamera);
         if (ir.IsEmpty) return;
 
-        float scaleX = ir.Width  / picCamera.Image.Width;
+        float scaleX = ir.Width / picCamera.Image.Width;
         float scaleY = ir.Height / picCamera.Image.Height;
 
-        var dr          = region.Value;
+        var dr = region.Value;
         var displayRect = new RectangleF(
             ir.X + dr.X * scaleX,
             ir.Y + dr.Y * scaleY,
-            dr.Width  * scaleX,
+            dr.Width * scaleX,
             dr.Height * scaleY);
 
         using var regionPen = new Pen(Color.LimeGreen, 2)
@@ -241,7 +516,7 @@ public partial class frmMain : Form
         };
         e.Graphics.DrawRectangle(regionPen, Rectangle.Round(displayRect));
 
-        var font    = SystemFonts.SmallCaptionFont ?? SystemFonts.DefaultFont;
+        var font = SystemFonts.SmallCaptionFont ?? SystemFonts.DefaultFont;
         var labelPt = new PointF(displayRect.X + 4, displayRect.Y + 4);
         e.Graphics.DrawString("Vùng nhận diện", font, Brushes.LimeGreen, labelPt);
     }
@@ -253,13 +528,13 @@ public partial class frmMain : Form
     {
         if (pb.Image == null) return RectangleF.Empty;
 
-        float imgW  = pb.Image.Width;
-        float imgH  = pb.Image.Height;
-        float pbW   = pb.ClientSize.Width;
-        float pbH   = pb.ClientSize.Height;
+        float imgW = pb.Image.Width;
+        float imgH = pb.Image.Height;
+        float pbW = pb.ClientSize.Width;
+        float pbH = pb.ClientSize.Height;
         float scale = Math.Min(pbW / imgW, pbH / imgH);
-        float dw    = imgW * scale;
-        float dh    = imgH * scale;
+        float dw = imgW * scale;
+        float dh = imgH * scale;
 
         return new RectangleF((pbW - dw) / 2f, (pbH - dh) / 2f, dw, dh);
     }
@@ -289,12 +564,12 @@ public partial class frmMain : Form
         if (_segmenter == null) return;
 
         // Ngưỡng chính — tỏi trắng / bình thường
-        _segmenter.HMin  = _frmSettings.HMin;
-        _segmenter.HMax  = _frmSettings.HMax;
-        _segmenter.SMin  = _frmSettings.SMin;
-        _segmenter.SMax  = _frmSettings.SMax;
-        _segmenter.VMin  = _frmSettings.VMin;
-        _segmenter.VMax  = _frmSettings.VMax;
+        _segmenter.HMin = _frmSettings.HMin;
+        _segmenter.HMax = _frmSettings.HMax;
+        _segmenter.SMin = _frmSettings.SMin;
+        _segmenter.SMax = _frmSettings.SMax;
+        _segmenter.VMin = _frmSettings.VMin;
+        _segmenter.VMax = _frmSettings.VMax;
 
         // Ngưỡng phụ — tỏi hỏng / nâu / tối
         _segmenter.H2Min = _frmSettings.H2Min;

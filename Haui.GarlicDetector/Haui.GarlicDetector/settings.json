@@ -1,3 +1,14 @@
 {
-  "DetectionRegion": null
+  "DetectionRegion": null,
+  "Hsv": {
+    "HMin": 0,
+    "HMax": 179,
+    "SMin": 0,
+    "SMax": 60,
+    "VMin": 170,
+    "VMax": 255
+  },
+  "MinCircularity": 0.4,
+  "RobotPortName": "COM5",
+  "RobotBaudRate": 115200
 }
