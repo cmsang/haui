@@ -12,7 +12,7 @@ public partial class frmMain : Form
 {
     private GarlicPipeline _pipeline;
     private HsvSegmenter _segmenter;
-    private SvmClassifier _svmClassifier;
+    private IGarlicClassifier? _svmClassifier;
     private readonly frmSettings _frmSettings = new();
     private SerialPort Robot = new SerialPort();
     private readonly StringBuilder _serialBuffer = new StringBuilder();
@@ -624,7 +624,7 @@ public partial class frmMain : Form
 
         try
         {
-            _svmClassifier ??= new SvmClassifier();
+            _svmClassifier ??= new SvmClassifier(new GarlicFeatureExtractor(AppSettings.Instance.SvmTrainImageSize));
             _svmClassifier.Load(path);
             lblStatus.Text = $"Model SVM đã nạp ✓  ({Path.GetFileName(path)})";
         }

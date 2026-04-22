@@ -26,7 +26,7 @@ public sealed class GarlicPipeline : IDisposable
     private readonly CameraService _cameraService;
     private readonly IImagePreprocessor _preprocessor;
     private readonly IGarlicSegmentor _segmenter;
-    private readonly IPredictor? _predictor;
+    private readonly IGarlicClassifier? _predictor;
     private readonly IFeatureExtractor? _featureExtractor;
 
     // Frame gốc mới nhất — dùng để overlay kết quả phân vùng
@@ -79,7 +79,7 @@ public sealed class GarlicPipeline : IDisposable
         CameraService cameraService,
         IImagePreprocessor preprocessor,
         IGarlicSegmentor segmenter,
-        IPredictor predictor,
+        IGarlicClassifier predictor,
         IFeatureExtractor featureExtractor)
     {
         _cameraService = cameraService;
