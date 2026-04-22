@@ -22,10 +22,14 @@ Final output labels:
 ## Domain Knowledge — Garlic Classification
 
 ### Stage 1 — SVM: Normal vs Damaged
-- **SVM input features per ROI**: HOG descriptor (texture), Hu Moments (shape), mean & stddev color in HSV (color health)
+- **SVM input features per ROI**: Color features (HSV/LAB), LBP texture, shape descriptors, statistical features
 - **Tỏi bình thường (Normal)**: regular shape, uniform bright/cream color, smooth texture → SVM label `0`
 - **Tỏi hỏng (Damaged)**: irregular shape, dark/brown spots, discoloration, shriveled or broken → SVM label `1`
-- Damage detection relies on texture irregularity (HOG), color anomaly (dark/brown regions in HSV), and shape deformation (Hu Moments)
+- Damage detection relies on:
+  - **Color anomaly**: abnormal pixel ratios (green/purple/dark masks in HSV), LAB color stats
+  - **Texture irregularity**: Uniform LBP histogram (59 bins)
+  - **Shape deformation**: circularity, convexity, aspect ratio from contour
+  - **Statistical complexity**: per-channel entropy, gradient magnitude (Sobel SNR)
 
 ### Stage 2 — Size Rule: Large vs Small (normal bulbs only)
 - After SVM confirms a bulb is **normal**, apply a pixel-area threshold on the contour area (or bounding box dimensions)
@@ -59,7 +63,7 @@ Follow SOLID principles strictly when generating code:
 - Each class should have only one responsibility.
 - Example:
   - `GarlicSegmentor`: only handles image segmentation and contour extraction
-  - `GarlicFeatureExtractor`: only extracts features (HOG, Hu Moments, area, color stats)
+  - `GarlicFeatureExtractor`: only extracts features (Color, LBP, Shape, Statistical)
   - `SvmClassifier`: only handles training and prediction
 
 2. Open/Closed Principle (OCP)
@@ -98,10 +102,24 @@ Follow SOLID principles strictly when generating code:
 1. **Input**: raw image (from file or camera)
 2. **Preprocessing**: convert to HSV/Lab, resize, normalize
 3. **Segmentation**: HSV/Lab threshold → binary mask → morphological open/close → find contours → extract each garlic ROI
-4. **Feature extraction per ROI** (inputs to SVM):
-   - HOG descriptor (texture)
-   - Hu Moments (shape)
-   - Mean color and standard deviation in HSV (color health)
+4. **Feature extraction per ROI** — `GarlicFeatureExtractor.Extract(Mat croppedGarlic)` (all features min-max normalized to [0,1], `TARGET_SIZE = 64`):
+   - **Group 1 — Color Features** (~20 features):
+     - HSV mean & std (H÷180, S÷255, V÷255)
+     - Abnormal pixel ratios: green mask (H=35–85), purple mask (H=100–160), dark mask (V<60)
+     - LAB mean & std (L/A/B ÷255)
+     - HSV-H histogram (8 bins, range 0–180)
+   - **Group 2 — LBP Texture Features** (~59 features):
+     - Uniform Local Binary Pattern histogram (59 bins) on grayscale
+     - Uniform patterns → bin = count of set bits (0–8); non-uniform → bin 58
+     - Histogram normalized by total pixel count
+   - **Group 3 — Shape Features** (~6 features):
+     - From largest contour in Otsu-thresholded grayscale ROI
+     - Area (÷TARGET_SIZE²), Circularity (4π·area/perimeter²), Convexity (area/hull area)
+     - Aspect ratio (width/height), Perimeter (÷4·TARGET_SIZE), Contour point count (÷4·TARGET_SIZE)
+     - Padding with zeros if no contour found
+   - **Group 4 — Statistical Features** (~12 features):
+     - Per BGR channel: mean (÷255), std (÷255), entropy (16-bin histogram, normalized by log(16))
+     - Gradient magnitude via Sobel: mean (÷255), std (÷255), SNR (mean/(std+ε))
 5. **Stage 1 — SVM classification** (RBF kernel):
    - Predicts `0` = tỏi bình thường (normal) or `1` = tỏi hỏng (damaged)
    - If damaged → assign final label `2` (Tỏi hỏng), skip Stage 2
@@ -122,7 +140,7 @@ Follow SOLID principles strictly when generating code:
 - Implementations:
   - `HsvGarlicPreprocessor` — grayscale/HSV preprocessing
   - `GarlicSegmentor` — contour-based garlic bulb segmentation
-  - `GarlicFeatureExtractor` — HOG + Hu Moments + area + color features
+  - `GarlicFeatureExtractor` — Color + LBP + Shape + Statistical features (TARGET_SIZE=64, ~97 features total, min-max normalized)
   - `SvmClassifier` — SVM train/predict with labels 0, 1, 2
 
 - Models / DTOs:
