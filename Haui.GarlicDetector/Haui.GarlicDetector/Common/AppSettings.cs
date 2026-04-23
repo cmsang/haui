@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -116,10 +118,18 @@ public sealed class AppSettings
     /// <summary>Tham số Gamma của SVM RBF. Mặc định 0.5.</summary>
     public double SvmGamma { get; set; } = 0.5;
 
-    /// <summary>Kích thước ảnh ROI (cạnh) khi trích xuất đặc trưng. Mặc định 64.</summary>
-    public int SvmTrainImageSize { get; set; } = 64;
+    /// <summary>Kích thước ảnh ROI (cạnh) khi trích xuất đặc trưng. Mặc định 128.</summary>
+    public int SvmTrainImageSize { get; set; } = 128;
 
-    // ─── Load / Save
+    // ─── Robot / Serial Communication ────────────────────────────────────────
+
+    /// <summary>Tên cổng COM để kết nối với robot (ví dụ: "COM3"). Mặc định "COM3".</summary>
+    public string RobotPortName { get; set; } = "COM3";
+
+    /// <summary>Tốc độ baud rate kết nối với robot. Mặc định 9600.</summary>
+    public int RobotBaudRate { get; set; } = 9600;
+
+    // ─── Load / Save ─────────────────────────────────────────────────────────
 
     /// <summary>Đọc cài đặt từ <c>settings.json</c>. Trả về instance rỗng nếu file không tồn tại.</summary>
     public static AppSettings Load()

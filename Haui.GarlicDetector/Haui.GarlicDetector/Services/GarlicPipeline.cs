@@ -26,7 +26,7 @@ public sealed class GarlicPipeline : IDisposable
     private readonly CameraService _cameraService;
     private readonly IImagePreprocessor _preprocessor;
     private readonly IGarlicSegmentor _segmenter;
-    private readonly IPredictor? _predictor;
+    private readonly IGarlicClassifier? _predictor;
     private readonly IFeatureExtractor? _featureExtractor;
 
     // Frame gốc mới nhất — dùng để overlay kết quả phân vùng
@@ -79,8 +79,8 @@ public sealed class GarlicPipeline : IDisposable
         CameraService cameraService,
         IImagePreprocessor preprocessor,
         IGarlicSegmentor segmenter,
-        IPredictor? predictor = null,
-        IFeatureExtractor? featureExtractor = null)
+        IGarlicClassifier predictor,
+        IFeatureExtractor featureExtractor)
     {
         _cameraService = cameraService;
         _preprocessor = preprocessor;
@@ -222,7 +222,7 @@ public sealed class GarlicPipeline : IDisposable
     /// Nếu <paramref name="detectionRegion"/> được đặt, chỉ phân vùng trong vùng đó;
     /// bounding box kết quả được offset về tọa độ frame đầy đủ.
     /// </summary>
-    private List<GarlicRegion> SegmentFrame(Bitmap bitmap, Rectangle? detectionRegion)
+    public List<GarlicRegion> SegmentFrame(Bitmap bitmap, Rectangle? detectionRegion)
     {
         using var bgrMat = BitmapConverter.ToMat(bitmap);
 

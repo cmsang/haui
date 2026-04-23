@@ -4,34 +4,26 @@ using OcvSize = OpenCvSharp.Size;
 namespace Haui.GarlicDetector.ML;
 
 /// <summary>
-/// Trích xuất đặc trưng tỏi gồm: HOG (texture), 7 Hu Moments (shape),
-/// mean/std HSV (color health). Tổng số chiều = <see cref="FeatureDimension"/>.
+/// Trích xuất đặc trưng tỏi gồm 4 nhóm:
+/// (1) Color ~20, (2) LBP ~59, (3) Shape ~6, (4) Statistical ~12.
+/// Tổng ~97 chiều, min-max normalized về [0, 1].
 /// </summary>
 public sealed class GarlicFeatureExtractor : IFeatureExtractor
 {
-    // ─── Thông số HOG ────────────────────────────────────────────────────────
-    // winSize = imageSize x imageSize; blockSize=16x16; blockStride=8x8;
-    // cellSize=8x8; nbins=9
-
     private readonly int _imageSize;
 
-    // HOG descriptor size = ((W-bW)/bS+1)^2 * (bW/cW)^2 * nbins
-    //                     = 7*7 * 4 * 9  = 1764  (khi imageSize=64)
-    private readonly int _hogDim;
-
-    // 7 Hu Moments + 6 color stats (mean/std H,S,V)
-    private const int ExtraDim = 7 + 6;
+    // ~20 + ~59 + ~6 + ~12 = ~97 features
+    private const int ColorDim = 20;
+    private const int LbpDim   = 59;
+    private const int ShapeDim = 6;
+    private const int StatDim  = 12;
 
     /// <inheritdoc/>
-    public int FeatureDimension => _hogDim + ExtraDim;
+    public int FeatureDimension => ColorDim + LbpDim + ShapeDim + StatDim;
 
     public GarlicFeatureExtractor(int imageSize = 64)
     {
         _imageSize = imageSize;
-
-        int blockW   = 16, blockStride = 8, cellSize = 8, nbins = 9;
-        int numBlock = (_imageSize - blockW) / blockStride + 1;
-        _hogDim      = numBlock * numBlock * (blockW / cellSize) * (blockW / cellSize) * nbins;
     }
 
     /// <inheritdoc/>
@@ -40,76 +32,240 @@ public sealed class GarlicFeatureExtractor : IFeatureExtractor
         using var resized = new Mat();
         Cv2.Resize(roi, resized, new OcvSize(_imageSize, _imageSize));
 
-        var features = new float[FeatureDimension];
-        int offset   = 0;
+        var raw = new List<double>(FeatureDimension);
+        raw.AddRange(ExtractColorFeatures(resized));
+        raw.AddRange(ExtractLbpFeatures(resized));
+        raw.AddRange(ExtractShapeFeatures(resized));
+        raw.AddRange(ExtractStatFeatures(resized));
 
-        // ── HOG ─────────────────────────────────────────────────────────────
-        using var gray = new Mat();
-        Cv2.CvtColor(resized, gray, ColorConversionCodes.BGR2GRAY);
-
-        var hog    = new HOGDescriptor(
-            winSize:     new OcvSize(_imageSize, _imageSize),
-            blockSize:   new OcvSize(16, 16),
-            blockStride: new OcvSize(8, 8),
-            cellSize:    new OcvSize(8, 8),
-            nbins:       9);
-
-        float[] hogDesc = hog.Compute(gray);
-        hogDesc.CopyTo(features, offset);
-        offset += hogDesc.Length;
-
-        // ── Hu Moments ───────────────────────────────────────────────────────
-        // Moments là struct, không phải IDisposable — không dùng using
-        var moments = Cv2.Moments(gray);
-        double[] hu = ComputeHuMoments(moments);
-
-        for (int i = 0; i < 7; i++)
-        {
-            // Log-transform để cân bằng magnitude
-            double v = hu[i] == 0 ? 0 : -Math.Sign(hu[i]) * Math.Log10(Math.Abs(hu[i]));
-            features[offset + i] = (float)v;
-        }
-        offset += 7;
-
-        // ── Color stats trong HSV (mean/std của H, S, V) ─────────────────────
-        using var hsv = new Mat();
-        Cv2.CvtColor(resized, hsv, ColorConversionCodes.BGR2HSV);
-
-        Cv2.MeanStdDev(hsv, out Scalar mean, out Scalar std);
-        // mean và std có 3 kênh H, S, V
-        features[offset + 0] = (float)mean.Val0;   // mean H
-        features[offset + 1] = (float)mean.Val1;   // mean S
-        features[offset + 2] = (float)mean.Val2;   // mean V
-        features[offset + 3] = (float)std.Val0;    // std H
-        features[offset + 4] = (float)std.Val1;    // std S
-        features[offset + 5] = (float)std.Val2;    // std V
-
-        return features;
+        return MinMaxNormalize(raw);
     }
 
-    // ─── Tính 7 Hu Moments thủ công từ central moments ───────────────────────
-    // (Cv2.HuMoments không available trong một số phiên bản OpenCvSharp4)
-    private static double[] ComputeHuMoments(Moments m)
+    // ═══════════════════════════════════════════════════════════════════════
+    // 1. ĐẶC TRƯNG MÀU SẮC (~20 features)
+    // ═══════════════════════════════════════════════════════════════════════
+    private double[] ExtractColorFeatures(Mat img)
     {
-        double n20 = m.M20 / Math.Pow(m.M00, 2.0);
-        double n02 = m.M02 / Math.Pow(m.M00, 2.0);
-        double n11 = m.M11 / Math.Pow(m.M00, 2.0);
-        double n30 = m.M30 / Math.Pow(m.M00, 2.5);
-        double n03 = m.M03 / Math.Pow(m.M00, 2.5);
-        double n21 = m.M21 / Math.Pow(m.M00, 2.5);
-        double n12 = m.M12 / Math.Pow(m.M00, 2.5);
+        var f = new List<double>();
 
-        double[] hu = new double[7];
-        hu[0] = n20 + n02;
-        hu[1] = (n20 - n02) * (n20 - n02) + 4 * n11 * n11;
-        hu[2] = (n30 - 3 * n12) * (n30 - 3 * n12) + (3 * n21 - n03) * (3 * n21 - n03);
-        hu[3] = (n30 + n12) * (n30 + n12) + (n21 + n03) * (n21 + n03);
-        hu[4] = (n30 - 3 * n12) * (n30 + n12) * ((n30 + n12) * (n30 + n12) - 3 * (n21 + n03) * (n21 + n03))
-              + (3 * n21 - n03) * (n21 + n03) * (3 * (n30 + n12) * (n30 + n12) - (n21 + n03) * (n21 + n03));
-        hu[5] = (n20 - n02) * ((n30 + n12) * (n30 + n12) - (n21 + n03) * (n21 + n03))
-              + 4 * n11 * (n30 + n12) * (n21 + n03);
-        hu[6] = (3 * n21 - n03) * (n30 + n12) * ((n30 + n12) * (n30 + n12) - 3 * (n21 + n03) * (n21 + n03))
-              - (n30 - 3 * n12) * (n21 + n03) * (3 * (n30 + n12) * (n30 + n12) - (n21 + n03) * (n21 + n03));
-        return hu;
+        // ── HSV mean/std ─────────────────────────────────────────────────
+        using var hsv = new Mat();
+        Cv2.CvtColor(img, hsv, ColorConversionCodes.BGR2HSV);
+        Cv2.MeanStdDev(hsv, out Scalar hsvMean, out Scalar hsvStd);
+        f.Add(hsvMean.Val0 / 180.0); // H mean
+        f.Add(hsvMean.Val1 / 255.0); // S mean
+        f.Add(hsvMean.Val2 / 255.0); // V mean
+        f.Add(hsvStd.Val0  / 180.0); // H std
+        f.Add(hsvStd.Val1  / 255.0); // S std
+        f.Add(hsvStd.Val2  / 255.0); // V std
+
+        // ── Tỉ lệ pixel màu bất thường ──────────────────────────────────
+        // Màu xanh lá (thối xanh): H = 35–85
+        using var greenMask = new Mat();
+        Cv2.InRange(hsv, new Scalar(35, 40, 40), new Scalar(85, 255, 255), greenMask);
+        f.Add(GetPixelRatio(greenMask));
+
+        // Màu tím/xanh dương: H = 100–160
+        using var purpleMask = new Mat();
+        Cv2.InRange(hsv, new Scalar(100, 40, 40), new Scalar(160, 255, 255), purpleMask);
+        f.Add(GetPixelRatio(purpleMask));
+
+        // Màu nâu/đen (thối): V < 60
+        using var darkMask = new Mat();
+        Cv2.InRange(hsv, new Scalar(0, 0, 0), new Scalar(180, 255, 60), darkMask);
+        f.Add(GetPixelRatio(darkMask));
+
+        // ── LAB mean/std ─────────────────────────────────────────────────
+        using var lab = new Mat();
+        Cv2.CvtColor(img, lab, ColorConversionCodes.BGR2Lab);
+        Cv2.MeanStdDev(lab, out Scalar labMean, out Scalar labStd);
+        f.Add(labMean.Val0 / 255.0); // L
+        f.Add(labMean.Val1 / 255.0); // A
+        f.Add(labMean.Val2 / 255.0); // B
+        f.Add(labStd.Val0  / 255.0);
+        f.Add(labStd.Val1  / 255.0);
+        f.Add(labStd.Val2  / 255.0);
+
+        // ── HSV-H histogram (8 bins) ─────────────────────────────────────
+        using var hChannel = new Mat();
+        Cv2.ExtractChannel(hsv, hChannel, 0);
+        float[] hHist = ComputeHistogram(hChannel, 8, 0f, 180f);
+        foreach (var v in hHist) f.Add(v);
+
+        return [.. f];
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 2. ĐẶC TRƯNG KẾT CẤU — Uniform LBP (~59 features)
+    // ═══════════════════════════════════════════════════════════════════════
+    private static double[] ExtractLbpFeatures(Mat img)
+    {
+        using var gray = new Mat();
+        Cv2.CvtColor(img, gray, ColorConversionCodes.BGR2GRAY);
+
+        int rows = gray.Rows, cols = gray.Cols;
+        var lbpHist = new int[LbpDim];
+
+        for (int y = 1; y < rows - 1; y++)
+        {
+            for (int x = 1; x < cols - 1; x++)
+            {
+                byte center = gray.At<byte>(y, x);
+                int code = 0;
+
+                // 8 neighbors theo chiều kim đồng hồ
+                byte[] neighbors =
+                [
+                    gray.At<byte>(y-1, x-1), gray.At<byte>(y-1, x),
+                    gray.At<byte>(y-1, x+1), gray.At<byte>(y,   x+1),
+                    gray.At<byte>(y+1, x+1), gray.At<byte>(y+1, x),
+                    gray.At<byte>(y+1, x-1), gray.At<byte>(y,   x-1)
+                ];
+
+                for (int i = 0; i < 8; i++)
+                    if (neighbors[i] >= center)
+                        code |= (1 << i);
+
+                lbpHist[GetUniformLbpIndex(code)]++;
+            }
+        }
+
+        double total = lbpHist.Sum();
+        return lbpHist.Select(v => total > 0 ? v / total : 0.0).ToArray();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 3. ĐẶC TRƯNG HÌNH DẠNG (~6 features)
+    // ═══════════════════════════════════════════════════════════════════════
+    private double[] ExtractShapeFeatures(Mat img)
+    {
+        using var gray   = new Mat();
+        using var binary = new Mat();
+        Cv2.CvtColor(img, gray, ColorConversionCodes.BGR2GRAY);
+        Cv2.Threshold(gray, binary, 0, 255, ThresholdTypes.Binary | ThresholdTypes.Otsu);
+
+        Cv2.FindContours(binary, out OpenCvSharp.Point[][] contours, out _,
+            RetrievalModes.External, ContourApproximationModes.ApproxSimple);
+
+        if (contours.Length == 0)
+            return new double[ShapeDim];
+
+        var c         = contours.OrderByDescending(ct => Cv2.ContourArea(InputArray.Create(ct))).First();
+        double area   = Cv2.ContourArea(c);
+        double perim  = Cv2.ArcLength(c, true);
+        double circ   = perim > 0 ? 4 * Math.PI * area / (perim * perim) : 0;
+
+        var hull      = Cv2.ConvexHull(c);
+        double hArea  = Cv2.ContourArea(hull);
+        double convex = hArea > 0 ? area / hArea : 0;
+
+        Rect  bbox   = Cv2.BoundingRect(c);
+        double aspect = (double)bbox.Width / Math.Max(bbox.Height, 1);
+
+        return
+        [
+            area   / (_imageSize * _imageSize),
+            circ,
+            convex,
+            aspect,
+            perim  / (4.0 * _imageSize),
+            (double)c.Length / (4.0 * _imageSize)
+        ];
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 4. ĐẶC TRƯNG THỐNG KÊ (~12 features)
+    // ═══════════════════════════════════════════════════════════════════════
+    private static double[] ExtractStatFeatures(Mat img)
+    {
+        var f        = new List<double>();
+        var channels = Cv2.Split(img); // B, G, R
+
+        foreach (var ch in channels)
+        {
+            using var _ = ch;
+            Cv2.MeanStdDev(ch, out Scalar mean, out Scalar std);
+            f.Add(mean.Val0 / 255.0);
+            f.Add(std.Val0  / 255.0);
+
+            // Entropy từ histogram 16 bins
+            float[] hist    = ComputeHistogram(ch, 16, 0f, 256f);
+            double entropy  = -hist.Where(v => v > 0)
+                                   .Sum(v => v * Math.Log(v + 1e-10));
+            f.Add(entropy / Math.Log(16));
+        }
+
+        // Gradient magnitude (Sobel) — đo độ sắc nét / vết hỏng
+        using var gray  = new Mat();
+        using var gradX = new Mat();
+        using var gradY = new Mat();
+        using var grad  = new Mat();
+        Cv2.CvtColor(img, gray, ColorConversionCodes.BGR2GRAY);
+        Cv2.Sobel(gray, gradX, MatType.CV_64F, 1, 0);
+        Cv2.Sobel(gray, gradY, MatType.CV_64F, 0, 1);
+        Cv2.Magnitude(gradX, gradY, grad);
+
+        Cv2.MeanStdDev(grad, out Scalar gMean, out Scalar gStd);
+        f.Add(gMean.Val0 / 255.0);
+        f.Add(gStd.Val0  / 255.0);
+        f.Add(gMean.Val0 / (gStd.Val0 + 1e-10)); // SNR
+
+        return [.. f];
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPER METHODS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private static double GetPixelRatio(Mat mask) =>
+        (double)Cv2.CountNonZero(mask) / (mask.Rows * mask.Cols);
+
+    private static float[] ComputeHistogram(Mat channel, int bins, float min, float max)
+    {
+        using var hist = new Mat();
+        Mat[] src    = [channel];
+        int[] chIdx  = [0];
+        int[] hSizes = [bins];
+        Rangef[] ranges = [new Rangef(min, max)];
+        Cv2.CalcHist(src, chIdx, null, hist, 1, hSizes, ranges);
+        Cv2.Normalize(hist, hist, 0, 1, NormTypes.MinMax);
+
+        var result = new float[bins];
+        for (int i = 0; i < bins; i++)
+            result[i] = hist.At<float>(i);
+        return result;
+    }
+
+    /// <summary>Trả về bin index của Uniform LBP (0–8 cho uniform, 58 cho non-uniform).</summary>
+    private static int GetUniformLbpIndex(int code)
+    {
+        int transitions = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            int curr = (code >> i) & 1;
+            int next = (code >> ((i + 1) % 8)) & 1;
+            if (curr != next) transitions++;
+        }
+
+        if (transitions <= 2)
+        {
+            int ones = 0;
+            for (int i = 0; i < 8; i++)
+                if (((code >> i) & 1) == 1) ones++;
+            return ones; // 0–8
+        }
+        return 58; // non-uniform → bin cuối
+    }
+
+    /// <summary>Min-max normalize toàn bộ vector về [0, 1].</summary>
+    private static float[] MinMaxNormalize(List<double> features)
+    {
+        double min   = features.Min();
+        double max   = features.Max();
+        double range = max - min;
+
+        return features
+            .Select(v => range < 1e-10 ? 0f : (float)((v - min) / range))
+            .ToArray();
     }
 }

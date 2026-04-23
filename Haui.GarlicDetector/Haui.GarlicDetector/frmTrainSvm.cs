@@ -117,8 +117,8 @@ public partial class frmTrainSvm : Form
         try
         {
             var progress = new Progress<string>(msg => AppendLog(msg));
-            var trainer  = new SvmTrainer(new GarlicFeatureExtractor(config.ImageSize));
-            var result   = await trainer.TrainAsync(dataFolder, outputPath, config, progress);
+            using var classifier = new SvmClassifier(new GarlicFeatureExtractor(config.ImageSize));
+            var result           = await classifier.TrainAsync(dataFolder, outputPath, config, progress);
 
             // Lưu đường dẫn model vào AppSettings
             AppSettings.Instance.SvmModelPath = outputPath;
