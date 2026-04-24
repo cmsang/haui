@@ -759,14 +759,13 @@ public partial class frmMain : Form
     {
         btnDetect.Visible = !autoDetect;
         btnDetect.Enabled = !autoDetect && _pipeline != null;
+        lblStatus.Text = "";
 
         // Bật/tắt vòng lặp phân vùng tự động trong pipeline
         if (_pipeline != null)
             _pipeline.AutoSegment = autoDetect;
 
-        // Khi chuyển về auto, reset cached regions để tránh overlay cũ
-        if (autoDetect)
-            _pipeline?.CachedRegions?.Clear();
+        _pipeline?.CachedRegions?.Clear();
     }
 
     /// <summary>Nhận thông báo từ frmSettings khi AutoDetect thay đổi.</summary>
@@ -851,10 +850,10 @@ public partial class frmMain : Form
     {
         string labelText = region.FinalLabel switch
         {
-            GarlicLabel.ToTo   => "🟢 Tỏi to",
-            GarlicLabel.ToNho  => "🟡 Tỏi nhỏ",
+            GarlicLabel.ToTo => "🟢 Tỏi to",
+            GarlicLabel.ToNho => "🟡 Tỏi nhỏ",
             GarlicLabel.ToHong => "🔴 Tỏi hỏng",
-            _                  => "—"
+            _ => "—"
         };
 
         // Tâm bounding box làm vị trí đại diện
