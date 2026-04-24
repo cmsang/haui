@@ -129,6 +129,14 @@ public sealed class AppSettings
     /// <summary>Tốc độ baud rate kết nối với robot. Mặc định 9600.</summary>
     public int RobotBaudRate { get; set; } = 9600;
 
+    // ─── Camera / UI ─────────────────────────────────────────────────────────
+
+    /// <summary>Label độ phân giải đã chọn lần cuối (ví dụ: "640 × 480"). Null = dùng mặc định.</summary>
+    public string? LastResolutionLabel { get; set; }
+
+    /// <summary>Bật/tắt chế độ nhận diện tự động (true = tự động, false = nhấn nút thủ công).</summary>
+    public bool AutoDetect { get; set; } = true;
+
     // ─── Load / Save ─────────────────────────────────────────────────────────
 
     /// <summary>Đọc cài đặt từ <c>settings.json</c>. Trả về instance rỗng nếu file không tồn tại.</summary>

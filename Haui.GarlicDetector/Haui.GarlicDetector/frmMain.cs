@@ -17,6 +17,7 @@ public partial class frmMain : Form
     private SerialPort Robot = new SerialPort();
     private readonly StringBuilder _serialBuffer = new StringBuilder();
     private bool CameraWait = false;
+    private System.Windows.Forms.Timer? _annotationTimer;
 
     public frmMain()
     {
@@ -35,6 +36,7 @@ public partial class frmMain : Form
 
         // Đăng ký sự kiện HSV từ form cài đặt
         _frmSettings.HsvChanged += frmSettings_HsvChanged;
+        _frmSettings.AutoDetectChanged += frmSettings_AutoDetectChanged;
 
         // Đăng ký Paint overlay cho vùng nhận diện
         picCamera.Paint += PicCamera_Paint;
@@ -42,8 +44,8 @@ public partial class frmMain : Form
         // Nạp model SVM nếu đã có đường dẫn trong settings
         LoadSvmModel();
 
-        // Hiển thị trạng thái vùng nhận diện đã lưu
-        UpdateRegionStatus();
+        // Khôi phục trạng thái AutoDetect từ settings
+        ApplyAutoDetectSetting(AppSettings.Instance.AutoDetect);
 
         // Khởi tạo kết nối serial với robot
         if (!Robot.IsOpen)
@@ -238,6 +240,9 @@ public partial class frmMain : Form
             {
                 lblStatus.Text = $"✓ Phát hiện: {labelText} (Area: {largestRegion.Area:F0} px², Circ: {largestRegion.Circularity:F2})";
                 SetFrame(resultBitmap);
+
+
+                AddResultToGrid(largestRegion);
             });
 
             // Gửi kết quả về robot
@@ -327,15 +332,29 @@ public partial class frmMain : Form
             cmbCameras.SelectedIndex = 0;
     }
 
-    /// <summary>Điền danh sách độ phân giải cài sẵn vào combobox.</summary>
+    /// <summary>Điền danh sách độ phân giải cài sẵn vào combobox, khôi phục lựa chọn gần nhất.</summary>
     private void LoadResolutionList()
     {
         cmbResolution.Items.Clear();
         foreach (var res in CameraResolution.GetPresets())
             cmbResolution.Items.Add(res);
 
+        // Khôi phục lựa chọn gần nhất từ settings
+        var lastLabel = AppSettings.Instance.LastResolutionLabel;
+        if (!string.IsNullOrWhiteSpace(lastLabel))
+        {
+            for (int i = 0; i < cmbResolution.Items.Count; i++)
+            {
+                if (cmbResolution.Items[i] is CameraResolution r && r.Label == lastLabel)
+                {
+                    cmbResolution.SelectedIndex = i;
+                    return;
+                }
+            }
+        }
+
         // Mặc định chọn 640 × 480
-        cmbResolution.SelectedIndex = 1;
+        cmbResolution.SelectedIndex = Math.Min(1, cmbResolution.Items.Count - 1);
     }
 
     // ─── Điều khiển camera ────────────────────────────────────────────────────
@@ -367,6 +386,9 @@ public partial class frmMain : Form
         // Áp dụng vùng nhận diện đã lưu trong AppSettings
         _pipeline.DetectionRegion = AppSettings.Instance.DetectionRectangle;
 
+        // Đồng bộ chế độ AutoDetect vào pipeline
+        _pipeline.AutoSegment = AppSettings.Instance.AutoDetect;
+
         // Đồng bộ giá trị HSV hiện tại từ frmSettings vào segmenter
         SyncHsvToSegmenter();
 
@@ -378,6 +400,7 @@ public partial class frmMain : Form
 
         btnStart.Enabled = false;
         btnStop.Enabled = true;
+        btnDetect.Enabled = !AppSettings.Instance.AutoDetect;
         lblStatus.Text = "Đang chạy...";
     }
 
@@ -404,6 +427,7 @@ public partial class frmMain : Form
 
         btnStart.Enabled = true;
         btnStop.Enabled = false;
+        btnDetect.Enabled = false;
         lblStatus.Text = "Đã dừng.";
     }
 
@@ -426,8 +450,13 @@ public partial class frmMain : Form
     /// </summary>
     private void cmbResolution_SelectedIndexChanged(object sender, EventArgs e)
     {
-        if (_pipeline == null || cmbResolution.SelectedItem is not CameraResolution res) return;
+        if (cmbResolution.SelectedItem is not CameraResolution res) return;
 
+        // Lưu lựa chọn vào settings
+        AppSettings.Instance.LastResolutionLabel = res.Label;
+        AppSettings.Instance.Save();
+
+        if (_pipeline == null) return;
         _pipeline.SwitchResolution(res);
         lblStatus.Text = $"Độ phân giải: {res.Label}.";
     }
@@ -453,11 +482,29 @@ public partial class frmMain : Form
     /// </summary>
     private void OnSegmentationCompleted(object? sender, SegmentationCompletedEventArgs e)
     {
+        // Chế độ thủ công: chỉ hiển thị frame live, không ghi grid
+        if (!AppSettings.Instance.AutoDetect)
+        {
+            SetFrame(e.Frame);
+            return;
+        }
+
         SetFrame(e.Frame);
 
         var text = $"Phát hiện {e.Regions.Count} vùng tỏi.";
-        if (InvokeRequired) BeginInvoke(() => lblStatus.Text = text);
-        else lblStatus.Text = text;
+        if (InvokeRequired)
+            BeginInvoke(() =>
+            {
+                lblStatus.Text = text;
+                foreach (var r in e.Regions)
+                    AddResultToGrid(r);
+            });
+        else
+        {
+            lblStatus.Text = text;
+            foreach (var r in e.Regions)
+                AddResultToGrid(r);
+        }
     }
 
     /// <summary>Hiển thị thông báo lỗi từ pipeline lên thanh trạng thái.</summary>
@@ -697,8 +744,136 @@ public partial class frmMain : Form
     private void frmMain_FormClosing(object sender, FormClosingEventArgs e)
     {
         _frmSettings.HsvChanged -= frmSettings_HsvChanged;
+        _frmSettings.AutoDetectChanged -= frmSettings_AutoDetectChanged;
         _frmSettings.Dispose();
         StopPipeline();
         _svmClassifier?.Dispose();
+    }
+
+    // ─── AutoDetect / Nhận diện thủ công ─────────────────────────────────────
+
+    /// <summary>
+    /// Áp dụng cài đặt AutoDetect: toggle segmentation pipeline và hiển thị/ẩn btnDetect.
+    /// </summary>
+    private void ApplyAutoDetectSetting(bool autoDetect)
+    {
+        btnDetect.Visible = !autoDetect;
+        btnDetect.Enabled = !autoDetect && _pipeline != null;
+        lblStatus.Text = "";
+
+        // Bật/tắt vòng lặp phân vùng tự động trong pipeline
+        if (_pipeline != null)
+            _pipeline.AutoSegment = autoDetect;
+
+        _pipeline?.CachedRegions?.Clear();
+    }
+
+    /// <summary>Nhận thông báo từ frmSettings khi AutoDetect thay đổi.</summary>
+    private void frmSettings_AutoDetectChanged(object? sender, EventArgs e)
+        => ApplyAutoDetectSetting(AppSettings.Instance.AutoDetect);
+
+    /// <summary>
+    /// Nút Nhận diện (chế độ thủ công): chụp ảnh, nhận diện, hiển thị annotation 2 giây.
+    /// </summary>
+    private async void btnDetect_Click(object sender, EventArgs e)
+    {
+        if (_pipeline == null) return;
+
+        btnDetect.Enabled = false;
+        lblStatus.Text = "Đang nhận diện...";
+
+        try
+        {
+            await Task.Run(() =>
+            {
+                var snapshot = _pipeline.CaptureSnapshot();
+                if (snapshot == null)
+                {
+                    BeginInvoke(() =>
+                    {
+                        lblStatus.Text = "Không thể chụp ảnh từ camera.";
+                        btnDetect.Enabled = true;
+                    });
+                    return;
+                }
+
+                var regions = _pipeline.SegmentFrame(snapshot, _pipeline.DetectionRegion);
+
+                // Vẽ annotation lên ảnh
+                var annotated = (Bitmap)snapshot.Clone();
+                if (regions.Count > 0)
+                    GarlicPipeline.DrawRegions(annotated, regions);
+                snapshot.Dispose();
+
+                BeginInvoke(() =>
+                {
+                    // Hiển thị ảnh annotated
+                    SetFrame(annotated);
+
+                    // Ghi kết quả vào grid
+                    foreach (var r in regions)
+                        AddResultToGrid(r);
+
+                    lblStatus.Text = regions.Count > 0
+                        ? $"Phát hiện {regions.Count} củ tỏi."
+                        : "Không phát hiện tỏi.";
+
+                    // Sau 2 giây, trả về frame live
+                    _annotationTimer?.Stop();
+                    _annotationTimer?.Dispose();
+                    _annotationTimer = new System.Windows.Forms.Timer { Interval = 250 };
+                    _annotationTimer.Tick += (_, _) =>
+                    {
+                        _annotationTimer.Stop();
+                        _annotationTimer.Dispose();
+                        _annotationTimer = null;
+                        btnDetect.Enabled = _pipeline != null;
+                        lblStatus.Text = "";
+                    };
+                    _annotationTimer.Start();
+                });
+            });
+        }
+        catch (Exception ex)
+        {
+            lblStatus.Text = $"Lỗi: {ex.Message}";
+            btnDetect.Enabled = true;
+        }
+    }
+
+    // ─── Grid kết quả nhận diện ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Thêm một kết quả nhận diện mới vào đầu grid, giới hạn tối đa 200 dòng.
+    /// </summary>
+    private void AddResultToGrid(GarlicRegion region)
+    {
+        string labelText = region.FinalLabel switch
+        {
+            GarlicLabel.ToTo => "🟢 Tỏi to",
+            GarlicLabel.ToNho => "🟡 Tỏi nhỏ",
+            GarlicLabel.ToHong => "🔴 Tỏi hỏng",
+            _ => "—"
+        };
+
+        // Tâm bounding box làm vị trí đại diện
+        int cx = region.BoundingBox.X + region.BoundingBox.Width / 2;
+        int cy = region.BoundingBox.Y + region.BoundingBox.Height / 2;
+
+        dgvResults.Rows.Insert(0,
+            region.DetectedAt.ToString("HH:mm:ss"),
+            labelText,
+            $"{region.Area:F0}",
+            $"({cx}, {cy})");
+
+        // Giới hạn 200 dòng
+        while (dgvResults.Rows.Count > 200)
+            dgvResults.Rows.RemoveAt(dgvResults.Rows.Count - 1);
+    }
+
+    /// <summary>Xóa toàn bộ danh sách kết quả nhận diện.</summary>
+    private void btnClearResults_Click(object sender, EventArgs e)
+    {
+        dgvResults.Rows.Clear();
     }
 }

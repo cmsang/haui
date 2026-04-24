@@ -75,6 +75,13 @@ public sealed class GarlicPipeline : IDisposable
     /// </summary>
     public Rectangle? DetectionRegion { get; set; }
 
+    /// <summary>
+    /// Khi <c>true</c> (mặc định), pipeline tự động phân vùng mỗi frame và phát sự kiện
+    /// <see cref="SegmentationCompleted"/>. Khi <c>false</c>, vòng lặp phân vùng bị bỏ qua;
+    /// frame vẫn được phát qua <see cref="FrameReady"/> để picCamera luôn cập nhật live feed.
+    /// </summary>
+    public bool AutoSegment { get; set; } = true;
+
     public GarlicPipeline(
         CameraService cameraService,
         IImagePreprocessor preprocessor,
@@ -145,6 +152,9 @@ public sealed class GarlicPipeline : IDisposable
 
         // Thông báo UI ngay lập tức — không chờ phân vùng
         FrameReady?.Invoke(this, new FrameReadyEventArgs((Bitmap)bitmap.Clone(), _cachedRegions));
+
+        // Chế độ thủ công: chỉ cập nhật live feed, không phân vùng
+        if (!AutoSegment) return;
 
         // Khởi động worker phân vùng nếu chưa có instance nào đang chạy
         if (Interlocked.CompareExchange(ref _isProcessing, 1, 0) == 0)
