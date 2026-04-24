@@ -18,12 +18,12 @@ public partial class frmSettings : Form
 
     // ─── Thuộc tính đọc giá trị hiện tại ─────────────────────────────────────
 
-    public int HMin => trkHMin.Value;
-    public int HMax => trkHMax.Value;
-    public int SMin => trkSMin.Value;
-    public int SMax => trkSMax.Value;
-    public int VMin => trkVMin.Value;
-    public int VMax => trkVMax.Value;
+    public int HMin => HsvDto.Default.HMin;
+    public int HMax => HsvDto.Default.HMax;
+    public int SMin => HsvDto.Default.SMin;
+    public int SMax => HsvDto.Default.SMax;
+    public int VMin => HsvDto.Default.VMin;
+    public int VMax => HsvDto.Default.VMax;
 
     /// <summary>Ngưỡng circularity tối thiểu ∈ [0, 1] đọc từ trackbar (0–100 → 0.00–1.00).</summary>
     public double MinCircularity => trkCircularity.Value / 100.0;
@@ -41,12 +41,12 @@ public partial class frmSettings : Form
     public bool AutoDetect => chkAutoDetect.Checked;
 
     // ─── Ngưỡng HSV phụ (tỏi hỏng) ─────────────────────────────────────────
-    public int H2Min => trkH2Min.Value;
-    public int H2Max => trkH2Max.Value;
-    public int S2Min => trkS2Min.Value;
-    public int S2Max => trkS2Max.Value;
-    public int V2Min => trkV2Min.Value;
-    public int V2Max => trkV2Max.Value;
+    public int H2Min => HsvDto.DefaultDamaged.HMin;
+    public int H2Max => HsvDto.DefaultDamaged.HMax;
+    public int S2Min => HsvDto.DefaultDamaged.SMin;
+    public int S2Max => HsvDto.DefaultDamaged.SMax;
+    public int V2Min => HsvDto.DefaultDamaged.VMin;
+    public int V2Max => HsvDto.DefaultDamaged.VMax;
 
     public frmSettings()
     {
@@ -57,15 +57,6 @@ public partial class frmSettings : Form
 
     private void frmSettings_Load(object sender, EventArgs e)
     {
-        // Khôi phục giá trị HSV đã lưu; nếu chưa có thì dùng mặc định
-        var hsv = AppSettings.Instance.Hsv ?? HsvDto.Default;
-        trkHMin.Value = Math.Clamp(hsv.HMin, trkHMin.Minimum, trkHMin.Maximum);
-        trkHMax.Value = Math.Clamp(hsv.HMax, trkHMax.Minimum, trkHMax.Maximum);
-        trkSMin.Value = Math.Clamp(hsv.SMin, trkSMin.Minimum, trkSMin.Maximum);
-        trkSMax.Value = Math.Clamp(hsv.SMax, trkSMax.Minimum, trkSMax.Maximum);
-        trkVMin.Value = Math.Clamp(hsv.VMin, trkVMin.Minimum, trkVMin.Maximum);
-        trkVMax.Value = Math.Clamp(hsv.VMax, trkVMax.Minimum, trkVMax.Maximum);
-
         // Khôi phục ngưỡng circularity đã lưu
         int circ = (int)Math.Round(AppSettings.Instance.MinCircularity * 100);
         trkCircularity.Value = Math.Clamp(circ, trkCircularity.Minimum, trkCircularity.Maximum);
@@ -80,15 +71,6 @@ public partial class frmSettings : Form
         nudRoiPadding.Value     = Math.Clamp(AppSettings.Instance.RoiPaddingPx,
                                              (int)nudRoiPadding.Minimum,
                                              (int)nudRoiPadding.Maximum);
-
-        // Khôi phục ngưỡng HSV phụ (tỏi hỏng)
-        var hsv2 = AppSettings.Instance.HsvDamaged ?? HsvDto.DefaultDamaged;
-        trkH2Min.Value = Math.Clamp(hsv2.HMin, trkH2Min.Minimum, trkH2Min.Maximum);
-        trkH2Max.Value = Math.Clamp(hsv2.HMax, trkH2Max.Minimum, trkH2Max.Maximum);
-        trkS2Min.Value = Math.Clamp(hsv2.SMin, trkS2Min.Minimum, trkS2Min.Maximum);
-        trkS2Max.Value = Math.Clamp(hsv2.SMax, trkS2Max.Minimum, trkS2Max.Maximum);
-        trkV2Min.Value = Math.Clamp(hsv2.VMin, trkV2Min.Minimum, trkV2Min.Maximum);
-        trkV2Max.Value = Math.Clamp(hsv2.VMax, trkV2Max.Minimum, trkV2Max.Maximum);
 
         // Khôi phục chế độ AutoDetect
         chkAutoDetect.Checked = AppSettings.Instance.AutoDetect;
@@ -120,8 +102,6 @@ public partial class frmSettings : Form
     private void SaveSettings()
     {
         var s = AppSettings.Instance;
-        s.Hsv             = new HsvDto(HMin, HMax, SMin, SMax, VMin, VMax);
-        s.HsvDamaged      = new HsvDto(H2Min, H2Max, S2Min, S2Max, V2Min, V2Max);
         s.MinCircularity  = MinCircularity;
         s.SizeThresholdPx = SizeThresholdPx;
         s.MinContourArea  = MinContourArea;
@@ -139,20 +119,7 @@ public partial class frmSettings : Form
 
     private void UpdateLabels()
     {
-        lblHMin.Text = trkHMin.Value.ToString();
-        lblHMax.Text = trkHMax.Value.ToString();
-        lblSMin.Text = trkSMin.Value.ToString();
-        lblSMax.Text = trkSMax.Value.ToString();
-        lblVMin.Text = trkVMin.Value.ToString();
-        lblVMax.Text = trkVMax.Value.ToString();
         lblCircularity.Text = (trkCircularity.Value / 100.0).ToString("F2");
-
-        lblH2Min.Text = trkH2Min.Value.ToString();
-        lblH2Max.Text = trkH2Max.Value.ToString();
-        lblS2Min.Text = trkS2Min.Value.ToString();
-        lblS2Max.Text = trkS2Max.Value.ToString();
-        lblV2Min.Text = trkV2Min.Value.ToString();
-        lblV2Max.Text = trkV2Max.Value.ToString();
     }
 
     // ─── Nút ─────────────────────────────────────────────────────────────────
@@ -160,13 +127,6 @@ public partial class frmSettings : Form
     /// <summary>Đặt lại toàn bộ về giá trị mặc định.</summary>
     private void btnReset_Click(object sender, EventArgs e)
     {
-        // HSV mặc định — SaveSettings() sẽ được gọi tự động qua trkHsv_ValueChanged
-        trkHMin.Value        = 0;
-        trkHMax.Value        = 179;
-        trkSMin.Value        = 0;
-        trkSMax.Value        = 60;
-        trkVMin.Value        = 170;
-        trkVMax.Value        = 255;
         trkCircularity.Value = 40;
 
         // Kích thước mặc định — tắt event tạm để tránh lưu nhiều lần
@@ -179,15 +139,6 @@ public partial class frmSettings : Form
 
         nudSizeThreshold.ValueChanged  += nudClassification_ValueChanged;
         nudMinContourArea.ValueChanged += nudClassification_ValueChanged;
-
-        // Đặt lại ngưỡng HSV phụ (tỏi hỏng) về mặc định
-        var d = HsvDto.DefaultDamaged;
-        trkH2Min.Value = d.HMin;
-        trkH2Max.Value = d.HMax;
-        trkS2Min.Value = d.SMin;
-        trkS2Max.Value = d.SMax;
-        trkV2Min.Value = d.VMin;
-        trkV2Max.Value = d.VMax;
 
         // Lưu 1 lần duy nhất sau khi reset tất cả
         SaveSettings();
