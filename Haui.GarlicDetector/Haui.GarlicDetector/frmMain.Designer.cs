@@ -16,6 +16,7 @@ partial class frmMain
     private Button btnLabeling;
     private Button btnSettings;
     private Button btnTrainSvm;
+    private Button btnTest;
     private Label lblStatus;
 
     // ─── Khung hiển thị ảnh camera ───────────────────────────────────────────
@@ -44,6 +45,7 @@ partial class frmMain
         btnLabeling     = new Button();
         btnSettings     = new Button();
         btnTrainSvm     = new Button();
+        btnTest         = new Button();
         lblStatus     = new Label();
 
         picCamera = new PictureBox();
@@ -63,7 +65,7 @@ partial class frmMain
         {
             lblCamera, cmbCameras,
             lblResolution, cmbResolution,
-            btnStart, btnStop, btnSelectRegion, btnLabeling, btnSettings, btnTrainSvm, lblStatus,
+            btnStart, btnStop, btnSelectRegion, btnLabeling, btnSettings, btnTrainSvm, btnTest, lblStatus,
         });
 
         // lblCamera
@@ -171,6 +173,18 @@ partial class frmMain
         btnTrainSvm.FlatAppearance.BorderSize = 0;
         btnTrainSvm.Click                    += btnTrainSvm_Click;
 
+        // btnTest
+        btnTest.Name                      = "btnTest";
+        btnTest.Text                      = "🧪 Test";
+        btnTest.Width                     = 90;
+        btnTest.Height                    = 30;
+        btnTest.Location                  = new Point(1259, 11);
+        btnTest.BackColor                 = Color.FromArgb(0, 140, 140);
+        btnTest.ForeColor                 = Color.White;
+        btnTest.FlatStyle                 = FlatStyle.Flat;
+        btnTest.FlatAppearance.BorderSize = 0;
+        btnTest.Click                    += btnTest_Click;
+
         // lblStatus
         lblStatus.Name      = "lblStatus";
         lblStatus.Text      = "Sẵn sàng.";
@@ -178,7 +192,7 @@ partial class frmMain
         lblStatus.Width     = 250;
         lblStatus.Height    = 20;
         lblStatus.ForeColor = Color.LightGray;
-        lblStatus.Location  = new Point(1260, 17);
+        lblStatus.Location  = new Point(1362, 17);
 
         // ── picCamera ─────────────────────────────────────────────────────────
         picCamera.Name      = "picCamera";
