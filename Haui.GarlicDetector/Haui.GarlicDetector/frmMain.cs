@@ -597,6 +597,13 @@ public partial class frmMain : Form
 
     // ─── Huấn luyện SVM ──────────────────────────────────────────────────────
 
+    /// <summary>Mở form test nhận diện ảnh tĩnh.</summary>
+    private void btnTest_Click(object sender, EventArgs e)
+    {
+        var frm = new frmTestDetection();
+        frm.Show(this);
+    }
+
     /// <summary>Mở form huấn luyện SVM.</summary>
     private void btnTrainSvm_Click(object sender, EventArgs e)
     {
