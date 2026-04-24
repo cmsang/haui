@@ -238,6 +238,9 @@ public partial class frmMain : Form
             {
                 lblStatus.Text = $"✓ Phát hiện: {labelText} (Area: {largestRegion.Area:F0} px², Circ: {largestRegion.Circularity:F2})";
                 SetFrame(resultBitmap);
+
+
+                AddResultToGrid(largestRegion);
             });
 
             // Gửi kết quả về robot
@@ -456,8 +459,19 @@ public partial class frmMain : Form
         SetFrame(e.Frame);
 
         var text = $"Phát hiện {e.Regions.Count} vùng tỏi.";
-        if (InvokeRequired) BeginInvoke(() => lblStatus.Text = text);
-        else lblStatus.Text = text;
+        if (InvokeRequired)
+            BeginInvoke(() =>
+            {
+                lblStatus.Text = text;
+                foreach (var r in e.Regions)
+                    AddResultToGrid(r);
+            });
+        else
+        {
+            lblStatus.Text = text;
+            foreach (var r in e.Regions)
+                AddResultToGrid(r);
+        }
     }
 
     /// <summary>Hiển thị thông báo lỗi từ pipeline lên thanh trạng thái.</summary>
@@ -700,5 +714,41 @@ public partial class frmMain : Form
         _frmSettings.Dispose();
         StopPipeline();
         _svmClassifier?.Dispose();
+    }
+
+    // ─── Grid kết quả nhận diện ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Thêm một kết quả nhận diện mới vào đầu grid, giới hạn tối đa 200 dòng.
+    /// </summary>
+    private void AddResultToGrid(GarlicRegion region)
+    {
+        string labelText = region.FinalLabel switch
+        {
+            GarlicLabel.ToTo   => "🟢 Tỏi to",
+            GarlicLabel.ToNho  => "🟡 Tỏi nhỏ",
+            GarlicLabel.ToHong => "🔴 Tỏi hỏng",
+            _                  => "—"
+        };
+
+        // Tâm bounding box làm vị trí đại diện
+        int cx = region.BoundingBox.X + region.BoundingBox.Width / 2;
+        int cy = region.BoundingBox.Y + region.BoundingBox.Height / 2;
+
+        dgvResults.Rows.Insert(0,
+            region.DetectedAt.ToString("HH:mm:ss"),
+            labelText,
+            $"{region.Area:F0}",
+            $"({cx}, {cy})");
+
+        // Giới hạn 200 dòng
+        while (dgvResults.Rows.Count > 200)
+            dgvResults.Rows.RemoveAt(dgvResults.Rows.Count - 1);
+    }
+
+    /// <summary>Xóa toàn bộ danh sách kết quả nhận diện.</summary>
+    private void btnClearResults_Click(object sender, EventArgs e)
+    {
+        dgvResults.Rows.Clear();
     }
 }
