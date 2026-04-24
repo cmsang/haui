@@ -17,6 +17,7 @@ partial class frmMain
     private Button btnSettings;
     private Button btnTrainSvm;
     private Button btnTest;
+    private Button btnDetect;
     private Label lblStatus;
 
     // ─── Khung hiển thị ảnh camera ───────────────────────────────────────────
@@ -53,6 +54,7 @@ partial class frmMain
         btnSettings = new Button();
         btnTrainSvm = new Button();
         btnTest = new Button();
+        btnDetect = new Button();
         lblStatus = new Label();
         picCamera = new PictureBox();
         pnlRight = new Panel();
@@ -87,6 +89,7 @@ partial class frmMain
         pnlTop.Controls.Add(btnSettings);
         pnlTop.Controls.Add(btnTrainSvm);
         pnlTop.Controls.Add(btnTest);
+        pnlTop.Controls.Add(btnDetect);
         pnlTop.Controls.Add(lblStatus);
         pnlTop.Dock = DockStyle.Top;
         pnlTop.Location = new Point(0, 0);
@@ -246,10 +249,26 @@ partial class frmMain
         btnTest.UseVisualStyleBackColor = false;
         btnTest.Click += btnTest_Click;
         // 
+        // btnDetect
+        // 
+        btnDetect.Name                      = "btnDetect";
+        btnDetect.Text                      = "📷 Nhận diện";
+        btnDetect.ForeColor                 = Color.White;
+        btnDetect.BackColor                 = Color.FromArgb(180, 100, 0);
+        btnDetect.FlatStyle                 = FlatStyle.Flat;
+        btnDetect.FlatAppearance.BorderSize = 0;
+        btnDetect.Location                  = new Point(1556, 15);
+        btnDetect.Size                      = new Size(130, 40);
+        btnDetect.TabIndex                  = 11;
+        btnDetect.Visible                   = false;
+        btnDetect.Enabled                   = false;
+        btnDetect.UseVisualStyleBackColor   = false;
+        btnDetect.Click                    += btnDetect_Click;
+        // 
         // lblStatus
         // 
         lblStatus.ForeColor = Color.LightGray;
-        lblStatus.Location = new Point(1557, 23);
+        lblStatus.Location = new Point(1700, 23);
         lblStatus.Name = "lblStatus";
         lblStatus.Size = new Size(286, 27);
         lblStatus.TabIndex = 11;

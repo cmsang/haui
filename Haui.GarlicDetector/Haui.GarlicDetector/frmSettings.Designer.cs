@@ -54,8 +54,7 @@ partial class frmSettings
     // ─── GroupBox ngưỡng HSV phụ (tỏi hỏng) ─────────────────────────────────
     private GroupBox grpHsvDamaged;
 
-    private TrackBar trkH2Min;
-    private TrackBar trkH2Max;
+    private TrackBar trkH2Min;    private TrackBar trkH2Max;
     private TrackBar trkS2Min;
     private TrackBar trkS2Max;
     private TrackBar trkV2Min;
@@ -74,6 +73,10 @@ partial class frmSettings
     private Label lblS2MaxTxt;
     private Label lblV2MinTxt;
     private Label lblV2MaxTxt;
+
+    // ─── GroupBox chế độ nhận diện ───────────────────────────────────────────
+    private GroupBox grpDetection;
+    private CheckBox chkAutoDetect;
 
     protected override void Dispose(bool disposing)
     {
@@ -127,8 +130,7 @@ partial class frmSettings
 
         grpHsvDamaged = new GroupBox();
         trkH2Min    = new TrackBar();
-        trkH2Max    = new TrackBar();
-        trkS2Min    = new TrackBar();
+        trkH2Max    = new TrackBar();        trkS2Min    = new TrackBar();
         trkS2Max    = new TrackBar();
         trkV2Min    = new TrackBar();
         trkV2Max    = new TrackBar();
@@ -164,6 +166,9 @@ partial class frmSettings
         trkS2Max.BeginInit();
         trkV2Min.BeginInit();
         trkV2Max.BeginInit();
+        grpDetection = new GroupBox();
+        chkAutoDetect = new CheckBox();
+        grpDetection.SuspendLayout();
         pnlBottom.SuspendLayout();
         SuspendLayout();
 
@@ -530,9 +535,25 @@ partial class frmSettings
         trkV2Max.Name = "trkV2Max"; trkV2Max.Minimum = 0; trkV2Max.Maximum = 255; trkV2Max.Value = 175; trkV2Max.TickFrequency = 25; trkV2Max.Location = new Point(54, 196); trkV2Max.Width = 172; trkV2Max.AutoSize = false; trkV2Max.Height = 28; trkV2Max.ValueChanged += trkHsv_ValueChanged;
         lblV2Max.Name = "lblV2Max"; lblV2Max.AutoSize = false; lblV2Max.Width = 28; lblV2Max.Height = 15; lblV2Max.Location = new Point(230, 202); lblV2Max.ForeColor = Color.Yellow;
 
+        // ── grpDetection ──────────────────────────────────────────────────────
+        grpDetection.Name      = "grpDetection";
+        grpDetection.Text      = "Chế độ nhận diện";
+        grpDetection.Dock      = DockStyle.Top;
+        grpDetection.Height    = 56;
+        grpDetection.ForeColor = Color.White;
+        grpDetection.Padding   = new Padding(10, 8, 10, 8);
+        grpDetection.Controls.Add(chkAutoDetect);
+
+        chkAutoDetect.Name      = "chkAutoDetect";
+        chkAutoDetect.Text      = "Tự động nhận diện";
+        chkAutoDetect.ForeColor = Color.White;
+        chkAutoDetect.Location  = new Point(12, 24);
+        chkAutoDetect.AutoSize  = true;
+        chkAutoDetect.Checked   = true;
+        chkAutoDetect.CheckedChanged += chkAutoDetect_CheckedChanged;
+
         // ── pnlBottom ─────────────────────────────────────────────────────────
         pnlBottom.Name      = "pnlBottom";
-        pnlBottom.Dock      = DockStyle.Bottom;
         pnlBottom.Height    = 48;
         pnlBottom.BackColor = Color.FromArgb(45, 45, 48);
         pnlBottom.Controls.AddRange(new Control[] { btnReset, btnClose });
@@ -564,8 +585,8 @@ partial class frmSettings
         // ── Form ──────────────────────────────────────────────────────────────
         AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode       = AutoScaleMode.Font;
-        // Chiều cao = pnlBottom(48) + grpHsvDamaged(270) + grpClassification(136) + grpSegmentation(80) + grpHsv(270)
-        ClientSize          = new Size(274, 826);
+        // Chiều cao = pnlBottom(48) + grpHsvDamaged(270) + grpClassification(136) + grpSegmentation(80) + grpHsv(270) + grpDetection(56)
+        ClientSize          = new Size(274, 882);
         FormBorderStyle     = FormBorderStyle.FixedDialog;
         MaximizeBox         = false;
         MinimizeBox         = false;
@@ -579,11 +600,12 @@ partial class frmSettings
         Load               += frmSettings_Load;
 
         // Dock=Top: control Add sau sẽ hiển thị phía trên — thứ tự từ trên xuống:
-        // grpHsvDamaged → grpClassification → grpSegmentation → grpHsv
+        // grpDetection → grpHsvDamaged → grpClassification → grpSegmentation → grpHsv
         Controls.Add(grpHsv);
         Controls.Add(grpSegmentation);
         Controls.Add(grpClassification);
         Controls.Add(grpHsvDamaged);
+        Controls.Add(grpDetection);
         Controls.Add(pnlBottom);
 
         trkHMin.EndInit();
@@ -606,6 +628,7 @@ partial class frmSettings
         grpSegmentation.ResumeLayout(false);
         grpClassification.ResumeLayout(false);
         grpHsvDamaged.ResumeLayout(false);
+        grpDetection.ResumeLayout(false);
         pnlBottom.ResumeLayout(false);
         ResumeLayout(false);
         PerformLayout();

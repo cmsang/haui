@@ -13,6 +13,9 @@ public partial class frmSettings : Form
     /// <summary>Kích hoạt mỗi khi bất kỳ giá trị HSV nào thay đổi.</summary>
     public event EventHandler? HsvChanged;
 
+    /// <summary>Kích hoạt khi trạng thái AutoDetect thay đổi.</summary>
+    public event EventHandler? AutoDetectChanged;
+
     // ─── Thuộc tính đọc giá trị hiện tại ─────────────────────────────────────
 
     public int HMin => trkHMin.Value;
@@ -33,6 +36,9 @@ public partial class frmSettings : Form
 
     /// <summary>Số pixel mở rộng mỗi chiều khi crop ROI vào SVM và khi vẽ khung.</summary>
     public int RoiPaddingPx => (int)nudRoiPadding.Value;
+
+    /// <summary>Trạng thái checkbox AutoDetect.</summary>
+    public bool AutoDetect => chkAutoDetect.Checked;
 
     // ─── Ngưỡng HSV phụ (tỏi hỏng) ─────────────────────────────────────────
     public int H2Min => trkH2Min.Value;
@@ -83,6 +89,10 @@ public partial class frmSettings : Form
         trkS2Max.Value = Math.Clamp(hsv2.SMax, trkS2Max.Minimum, trkS2Max.Maximum);
         trkV2Min.Value = Math.Clamp(hsv2.VMin, trkV2Min.Minimum, trkV2Min.Maximum);
         trkV2Max.Value = Math.Clamp(hsv2.VMax, trkV2Max.Minimum, trkV2Max.Maximum);
+
+        // Khôi phục chế độ AutoDetect
+        chkAutoDetect.Checked = AppSettings.Instance.AutoDetect;
+
         UpdateLabels();
     }
 
@@ -116,7 +126,15 @@ public partial class frmSettings : Form
         s.SizeThresholdPx = SizeThresholdPx;
         s.MinContourArea  = MinContourArea;
         s.RoiPaddingPx    = RoiPaddingPx;
+        s.AutoDetect      = AutoDetect;
         s.Save();
+    }
+
+    /// <summary>Xử lý thay đổi AutoDetect, lưu settings và thông báo frmMain.</summary>
+    private void chkAutoDetect_CheckedChanged(object? sender, EventArgs e)
+    {
+        SaveSettings();
+        AutoDetectChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void UpdateLabels()
