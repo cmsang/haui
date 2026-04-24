@@ -1,5 +1,5 @@
 {
-  "SvmModelPath": "D:\\haui\\Haui.GarlicDetector\\GarlicImages\\garlic_svm.xml",
+  "SvmModelPath": "SVMFiles\\garlic_svm.xml",
   "SvmTrainImageSize": 128,
   "DetectionRegion": null,
   "Hsv": {
@@ -12,5 +12,6 @@
   },
   "MinCircularity": 0.4,
   "RobotPortName": "COM5",
-  "RobotBaudRate": 115200
+  "RobotBaudRate": 115200,
+  "AutoDetect": false
 }

@@ -31,5 +31,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <None Update="SVMFiles\garlic_svm.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>
