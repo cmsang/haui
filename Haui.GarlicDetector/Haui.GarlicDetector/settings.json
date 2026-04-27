@@ -10,7 +10,7 @@
     "VMin": 170,
     "VMax": 255
   },
-  "MinCircularity": 0.4,
+  "MinCircularity": 0.2,
   "RobotPortName": "COM5",
   "RobotBaudRate": 115200,
   "AutoDetect": false

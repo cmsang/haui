@@ -1,3 +1,4 @@
+using Haui.GarlicDetector.Vision;
 using OpenCvSharp;
 using OpenCvSharp.ML;
 
@@ -13,11 +14,26 @@ public sealed record SvmConfig(double C, double Gamma, int ImageSize);
 public sealed class SvmClassifier : IGarlicClassifier, IDisposable
 {
     private readonly IFeatureExtractor _extractor;
+    private readonly IImagePreprocessor? _preprocessor;
+    private readonly IGarlicSegmentor? _segmentor;
     private SVM? _svm;
 
     public SvmClassifier(IFeatureExtractor extractor)
     {
         _extractor = extractor;
+    }
+
+    /// <summary>
+    /// Khởi tạo với bộ tiền xử lý và phân vùng để tách ROI từng củ tỏi trong ảnh khi train.
+    /// </summary>
+    public SvmClassifier(
+        IFeatureExtractor extractor,
+        IImagePreprocessor preprocessor,
+        IGarlicSegmentor segmentor)
+    {
+        _extractor   = extractor;
+        _preprocessor = preprocessor;
+        _segmentor   = segmentor;
     }
 
     // ─── IsLoaded ─────────────────────────────────────────────────────────
@@ -75,8 +91,36 @@ public sealed class SvmClassifier : IGarlicClassifier, IDisposable
 
                 try
                 {
-                    var feat = _extractor.Extract(mat);
-                    featureList.Add(feat);
+                    // Nếu có preprocessor + segmentor: phân vùng ảnh để trích ROI từng củ tỏi
+                    if (_preprocessor != null && _segmentor != null)
+                    {
+                        using var preprocessed = _preprocessor.Preprocess(mat);
+                        var segments = _segmentor.Segment(preprocessed);
+
+                        if (segments.Count > 0)
+                        {
+                            // Trích đặc trưng từng ROI phân vùng được
+                            foreach (var seg in segments)
+                            {
+                                int rx = Math.Clamp(seg.BoundingRect.X, 0, mat.Width - 1);
+                                int ry = Math.Clamp(seg.BoundingRect.Y, 0, mat.Height - 1);
+                                int rw = Math.Clamp(seg.BoundingRect.Width,  1, mat.Width  - rx);
+                                int rh = Math.Clamp(seg.BoundingRect.Height, 1, mat.Height - ry);
+
+                                using var roi = new Mat(mat, new Rect(rx, ry, rw, rh));
+                                var feat = _extractor.Extract(roi);
+                                featureList.Add(feat);
+                                labelList.Add(label);
+                            }
+                            continue; // chuyển sang ảnh tiếp theo
+                        }
+                        // Phân vùng không tìm thấy vùng nào → fallback toàn ảnh
+                        progress?.Report($"  ⚠️ Không phân vùng được: {Path.GetFileName(file)} — dùng toàn ảnh.");
+                    }
+
+                    // Fallback: không có segmentor hoặc phân vùng thất bại → dùng toàn ảnh
+                    var featFull = _extractor.Extract(mat);
+                    featureList.Add(featFull);
                     labelList.Add(label);
                 }
                 catch { skipped++; }
