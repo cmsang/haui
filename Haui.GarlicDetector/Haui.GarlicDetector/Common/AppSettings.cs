@@ -80,7 +80,7 @@ public sealed class AppSettings
     /// Vùng có circularity thấp hơn ngưỡng này sẽ không được gán nhãn.
     /// Mặc định 0.4 (vừa đủ chấp nhận tỏi oval nhẹ).
     /// </summary>
-    public double MinCircularity { get; set; } = 0.4;
+    public double MinCircularity { get; set; } = 0.2;
 
     // ─── Phân loại kích thước ────────────────────────────────────────────────
 
@@ -100,9 +100,9 @@ public sealed class AppSettings
 
     /// <summary>
     /// Số pixel mở rộng thêm mỗi chiều khi crop ROI đưa vào SVM và khi vẽ khung bounding box.
-    /// Giúp SVM thấy thêm ngữ cảnh xung quanh tỏi. Mặc định 20 px.
+    /// Giúp SVM thấy thêm ngữ cảnh xung quanh tỏi. Mặc định 0 px.
     /// </summary>
-    public int RoiPaddingPx { get; set; } = 20;
+    public int RoiPaddingPx { get; set; } = 0;
 
     // ─── SVM / Huấn luyện ────────────────────────────────────────────────────
 

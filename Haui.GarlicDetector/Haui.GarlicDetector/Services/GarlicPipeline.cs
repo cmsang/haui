@@ -130,6 +130,37 @@ public sealed class GarlicPipeline : IDisposable
     /// <summary>Chụp ảnh tĩnh từ camera hiện tại.</summary>
     public Bitmap? CaptureSnapshot() => _cameraService.CaptureSnapshot();
 
+    /// <summary>
+    /// Kích hoạt lấy nét rồi chụp <paramref name="frameCount"/> khung, trả về khung nét nhất.
+    /// Nếu <see cref="DetectionRegion"/> được đặt, ảnh trả về được crop về đúng vùng đó.
+    /// </summary>
+    public Bitmap? CaptureSharpestFrame(int frameCount = 10)
+    {
+        var sharpest = _cameraService.CaptureSharpestFrame(frameCount, DetectionRegion);
+
+        if (sharpest == null || !DetectionRegion.HasValue)
+            return sharpest;
+
+        // Crop ảnh về đúng vùng được chọn
+        var dr = DetectionRegion.Value;
+        int x = Math.Clamp(dr.X, 0, sharpest.Width  - 1);
+        int y = Math.Clamp(dr.Y, 0, sharpest.Height - 1);
+        int w = Math.Clamp(dr.Width,  1, sharpest.Width  - x);
+        int h = Math.Clamp(dr.Height, 1, sharpest.Height - y);
+
+        try
+        {
+            var cropped = sharpest.Clone(new Rectangle(x, y, w, h), sharpest.PixelFormat);
+            sharpest.Dispose();
+            return cropped;
+        }
+        catch
+        {
+            // Nếu crop thất bại (e.g. vùng ngoài biên), trả về ảnh gốc
+            return sharpest;
+        }
+    }
+
     // ─── Pipeline nội bộ ─────────────────────────────────────────────────────
 
     private void OnFrameCaptured(object? sender, Bitmap bitmap)

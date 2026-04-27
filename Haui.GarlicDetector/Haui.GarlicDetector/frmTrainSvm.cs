@@ -1,5 +1,6 @@
 using Haui.GarlicDetector.Common;
 using Haui.GarlicDetector.ML;
+using Haui.GarlicDetector.Vision;
 
 namespace Haui.GarlicDetector;
 
@@ -117,7 +118,27 @@ public partial class frmTrainSvm : Form
         try
         {
             var progress = new Progress<string>(msg => AppendLog(msg));
-            using var classifier = new SvmClassifier(new GarlicFeatureExtractor(config.ImageSize));
+
+                // Xây dựng preprocessor + segmentor từ AppSettings (giống pipeline chính)
+                var s2 = AppSettings.Instance;
+                var preprocessor = new HsvGarlicPreprocessor();
+                var segmentor = new HsvSegmenter();
+
+                // Áp dụng ngưỡng HSV từ settings
+                var hsv = s2.Hsv ?? HsvDto.Default;
+                segmentor.HMin = hsv.HMin; segmentor.HMax = hsv.HMax;
+                segmentor.SMin = hsv.SMin; segmentor.SMax = hsv.SMax;
+                segmentor.VMin = hsv.VMin; segmentor.VMax = hsv.VMax;
+
+                var hsv2 = s2.HsvDamaged ?? HsvDto.DefaultDamaged;
+                segmentor.H2Min = hsv2.HMin; segmentor.H2Max = hsv2.HMax;
+                segmentor.S2Min = hsv2.SMin; segmentor.S2Max = hsv2.SMax;
+                segmentor.V2Min = hsv2.VMin; segmentor.V2Max = hsv2.VMax;
+
+                using var classifier = new SvmClassifier(
+                    new GarlicFeatureExtractor(config.ImageSize),
+                    preprocessor,
+                    segmentor);
             var result           = await classifier.TrainAsync(dataFolder, outputPath, config, progress);
 
             // Lưu đường dẫn model vào AppSettings

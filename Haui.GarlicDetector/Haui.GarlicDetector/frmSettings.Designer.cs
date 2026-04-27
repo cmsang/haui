@@ -30,6 +30,7 @@ partial class frmSettings
 
     // ─── Panel dưới (nút) ────────────────────────────────────────────────────
     private Panel pnlBottom;
+    private Button btnSave;
     private Button btnReset;
     private Button btnClose;
 
@@ -107,6 +108,7 @@ partial class frmSettings
         trkVMax = new TrackBar();
         lblVMax = new Label();
         pnlBottom = new Panel();
+        btnSave = new Button();
         btnReset = new Button();
         btnClose = new Button();
         grpSegmentation = new GroupBox();
@@ -380,11 +382,12 @@ partial class frmSettings
         // 
         pnlBottom.BackColor = Color.FromArgb(45, 45, 48);
         pnlBottom.Controls.Add(btnReset);
+        pnlBottom.Controls.Add(btnSave);
         pnlBottom.Controls.Add(btnClose);
-        pnlBottom.Location = new Point(0, 0);
+        pnlBottom.Dock = DockStyle.Bottom;
         pnlBottom.Margin = new Padding(3, 4, 3, 4);
         pnlBottom.Name = "pnlBottom";
-        pnlBottom.Size = new Size(229, 64);
+        pnlBottom.Size = new Size(313, 64);
         pnlBottom.TabIndex = 3;
         // 
         // btnReset
@@ -393,14 +396,29 @@ partial class frmSettings
         btnReset.FlatAppearance.BorderSize = 0;
         btnReset.FlatStyle = FlatStyle.Flat;
         btnReset.ForeColor = Color.White;
-        btnReset.Location = new Point(73, 12);
+        btnReset.Location = new Point(6, 12);
         btnReset.Margin = new Padding(3, 4, 3, 4);
         btnReset.Name = "btnReset";
-        btnReset.Size = new Size(109, 40);
+        btnReset.Size = new Size(90, 40);
         btnReset.TabIndex = 0;
         btnReset.Text = "↺ Đặt lại";
         btnReset.UseVisualStyleBackColor = false;
         btnReset.Click += btnReset_Click;
+        // 
+        // btnSave
+        // 
+        btnSave.BackColor = Color.FromArgb(30, 130, 30);
+        btnSave.FlatAppearance.BorderSize = 0;
+        btnSave.FlatStyle = FlatStyle.Flat;
+        btnSave.ForeColor = Color.White;
+        btnSave.Location = new Point(102, 12);
+        btnSave.Margin = new Padding(3, 4, 3, 4);
+        btnSave.Name = "btnSave";
+        btnSave.Size = new Size(100, 40);
+        btnSave.TabIndex = 1;
+        btnSave.Text = "💾 Lưu";
+        btnSave.UseVisualStyleBackColor = false;
+        btnSave.Click += btnSave_Click;
         // 
         // btnClose
         // 
@@ -408,11 +426,11 @@ partial class frmSettings
         btnClose.FlatAppearance.BorderSize = 0;
         btnClose.FlatStyle = FlatStyle.Flat;
         btnClose.ForeColor = Color.White;
-        btnClose.Location = new Point(191, 12);
+        btnClose.Location = new Point(208, 12);
         btnClose.Margin = new Padding(3, 4, 3, 4);
         btnClose.Name = "btnClose";
-        btnClose.Size = new Size(97, 40);
-        btnClose.TabIndex = 1;
+        btnClose.Size = new Size(99, 40);
+        btnClose.TabIndex = 2;
         btnClose.Text = "✕ Đóng";
         btnClose.UseVisualStyleBackColor = false;
         btnClose.Click += btnClose_Click;
@@ -427,7 +445,7 @@ partial class frmSettings
         grpSegmentation.Location = new Point(0, 256);
         grpSegmentation.Margin = new Padding(3, 4, 3, 4);
         grpSegmentation.Name = "grpSegmentation";
-        grpSegmentation.Padding = new Padding(11, 11, 11, 11);
+        grpSegmentation.Padding = new Padding(11);
         grpSegmentation.Size = new Size(313, 83);
         grpSegmentation.TabIndex = 0;
         grpSegmentation.TabStop = false;
@@ -444,7 +462,7 @@ partial class frmSettings
         // 
         // trkCircularity
         // 
-        trkCircularity.Location = new Point(66, 29);
+        trkCircularity.Location = new Point(87, 29);
         trkCircularity.Margin = new Padding(3, 4, 3, 4);
         trkCircularity.Maximum = 100;
         trkCircularity.Name = "trkCircularity";
@@ -457,7 +475,7 @@ partial class frmSettings
         // lblCircularity
         // 
         lblCircularity.ForeColor = Color.Yellow;
-        lblCircularity.Location = new Point(231, 37);
+        lblCircularity.Location = new Point(252, 37);
         lblCircularity.Name = "lblCircularity";
         lblCircularity.Size = new Size(41, 27);
         lblCircularity.TabIndex = 2;
@@ -480,7 +498,7 @@ partial class frmSettings
         grpClassification.Location = new Point(0, 75);
         grpClassification.Margin = new Padding(3, 4, 3, 4);
         grpClassification.Name = "grpClassification";
-        grpClassification.Padding = new Padding(11, 11, 11, 11);
+        grpClassification.Padding = new Padding(11);
         grpClassification.Size = new Size(313, 181);
         grpClassification.TabIndex = 1;
         grpClassification.TabStop = false;
@@ -500,7 +518,7 @@ partial class frmSettings
         nudSizeThreshold.BackColor = Color.FromArgb(45, 45, 48);
         nudSizeThreshold.ForeColor = Color.Yellow;
         nudSizeThreshold.Increment = new decimal(new int[] { 500, 0, 0, 0 });
-        nudSizeThreshold.Location = new Point(75, 35);
+        nudSizeThreshold.Location = new Point(96, 35);
         nudSizeThreshold.Margin = new Padding(3, 4, 3, 4);
         nudSizeThreshold.Maximum = new decimal(new int[] { 200000, 0, 0, 0 });
         nudSizeThreshold.Minimum = new decimal(new int[] { 100, 0, 0, 0 });
@@ -513,7 +531,7 @@ partial class frmSettings
         // lblSizeThresholdUnit
         // 
         lblSizeThresholdUnit.ForeColor = Color.LightGray;
-        lblSizeThresholdUnit.Location = new Point(194, 37);
+        lblSizeThresholdUnit.Location = new Point(215, 37);
         lblSizeThresholdUnit.Name = "lblSizeThresholdUnit";
         lblSizeThresholdUnit.Size = new Size(32, 29);
         lblSizeThresholdUnit.TabIndex = 2;
@@ -533,7 +551,7 @@ partial class frmSettings
         nudMinContourArea.BackColor = Color.FromArgb(45, 45, 48);
         nudMinContourArea.ForeColor = Color.Yellow;
         nudMinContourArea.Increment = new decimal(new int[] { 100, 0, 0, 0 });
-        nudMinContourArea.Location = new Point(75, 80);
+        nudMinContourArea.Location = new Point(96, 80);
         nudMinContourArea.Margin = new Padding(3, 4, 3, 4);
         nudMinContourArea.Maximum = new decimal(new int[] { 50000, 0, 0, 0 });
         nudMinContourArea.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
@@ -546,7 +564,7 @@ partial class frmSettings
         // lblMinContourAreaUnit
         // 
         lblMinContourAreaUnit.ForeColor = Color.LightGray;
-        lblMinContourAreaUnit.Location = new Point(194, 83);
+        lblMinContourAreaUnit.Location = new Point(215, 83);
         lblMinContourAreaUnit.Name = "lblMinContourAreaUnit";
         lblMinContourAreaUnit.Size = new Size(32, 29);
         lblMinContourAreaUnit.TabIndex = 5;
@@ -557,7 +575,7 @@ partial class frmSettings
         lblRoiPaddingTxt.ForeColor = Color.LightGray;
         lblRoiPaddingTxt.Location = new Point(11, 131);
         lblRoiPaddingTxt.Name = "lblRoiPaddingTxt";
-        lblRoiPaddingTxt.Size = new Size(59, 29);
+        lblRoiPaddingTxt.Size = new Size(79, 29);
         lblRoiPaddingTxt.TabIndex = 6;
         lblRoiPaddingTxt.Text = "Padding";
         // 
@@ -566,18 +584,17 @@ partial class frmSettings
         nudRoiPadding.BackColor = Color.FromArgb(45, 45, 48);
         nudRoiPadding.ForeColor = Color.Yellow;
         nudRoiPadding.Increment = new decimal(new int[] { 5, 0, 0, 0 });
-        nudRoiPadding.Location = new Point(75, 128);
+        nudRoiPadding.Location = new Point(96, 128);
         nudRoiPadding.Margin = new Padding(3, 4, 3, 4);
         nudRoiPadding.Name = "nudRoiPadding";
         nudRoiPadding.Size = new Size(114, 27);
         nudRoiPadding.TabIndex = 7;
-        nudRoiPadding.Value = new decimal(new int[] { 20, 0, 0, 0 });
         nudRoiPadding.ValueChanged += nudClassification_ValueChanged;
         // 
         // lblRoiPaddingUnit
         // 
         lblRoiPaddingUnit.ForeColor = Color.LightGray;
-        lblRoiPaddingUnit.Location = new Point(194, 131);
+        lblRoiPaddingUnit.Location = new Point(215, 131);
         lblRoiPaddingUnit.Name = "lblRoiPaddingUnit";
         lblRoiPaddingUnit.Size = new Size(32, 29);
         lblRoiPaddingUnit.TabIndex = 8;
@@ -795,7 +812,7 @@ partial class frmSettings
         grpDetection.Location = new Point(0, 0);
         grpDetection.Margin = new Padding(3, 4, 3, 4);
         grpDetection.Name = "grpDetection";
-        grpDetection.Padding = new Padding(11, 11, 11, 11);
+        grpDetection.Padding = new Padding(11);
         grpDetection.Size = new Size(313, 75);
         grpDetection.TabIndex = 2;
         grpDetection.TabStop = false;

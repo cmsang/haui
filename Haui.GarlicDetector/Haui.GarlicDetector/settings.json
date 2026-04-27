@@ -1,7 +1,10 @@
 {
-  "SvmModelPath": "SVMFiles\\garlic_svm.xml",
-  "SvmTrainImageSize": 128,
-  "DetectionRegion": null,
+  "DetectionRegion": {
+    "X": 411,
+    "Y": 214,
+    "Width": 343,
+    "Height": 293
+  },
   "Hsv": {
     "HMin": 0,
     "HMax": 179,
@@ -10,8 +13,18 @@
     "VMin": 170,
     "VMax": 255
   },
-  "MinCircularity": 0.4,
+  "LabelSaveFolder": "D:\\haui\\Haui.GarlicDetector\\TestImages",
+  "MinCircularity": 0.2,
+  "SizeThresholdPx": 5000,
+  "MinContourArea": 500,
+  "RoiPaddingPx": 0,
+  "TrainDataFolder": "D:\\haui\\Haui.GarlicDetector\\GarlicImages",
+  "SvmModelPath": "SVMFiles\\garlic_svm.xml",
+  "SvmC": 10,
+  "SvmGamma": 0.5,
+  "SvmTrainImageSize": 256,
   "RobotPortName": "COM5",
   "RobotBaudRate": 115200,
+  "LastResolutionLabel": "1280 \u00D7 720 (HD)",
   "AutoDetect": false
 }
