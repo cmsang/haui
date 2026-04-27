@@ -17,7 +17,7 @@
   "MinCircularity": 0.2,
   "SizeThresholdPx": 5000,
   "MinContourArea": 500,
-  "RoiPaddingPx": 5,
+  "RoiPaddingPx": 0,
   "TrainDataFolder": "D:\\haui\\Haui.GarlicDetector\\GarlicImages",
   "SvmModelPath": "SVMFiles\\garlic_svm.xml",
   "SvmC": 10,

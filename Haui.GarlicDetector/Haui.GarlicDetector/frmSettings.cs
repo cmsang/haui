@@ -80,21 +80,16 @@ public partial class frmSettings : Form
 
     // ─── TrackBar HSV ─────────────────────────────────────────────────────────
 
-    /// <summary>Cập nhật nhãn giá trị và thông báo frmMain khi TrackBar thay đổi.</summary>
+    /// <summary>Chỉ cập nhật nhãn hiển thị khi TrackBar thay đổi — chưa lưu.</summary>
     private void trkHsv_ValueChanged(object? sender, EventArgs e)
     {
         UpdateLabels();
-        SaveSettings();
-        HsvChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // ─── NumericUpDown kích thước ─────────────────────────────────────────────
 
-    /// <summary>Lưu ngay khi người dùng thay đổi ngưỡng kích thước.</summary>
-    private void nudClassification_ValueChanged(object? sender, EventArgs e)
-    {
-        SaveSettings();
-    }
+    /// <summary>Không lưu ngay — chờ người dùng nhấn nút Lưu.</summary>
+    private void nudClassification_ValueChanged(object? sender, EventArgs e) { }
 
     // ─── Lưu toàn bộ cài đặt ─────────────────────────────────────────────────
 
@@ -110,12 +105,8 @@ public partial class frmSettings : Form
         s.Save();
     }
 
-    /// <summary>Xử lý thay đổi AutoDetect, lưu settings và thông báo frmMain.</summary>
-    private void chkAutoDetect_CheckedChanged(object? sender, EventArgs e)
-    {
-        SaveSettings();
-        AutoDetectChanged?.Invoke(this, EventArgs.Empty);
-    }
+    /// <summary>Không lưu ngay — chờ người dùng nhấn nút Lưu.</summary>
+    private void chkAutoDetect_CheckedChanged(object? sender, EventArgs e) { }
 
     private void UpdateLabels()
     {
@@ -124,24 +115,36 @@ public partial class frmSettings : Form
 
     // ─── Nút ─────────────────────────────────────────────────────────────────
 
-    /// <summary>Đặt lại toàn bộ về giá trị mặc định.</summary>
+    /// <summary>Lưu toàn bộ cài đặt hiện tại và cập nhật pipeline ngay lập tức.</summary>
+    private void btnSave_Click(object sender, EventArgs e)
+    {
+        SaveSettings();
+        HsvChanged?.Invoke(this, EventArgs.Empty);
+        AutoDetectChanged?.Invoke(this, EventArgs.Empty);
+
+        MessageBox.Show("Cài đặt đã được lưu.", "Lưu thành công",
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    /// <summary>Đặt lại toàn bộ về giá trị mặc định — chưa lưu cho đến khi nhấn Lưu.</summary>
     private void btnReset_Click(object sender, EventArgs e)
     {
-        trkCircularity.Value = 40;
+        trkCircularity.Value = 20;
+        chkAutoDetect.Checked = false;
 
-        // Kích thước mặc định — tắt event tạm để tránh lưu nhiều lần
+        // Tắt event tạm để tránh gọi nhiều lần
         nudSizeThreshold.ValueChanged  -= nudClassification_ValueChanged;
         nudMinContourArea.ValueChanged -= nudClassification_ValueChanged;
 
         nudSizeThreshold.Value  = 5_000;
         nudMinContourArea.Value = 500;
-        nudRoiPadding.Value     = 20;
+        nudRoiPadding.Value     = 0;
 
         nudSizeThreshold.ValueChanged  += nudClassification_ValueChanged;
         nudMinContourArea.ValueChanged += nudClassification_ValueChanged;
 
-        // Lưu 1 lần duy nhất sau khi reset tất cả
-        SaveSettings();
+        UpdateLabels();
+        // Không lưu — người dùng cần nhấn nút Lưu để commit.
     }
 
     private void btnClose_Click(object sender, EventArgs e) => Hide();
