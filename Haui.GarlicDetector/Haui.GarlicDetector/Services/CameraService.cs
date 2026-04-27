@@ -128,6 +128,92 @@ public sealed class CameraService : IDisposable
     }
 
     /// <summary>
+    /// Kích hoạt lấy nét tự động của camera (nếu hỗ trợ) rồi chụp <paramref name="frameCount"/>
+    /// khung hình liên tiếp, trả về khung nét nhất dựa trên phương sai Laplacian.
+    /// <paramref name="roi"/> giới hạn vùng tính độ nét về vùng nhận diện đã chọn.
+    /// </summary>
+    public Bitmap? CaptureSharpestFrame(int frameCount = 10, Rectangle? roi = null)
+    {
+        // Thử kích hoạt autofocus của camera (một số camera DSHOW hỗ trợ; bỏ qua nếu không hỗ trợ)
+        lock (_captureLock)
+        {
+            if (_capture != null && _capture.IsOpened())
+            {
+                try { _capture.Set(VideoCaptureProperties.AutoFocus, 1); } catch { /* bỏ qua */ }
+            }
+        }
+
+        // Đợi camera điều chỉnh tiêu cự
+        Thread.Sleep(300);
+
+        Bitmap? sharpest = null;
+        double maxVariance = -1;
+
+        for (int i = 0; i < frameCount; i++)
+        {
+            var bmp = CaptureSnapshot();
+            if (bmp == null) { Thread.Sleep(50); continue; }
+
+            using var mat = OpenCvSharp.Extensions.BitmapConverter.ToMat(bmp);
+            double variance = ComputeLaplacianVariance(mat, roi);
+
+            if (variance > maxVariance)
+            {
+                maxVariance = variance;
+                sharpest?.Dispose();
+                sharpest = bmp;
+            }
+            else
+            {
+                bmp.Dispose();
+            }
+
+            // Khoảng cách ~30 fps giữa các lần chụp
+            Thread.Sleep(33);
+        }
+
+        return sharpest;
+    }
+
+    /// <summary>
+    /// Tính phương sai Laplacian (chỉ số độ nét) trên vùng <paramref name="roi"/> của ảnh BGR.
+    /// Giá trị càng cao → ảnh càng nét.
+    /// </summary>
+    private static double ComputeLaplacianVariance(Mat bgrMat, Rectangle? roi)
+    {
+        Mat? roiMat = null;
+        Mat matToUse = bgrMat;
+
+        if (roi.HasValue)
+        {
+            var r = roi.Value;
+            int x = Math.Clamp(r.X, 0, bgrMat.Width - 1);
+            int y = Math.Clamp(r.Y, 0, bgrMat.Height - 1);
+            int w = Math.Clamp(r.Width,  1, bgrMat.Width  - x);
+            int h = Math.Clamp(r.Height, 1, bgrMat.Height - y);
+            if (w >= 8 && h >= 8)
+            {
+                roiMat    = new Mat(bgrMat, new Rect(x, y, w, h));
+                matToUse  = roiMat;
+            }
+        }
+
+        try
+        {
+            using var gray = new Mat();
+            Cv2.CvtColor(matToUse, gray, ColorConversionCodes.BGR2GRAY);
+            using var lap = new Mat();
+            Cv2.Laplacian(gray, lap, MatType.CV_64F);
+            Cv2.MeanStdDev(lap, out _, out Scalar stdDev);
+            return stdDev.Val0 * stdDev.Val0; // phương sai = độ nét
+        }
+        finally
+        {
+            roiMat?.Dispose();
+        }
+    }
+
+    /// <summary>
     /// Quét các camera khả dụng bằng cách thử mở tối đa 10 thiết bị.
     /// Dừng ngay khi gặp thiết bị đầu tiên không tồn tại.
     /// </summary>

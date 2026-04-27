@@ -15,9 +15,21 @@ public partial class frmTestDetection : Form
     private readonly HsvGarlicPreprocessor _preprocessor;
     private readonly GarlicPipeline _pipeline;
 
-    public frmTestDetection()
+    // Ảnh nét nhất từ camera (truyền từ frmMain), tự động chạy nhận diện khi form hiển thị
+    private readonly Bitmap? _autoDetectImage;
+
+    public frmTestDetection() : this(null) { }
+
+    /// <summary>
+    /// Khởi tạo form với ảnh được chụp sẵn từ camera.
+    /// Khi <paramref name="capturedImage"/> khác null, form sẽ tự động hiển thị ảnh và
+    /// chạy nhận diện ngay khi form xuất hiện.
+    /// </summary>
+    public frmTestDetection(Bitmap? capturedImage)
     {
         InitializeComponent();
+
+        _autoDetectImage = capturedImage != null ? (Bitmap)capturedImage.Clone() : null;
 
         _segmenter = new HsvSegmenter();
         _preprocessor = new HsvGarlicPreprocessor();
@@ -42,6 +54,26 @@ public partial class frmTestDetection : Form
             _segmenter,
             classifier,
             new GarlicFeatureExtractor(AppSettings.Instance.SvmTrainImageSize));
+    }
+
+    // ─── Tự động nhận diện khi form mở với ảnh từ camera ────────────────────
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+
+        if (_autoDetectImage == null) return;
+
+        // Hiển thị ảnh nét nhất lên picOriginal
+        _originalImage?.Dispose();
+        _originalImage = (Bitmap)_autoDetectImage.Clone();
+        picOriginal.Image?.Dispose();
+        picOriginal.Image = (Bitmap)_originalImage.Clone();
+
+        lblInfo.Text = "Ảnh từ camera đã tải. Đang nhận diện...";
+
+        // Kích hoạt nhận diện ngay lập tức
+        btnDetect_Click(this, EventArgs.Empty);
     }
 
     // ─── Chọn ảnh ────────────────────────────────────────────────────────────
@@ -133,6 +165,7 @@ public partial class frmTestDetection : Form
     {
         base.OnFormClosed(e);
         _originalImage?.Dispose();
+        _autoDetectImage?.Dispose();
         _pipeline.Dispose();
     }
 }

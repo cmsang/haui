@@ -100,9 +100,9 @@ public sealed class AppSettings
 
     /// <summary>
     /// Số pixel mở rộng thêm mỗi chiều khi crop ROI đưa vào SVM và khi vẽ khung bounding box.
-    /// Giúp SVM thấy thêm ngữ cảnh xung quanh tỏi. Mặc định 20 px.
+    /// Giúp SVM thấy thêm ngữ cảnh xung quanh tỏi. Mặc định 0 px.
     /// </summary>
-    public int RoiPaddingPx { get; set; } = 20;
+    public int RoiPaddingPx { get; set; } = 0;
 
     // ─── SVM / Huấn luyện ────────────────────────────────────────────────────
 

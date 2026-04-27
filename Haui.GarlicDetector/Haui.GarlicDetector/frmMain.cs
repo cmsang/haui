@@ -22,6 +22,7 @@ public partial class frmMain : Form
     public frmMain()
     {
         InitializeComponent();
+        var foobar = AppSettings.Instance;
     }
 
     // ─── Khởi tạo form ────────────────────────────────────────────────────────
@@ -645,9 +646,35 @@ public partial class frmMain : Form
     // ─── Huấn luyện SVM ──────────────────────────────────────────────────────
 
     /// <summary>Mở form test nhận diện ảnh tĩnh.</summary>
-    private void btnTest_Click(object sender, EventArgs e)
+    private async void btnTest_Click(object sender, EventArgs e)
     {
-        var frm = new frmTestDetection();
+        Bitmap? sharpest = null;
+
+        // Nếu camera đang chạy: lấy nét vùng chọn rồi chụp ảnh nét nhất
+        if (_pipeline != null)
+        {
+            btnTest.Enabled = false;
+            lblStatus.Text = "Đang lấy nét và chụp ảnh...";
+
+            try
+            {
+                sharpest = await Task.Run(() => _pipeline.CaptureSharpestFrame(frameCount: 10));
+            }
+            catch
+            {
+                sharpest = null;
+            }
+            finally
+            {
+                btnTest.Enabled = true;
+                lblStatus.Text = sharpest != null
+                    ? "Đã chụp ảnh nét. Đang mở form nhận diện..."
+                    : "Không thể chụp ảnh từ camera.";
+            }
+        }
+
+        var frm = new frmTestDetection(sharpest);
+        sharpest?.Dispose(); // frmTestDetection đã clone, có thể dispose gốc
         frm.Show(this);
     }
 
