@@ -80,7 +80,7 @@ public sealed class AppSettings
     /// Vùng có circularity thấp hơn ngưỡng này sẽ không được gán nhãn.
     /// Mặc định 0.4 (vừa đủ chấp nhận tỏi oval nhẹ).
     /// </summary>
-    public double MinCircularity { get; set; } = 0.4;
+    public double MinCircularity { get; set; } = 0.2;
 
     // ─── Phân loại kích thước ────────────────────────────────────────────────
 

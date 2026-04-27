@@ -877,9 +877,9 @@ public partial class frmMain : Form
     {
         string labelText = region.FinalLabel switch
         {
-            GarlicLabel.ToTo => "🟢 Tỏi to",
-            GarlicLabel.ToNho => "🟡 Tỏi nhỏ",
-            GarlicLabel.ToHong => "🔴 Tỏi hỏng",
+            GarlicLabel.ToTo => "Tỏi to",
+            GarlicLabel.ToNho => "Tỏi nhỏ",
+            GarlicLabel.ToHong => "Tỏi hỏng",
             _ => "—"
         };
 
