@@ -186,6 +186,38 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     // ──── Public API ──────────────────────────────────────────────────────────
 
     /// <summary>
+    /// Nạp ảnh và danh sách vùng của một mẫu có sẵn để chỉnh sửa.
+    /// </summary>
+    public void LoadExistingTemplate(Mat boardImage, IEnumerable<TemplateRegion> existingRegions)
+    {
+        _boardImage?.Dispose();
+        _boardImage = boardImage.Clone();
+
+        var bitmap = BitmapSourceConverter.ToBitmapSource(_boardImage);
+        bitmap.Freeze();
+        _boardBitmap = bitmap;
+        BoardImageReady?.Invoke(bitmap);
+
+        Regions.Clear();
+        int idx = 0;
+        foreach (var r in existingRegions)
+        {
+            var item = TemplateRegionItem.FromModel(r, RegionPalette[idx % RegionPalette.Length]);
+            item.Stt = idx + 1;
+            Regions.Add(item);
+            idx++;
+        }
+
+        StatusText = $"Chế độ chỉnh sửa — {Regions.Count} vùng đã tải.";
+    }
+
+    /// <summary>
+    /// Trả về danh sách vùng hiện tại dưới dạng model (dùng khi cập nhật mẫu từ bên ngoài).
+    /// </summary>
+    public List<TemplateRegion> GetCurrentRegions()
+        => Regions.Select(r => r.ToModel()).ToList();
+
+    /// <summary>
     /// Nạp ảnh chụp từ camera, cắt bo mạch, tải vùng đã lưu.
     /// </summary>
     public void LoadFrame(Mat sourceFrame)

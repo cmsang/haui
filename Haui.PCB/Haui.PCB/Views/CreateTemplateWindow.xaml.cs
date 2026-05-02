@@ -24,6 +24,12 @@ public partial class CreateTemplateWindow : System.Windows.Window
     // Danh sách hình chữ nhật vùng đã vẽ (ánh xạ 1-1 với Regions)
     private readonly List<Rectangle> _regionRects = [];
 
+    /// <summary>
+    /// Sự kiện phát ra khi người dùng bấm Lưu ở chế độ chỉnh sửa mẫu.
+    /// Tham số là danh sách vùng đã cập nhật.
+    /// </summary>
+    public event Action<List<Haui.PCB.Models.TemplateRegion>>? RegionsSaved;
+
     public CreateTemplateWindow()
     {
         InitializeComponent();
@@ -62,6 +68,12 @@ public partial class CreateTemplateWindow : System.Windows.Window
     public void LoadFrame(Mat frame)
     {
         _viewModel.LoadFrame(frame);
+    }
+
+    /// <summary>Nạp mẫu có sẵn để chỉnh sửa (ảnh + danh sách vùng).</summary>
+    public void LoadExistingTemplate(Mat boardImage, IEnumerable<Haui.PCB.Models.TemplateRegion> regions)
+    {
+        _viewModel.LoadExistingTemplate(boardImage, regions);
     }
 
     // ──── Kéo thả tạo vùng ───────────────────────────────────────────────────
@@ -222,7 +234,15 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
     private void BtnSave_Click(object sender, RoutedEventArgs e)
     {
-        _viewModel.SaveRegions();
+        if (RegionsSaved is not null)
+        {
+            // Chế độ chỉnh sửa mẫu có sẵn — chỉ trả về danh sách vùng
+            RegionsSaved.Invoke(_viewModel.GetCurrentRegions());
+        }
+        else
+        {
+            _viewModel.SaveRegions();
+        }
     }
 
     private void BtnClose_Click(object sender, RoutedEventArgs e)

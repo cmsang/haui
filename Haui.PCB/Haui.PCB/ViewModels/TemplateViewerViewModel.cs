@@ -78,9 +78,22 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
         private set { _previewImage = value; OnPropertyChanged(); }
     }
 
+    /// <summary>Cờ đánh dấu có thay đổi chưa được lưu.</summary>
+    public bool HasUnsavedChanges
+    {
+        get => _hasUnsavedChanges;
+        private set { _hasUnsavedChanges = value; OnPropertyChanged(); }
+    }
+    private bool _hasUnsavedChanges;
+
     /// <summary>Kích thước ảnh bo mạch mẫu để View tính toán vùng hiển thị.</summary>
     public int BoardWidth => _boardWidth;
     public int BoardHeight => _boardHeight;
+
+    // ──── Internal state ─────────────────────────────────────────────────────
+
+    // Danh sách mẫu đang làm việc (có thể đã bị sửa/xóa nhưng chưa lưu)
+    private List<TemplateEntry> _workingEntries = [];
 
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
@@ -98,9 +111,9 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
         Regions.Clear();
         PreviewImage = null;
 
-        var entries = _libraryService.LoadAll();
+        _workingEntries = _libraryService.LoadAll().ToList();
         int stt = 1;
-        foreach (var entry in entries)
+        foreach (var entry in _workingEntries)
         {
             Templates.Add(new TemplateEntryItem
             {
@@ -111,9 +124,65 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
             });
         }
 
+        HasUnsavedChanges = false;
         StatusText = Templates.Count > 0
             ? $"Thư viện có {Templates.Count} ảnh mẫu."
             : "Chưa có ảnh mẫu nào. Hãy tạo mẫu trước.";
+    }
+
+    /// <summary>Lấy ảnh bo mạch của mẫu đang được chọn để đưa vào form chỉnh sửa.</summary>
+    public Mat? GetSelectedBoardImage(TemplateEntryItem item)
+        => _libraryService.LoadBoardImage(item.Source.BoardImagePath);
+
+    /// <summary>
+    /// Cập nhật danh sách vùng cho mẫu sau khi sửa trên form tạo mẫu.
+    /// Chưa lưu file — cần gọi SaveLibrary để lưu thật sự.
+    /// </summary>
+    public void UpdateTemplateRegions(TemplateEntryItem item, List<TemplateRegion> newRegions)
+    {
+        item.Source.Regions = newRegions;
+        item.RegionCount = newRegions.Count;
+
+        // Cập nhật lại item trong Templates list để UI phản ánh
+        var idx = Templates.IndexOf(item);
+        if (idx >= 0)
+        {
+            Templates[idx] = item;
+        }
+
+        // Refresh regions grid nếu đây là item đang được chọn
+        SelectTemplate(item);
+
+        HasUnsavedChanges = true;
+        StatusText = $"Đã cập nhật mẫu \"{item.Name}\" — {newRegions.Count} vùng. Nhấn Lưu để ghi file.";
+    }
+
+    /// <summary>Xóa mẫu khỏi danh sách. Chưa lưu file — cần gọi SaveLibrary.</summary>
+    public void DeleteTemplate(TemplateEntryItem item)
+    {
+        _workingEntries.Remove(item.Source);
+        Templates.Remove(item);
+
+        // Cập nhật lại số thứ tự
+        for (int i = 0; i < Templates.Count; i++)
+            Templates[i].Stt = i + 1;
+
+        Regions.Clear();
+        PreviewImage = null;
+        PreviewImageChanged?.Invoke(null);
+
+        HasUnsavedChanges = true;
+        StatusText = $"Đã xóa mẫu \"{item.Name}\". Nhấn Lưu để ghi file.";
+    }
+
+    /// <summary>Lưu toàn bộ danh sách mẫu xuống file index.json.</summary>
+    public void SaveLibrary()
+    {
+        // Đồng bộ _workingEntries với Templates (có thể đã được cập nhật từng phần)
+        _workingEntries = Templates.Select(t => t.Source).ToList();
+        _libraryService.SaveAll(_workingEntries);
+        HasUnsavedChanges = false;
+        StatusText = $"Đã lưu thư viện — {Templates.Count} ảnh mẫu.";
     }
 
     /// <summary>Chọn một mẫu để xem ảnh và danh sách vùng.</summary>

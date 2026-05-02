@@ -119,8 +119,81 @@ public partial class TemplateViewerWindow : System.Windows.Window
             _viewModel.SelectTemplate(item);
     }
 
+    private void BtnEditTemplate_Click(object sender, RoutedEventArgs e)
+    {
+        if (TemplatesGrid.SelectedItem is not TemplateEntryItem item)
+        {
+            MessageBox.Show("Vui lòng chọn một ảnh mẫu để sửa.", "Thông báo",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var boardMat = _viewModel.GetSelectedBoardImage(item);
+        if (boardMat is null)
+        {
+            MessageBox.Show("Không tìm thấy ảnh bo mạch của mẫu này.", "Lỗi",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var editWindow = new CreateTemplateWindow
+        {
+            Owner = this,
+            Title = $"Sửa mẫu — {item.Name}"
+        };
+
+        // Nạp ảnh và vùng hiện tại vào form tạo mẫu
+        editWindow.Show();
+        editWindow.LoadExistingTemplate(boardMat, item.Source.Regions);
+        boardMat.Dispose();
+
+        // Khi người dùng bấm Lưu trong form chỉnh sửa → cập nhật lại vùng
+        editWindow.RegionsSaved += newRegions =>
+        {
+            _viewModel.UpdateTemplateRegions(item, newRegions);
+            editWindow.Close();
+        };
+    }
+
+    private void BtnDeleteTemplate_Click(object sender, RoutedEventArgs e)
+    {
+        if (TemplatesGrid.SelectedItem is not TemplateEntryItem item)
+        {
+            MessageBox.Show("Vui lòng chọn một ảnh mẫu để xóa.", "Thông báo",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var result = MessageBox.Show(
+            $"Bạn có chắc muốn xóa mẫu \"{item.Name}\"?\nThao tác này chưa lưu file cho đến khi bạn bấm Lưu.",
+            "Xác nhận xóa", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+            _viewModel.DeleteTemplate(item);
+    }
+
+    private void BtnSaveLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.SaveLibrary();
+        MessageBox.Show("Đã lưu thư viện ảnh mẫu thành công.", "Thành công",
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
     private void BtnClose_Click(object sender, RoutedEventArgs e)
-        => Close();
+    {
+        if (_viewModel.HasUnsavedChanges)
+        {
+            var result = MessageBox.Show(
+                "Có thay đổi chưa được lưu. Bạn có muốn lưu trước khi đóng không?",
+                "Lưu thay đổi?", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+                _viewModel.SaveLibrary();
+            else if (result == MessageBoxResult.Cancel)
+                return;
+        }
+        Close();
+    }
 
     private void Window_Closed(object sender, EventArgs e)
         => _viewModel.Dispose();
