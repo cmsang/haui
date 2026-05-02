@@ -193,10 +193,10 @@
                         Click="BtnCreateTemplate_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
 
-                <!-- Nút xem ảnh mẫu -->
+                <!-- Nút xem mẫu -->
                 <Button x:Name="BtnViewTemplates"
-                        Content="🖼 Xem ảnh mẫu"
-                        Height="30" Width="120"
+                        Content="🖼 Xem mẫu"
+                        Height="30" Width="110"
                         Click="BtnViewTemplates_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
 

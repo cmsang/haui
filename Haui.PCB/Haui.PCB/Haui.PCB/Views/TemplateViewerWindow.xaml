@@ -111,6 +111,18 @@
                                 <DataGridTextColumn Header="STT"
                                                    Binding="{Binding Stt}"
                                                    Width="40"/>
+                                <!-- Ô màu tương ứng với màu vùng trên ảnh mẫu -->
+                                <DataGridTemplateColumn Header="" Width="24" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Width="14" Height="14"
+                                                    CornerRadius="2"
+                                                    Background="{Binding RegionBrush}"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="Tên vùng"
                                                    Binding="{Binding Name}"
                                                    Width="*"/>
@@ -164,6 +176,12 @@
                                Stretch="Uniform"
                                Margin="8"
                                RenderOptions.BitmapScalingMode="HighQuality"/>
+                        <!-- Canvas vẽ các vùng đã chọn lên ảnh mẫu -->
+                        <Canvas x:Name="RegionOverlayCanvas"
+                                Background="Transparent"
+                                IsHitTestVisible="False"
+                                Margin="8"
+                                SizeChanged="RegionOverlayCanvas_SizeChanged"/>
                     </Grid>
                 </Grid>
             </Border>

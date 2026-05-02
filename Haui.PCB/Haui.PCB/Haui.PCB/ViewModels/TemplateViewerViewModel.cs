@@ -32,6 +32,17 @@ public class TemplateRegionViewItem
     public string Name { get; set; } = string.Empty;
     public string Position { get; set; } = string.Empty;
     public string Size { get; set; } = string.Empty;
+
+    public double RelX { get; set; }
+    public double RelY { get; set; }
+    public double RelWidth { get; set; }
+    public double RelHeight { get; set; }
+
+    /// <summary>Màu hiển thị vùng trên ảnh mẫu.</summary>
+    public System.Windows.Media.Color RegionColor { get; set; } = System.Windows.Media.Colors.LimeGreen;
+
+    /// <summary>Brush để bind XAML.</summary>
+    public System.Windows.Media.SolidColorBrush RegionBrush => new(RegionColor);
 }
 
 /// <summary>
@@ -44,6 +55,8 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
     private string _statusText = "Chọn một mẫu để xem chi tiết.";
     private Mat? _currentMat;
     private bool _disposed;
+    private int _boardWidth;
+    private int _boardHeight;
 
     public event Action<BitmapSource?>? PreviewImageChanged;
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -64,6 +77,10 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
         get => _previewImage;
         private set { _previewImage = value; OnPropertyChanged(); }
     }
+
+    /// <summary>Kích thước ảnh bo mạch mẫu để View tính toán vùng hiển thị.</summary>
+    public int BoardWidth => _boardWidth;
+    public int BoardHeight => _boardHeight;
 
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
@@ -105,14 +122,23 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
         // Tải danh sách vùng
         Regions.Clear();
         int stt = 1;
+        int colorIdx = 0;
         foreach (var region in item.Source.Regions)
         {
+            var color = CreateTemplateViewModel.RegionPalette[
+                colorIdx % CreateTemplateViewModel.RegionPalette.Length];
+            colorIdx++;
             Regions.Add(new TemplateRegionViewItem
             {
                 Stt = stt++,
                 Name = region.Name,
                 Position = $"({region.RelX:P1}, {region.RelY:P1})",
-                Size = $"{region.RelWidth:P1} × {region.RelHeight:P1}"
+                Size = $"{region.RelWidth:P1} × {region.RelHeight:P1}",
+                RelX = region.RelX,
+                RelY = region.RelY,
+                RelWidth = region.RelWidth,
+                RelHeight = region.RelHeight,
+                RegionColor = color
             });
         }
 
@@ -122,6 +148,8 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
 
         if (_currentMat is not null)
         {
+            _boardWidth = _currentMat.Width;
+            _boardHeight = _currentMat.Height;
             var bitmap = BitmapSourceConverter.ToBitmapSource(_currentMat);
             bitmap.Freeze();
             PreviewImage = bitmap;
@@ -130,6 +158,8 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
         }
         else
         {
+            _boardWidth = 0;
+            _boardHeight = 0;
             PreviewImage = null;
             PreviewImageChanged?.Invoke(null);
             StatusText = $"Mẫu \"{item.Name}\" — không tìm thấy ảnh.";
