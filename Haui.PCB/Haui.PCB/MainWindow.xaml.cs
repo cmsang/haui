@@ -222,6 +222,12 @@ public partial class MainWindow : System.Windows.Window
         }
     }
 
+    private void BtnViewTemplates_Click(object sender, RoutedEventArgs e)
+    {
+        var viewerWindow = new Views.TemplateViewerWindow { Owner = this };
+        viewerWindow.Show();
+    }
+
     private void SetToolbarEnabled(bool enabled)
     {
         CameraComboBox.IsEnabled = enabled;

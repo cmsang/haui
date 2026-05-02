@@ -29,7 +29,8 @@ public partial class CreateTemplateWindow : System.Windows.Window
         InitializeComponent();
         _viewModel = new CreateTemplateViewModel(
             new TemplateRegionService(),
-            new PcbSegmentationService());
+            new PcbSegmentationService(),
+            new TemplateLibraryService());
 
         DataContext = _viewModel;
         RegionsGrid.ItemsSource = _viewModel.Regions;

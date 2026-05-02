@@ -10,6 +10,9 @@ public class RegionComparisonResult
     /// <summary>Tên vùng.</summary>
     public string Name { get; init; } = string.Empty;
 
+    /// <summary>Số thứ tự.</summary>
+    public int Stt { get; init; }
+
     /// <summary>Độ tương đồng (0..100).</summary>
     public double Similarity { get; init; }
 

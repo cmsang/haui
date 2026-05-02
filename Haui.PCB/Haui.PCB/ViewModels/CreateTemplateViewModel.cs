@@ -16,6 +16,13 @@ namespace Haui.PCB.ViewModels;
 public class TemplateRegionItem : INotifyPropertyChanged
 {
     private string _name = string.Empty;
+    private int _stt;
+
+    public int Stt
+    {
+        get => _stt;
+        set { _stt = value; OnPropertyChanged(); }
+    }
 
     public string Name
     {
@@ -67,6 +74,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly ITemplateRegionService _regionService;
     private readonly IPcbSegmentationService _segmentationService;
+    private readonly ITemplateLibraryService? _libraryService;
     private Mat? _boardImage;
     private BitmapSource? _boardBitmap;
     private string _statusText = string.Empty;
@@ -167,10 +175,12 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 
     public CreateTemplateViewModel(
         ITemplateRegionService regionService,
-        IPcbSegmentationService segmentationService)
+        IPcbSegmentationService segmentationService,
+        ITemplateLibraryService? libraryService = null)
     {
         _regionService = regionService;
         _segmentationService = segmentationService;
+        _libraryService = libraryService;
     }
 
     // ──── Public API ──────────────────────────────────────────────────────────
@@ -194,7 +204,12 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         Regions.Clear();
         int idx = 0;
         foreach (var r in _regionService.Load())
-            Regions.Add(TemplateRegionItem.FromModel(r, RegionPalette[idx++ % RegionPalette.Length]));
+        {
+            var item = TemplateRegionItem.FromModel(r, RegionPalette[idx % RegionPalette.Length]);
+            item.Stt = idx + 1;
+            Regions.Add(item);
+            idx++;
+        }
 
         StatusText = Regions.Count > 0
             ? $"Đã tải {Regions.Count} vùng mẫu."
@@ -208,6 +223,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     {
         var item = new TemplateRegionItem
         {
+            Stt = Regions.Count + 1,
             Name = $"Vùng {Regions.Count + 1}",
             RelX = relX,
             RelY = relY,
@@ -223,6 +239,9 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     public void RemoveRegion(TemplateRegionItem item)
     {
         Regions.Remove(item);
+        // Cập nhật lại số thứ tự
+        for (int i = 0; i < Regions.Count; i++)
+            Regions[i].Stt = i + 1;
         StatusText = $"Đã xóa \"{item.Name}\".";
     }
 
@@ -234,6 +253,22 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         // Lưu ảnh bo mạch mẫu để dùng cho việc so sánh sau này
         if (_boardImage is not null)
             _regionService.SaveBoardImage(_boardImage);
+
+        // Thêm vào thư viện mẫu nếu có service
+        if (_libraryService is not null && _boardImage is not null)
+        {
+            var templateName = $"{DateTime.Now:dd/MM/yyyy HH:mm}";
+            var imagePath = _libraryService.SaveBoardImage(templateName, _boardImage);
+
+            var existing = _libraryService.LoadAll().ToList();
+            existing.Add(new Models.TemplateEntry
+            {
+                Name = templateName,
+                BoardImagePath = imagePath,
+                Regions = Regions.Select(r => r.ToModel()).ToList()
+            });
+            _libraryService.SaveAll(existing);
+        }
 
         StatusText = $"Đã lưu {Regions.Count} vùng mẫu.";
     }
