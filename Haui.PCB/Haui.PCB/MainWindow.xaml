@@ -161,20 +161,19 @@
                 <Button x:Name="BtnTest"
                         Content="🔬 Test"
                         Height="30" Width="90"
+                        Margin="0,0,8,0"
                         IsEnabled="False"
                         Click="BtnTest_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
-
-                <Separator Width="1" Height="28" Background="#CCCCCC" Margin="8,0,12,0" />
 
                 <!-- Nút chọn vùng nhận diện -->
                 <Button x:Name="BtnSelectRegion"
                         Content="🔲 Chọn vùng"
                         Height="30" Width="110"
-                        Margin="0,0,8,0"
                         IsEnabled="False"
                         Click="BtnSelectRegion_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
+
             </WrapPanel>
         </Border>
 
