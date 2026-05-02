@@ -17,17 +17,13 @@ public partial class TestPipelineWindow : System.Windows.Window
     public TestPipelineWindow()
     {
         InitializeComponent();
-        _viewModel = new TestPipelineViewModel(new PcbSegmentationService());
+        _viewModel = new TestPipelineViewModel(
+            new PcbSegmentationService(),
+            new TemplateRegionService(),
+            new RegionComparisonService());
         DataContext = _viewModel;
 
-        // Lắng nghe ảnh gốc sẵn sàng
-        _viewModel.SourceImageReady += bitmap =>
-        {
-            OriginalImage.Source = bitmap;
-            OriginalPlaceholder.Visibility = Visibility.Collapsed;
-        };
-
-        // Lắng nghe ảnh đã xử lý sẵn sàng
+        // Lắng nghe ảnh bo mạch đã cắt sẵn sàng
         _viewModel.ProcessedImageReady += bitmap =>
         {
             if (bitmap is null)
@@ -56,15 +52,18 @@ public partial class TestPipelineWindow : System.Windows.Window
             else if (e.PropertyName == nameof(TestPipelineViewModel.HasSource))
                 BtnTest.IsEnabled = _viewModel.HasSource && !_viewModel.IsBusy;
         };
+
+        // Bind 2 grid kết quả
+        MatchedGrid.ItemsSource = _viewModel.MatchedRegions;
+        DifferentGrid.ItemsSource = _viewModel.DifferentRegions;
     }
 
     // ──── Public API ──────────────────────────────────────────────────────────
 
-    /// <summary>Nạp ảnh từ bên ngoài (ví dụ từ camera chụp).</summary>
+    /// <summary>Nạp ảnh từ bên ngoài (từ camera chụp) — pipeline tự động chạy.</summary>
     public void LoadImage(Mat mat)
     {
         _viewModel.LoadImage(mat);
-        BtnTest.IsEnabled = true;
     }
 
     // ──── Event Handlers ──────────────────────────────────────────────────────

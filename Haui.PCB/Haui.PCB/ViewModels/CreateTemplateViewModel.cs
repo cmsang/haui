@@ -146,10 +146,15 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         StatusText = $"Đã xóa \"{item.Name}\".";
     }
 
-    /// <summary>Lưu tất cả vùng xuống file.</summary>
+    /// <summary>Lưu tất cả vùng và ảnh bo mạch mẫu xuống file.</summary>
     public void SaveRegions()
     {
         _regionService.Save(Regions.Select(r => r.ToModel()));
+
+        // Lưu ảnh bo mạch mẫu để dùng cho việc so sánh sau này
+        if (_boardImage is not null)
+            _regionService.SaveBoardImage(_boardImage);
+
         StatusText = $"Đã lưu {Regions.Count} vùng mẫu.";
     }
 

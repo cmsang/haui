@@ -1,6 +1,8 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using OpenCvSharp;
+using Haui.PCB.Models;
 using Haui.PCB.Processing;
 
 namespace Haui.PCB.ViewModels;
@@ -12,6 +14,8 @@ namespace Haui.PCB.ViewModels;
 public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IPcbSegmentationService _segmentation;
+    private readonly ITemplateRegionService _regionService;
+    private readonly IRegionComparisonService _comparisonService;
 
     private Mat? _sourceMat;
     private string _statusText = string.Empty;
@@ -20,10 +24,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     // ──── Sự kiện ────────────────────────────────────────────────────────────
 
-    /// <summary>Phát khi ảnh gốc đã được tải — BitmapSource đã Freeze.</summary>
-    public event Action<System.Windows.Media.Imaging.BitmapSource>? SourceImageReady;
-
-    /// <summary>Phát khi ảnh đã xử lý sẵn sàng — BitmapSource đã Freeze.</summary>
+    /// <summary>Phát khi ảnh đã xử lý (bo mạch đã cắt) sẵn sàng — BitmapSource đã Freeze.</summary>
     public event Action<System.Windows.Media.Imaging.BitmapSource?>? ProcessedImageReady;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -44,28 +45,35 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasSource => _sourceMat is not null && !_sourceMat.Empty();
 
+    /// <summary>Các vùng đạt ngưỡng tương đồng >= 80% (giống nhau).</summary>
+    public ObservableCollection<RegionComparisonResult> MatchedRegions { get; } = [];
+
+    /// <summary>Các vùng có độ tương đồng dưới 80% (khác nhau).</summary>
+    public ObservableCollection<RegionComparisonResult> DifferentRegions { get; } = [];
+
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
-    public TestPipelineViewModel(IPcbSegmentationService segmentation)
+    public TestPipelineViewModel(
+        IPcbSegmentationService segmentation,
+        ITemplateRegionService regionService,
+        IRegionComparisonService comparisonService)
     {
         _segmentation = segmentation;
+        _regionService = regionService;
+        _comparisonService = comparisonService;
     }
 
     // ──── Actions ─────────────────────────────────────────────────────────────
 
-    /// <summary>Nạp ảnh từ bên ngoài (ví dụ từ camera chụp).</summary>
+    /// <summary>Nạp ảnh từ bên ngoài (ví dụ từ camera chụp) rồi tự động chạy pipeline.</summary>
     public void LoadImage(Mat mat)
     {
         _sourceMat?.Dispose();
         _sourceMat = mat.Clone();
-
-        var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(_sourceMat);
-        bitmap.Freeze();
-        SourceImageReady?.Invoke(bitmap);
-        ProcessedImageReady?.Invoke(null);
-
-        StatusText = "Ảnh đã tải. Bấm ▶ Test để xử lý.";
         OnPropertyChanged(nameof(HasSource));
+
+        // Tự động chạy pipeline ngay sau khi nhận ảnh
+        _ = RunSegmentationAsync();
     }
 
     /// <summary>Nạp ảnh từ đường dẫn file.</summary>
@@ -81,16 +89,13 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(_sourceMat);
-        bitmap.Freeze();
-        SourceImageReady?.Invoke(bitmap);
-        ProcessedImageReady?.Invoke(null);
-
         StatusText = $"Đã chọn: {System.IO.Path.GetFileName(filePath)}";
         OnPropertyChanged(nameof(HasSource));
     }
 
-    /// <summary>Chạy phân vùng PCB trên thread nền và phát kết quả.</summary>
+    /// <summary>
+    /// Chạy pipeline: cắt bo mạch → hiển thị → so sánh vùng với mẫu.
+    /// </summary>
     public async Task RunSegmentationAsync()
     {
         if (!HasSource)
@@ -101,27 +106,30 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
         IsBusy = true;
         StatusText = "Đang xử lý...";
+        MatchedRegions.Clear();
+        DifferentRegions.Clear();
 
-        // Clone để tránh race condition khi xử lý trên thread nền
         using var source = _sourceMat!.Clone();
-        Mat? result = null;
+        Mat? newBoard = null;
 
         try
         {
-            result = await Task.Run(() => _segmentation.Segment(source));
+            newBoard = await Task.Run(() => _segmentation.Segment(source));
 
-            if (result is null)
+            if (newBoard is null)
             {
                 StatusText = "Không phát hiện được bo mạch. Thử điều chỉnh ảnh.";
                 ProcessedImageReady?.Invoke(null);
+                return;
             }
-            else
-            {
-                var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(result);
-                bitmap.Freeze();
-                ProcessedImageReady?.Invoke(bitmap);
-                StatusText = $"Hoàn thành. Kích thước PCB: {result.Width}×{result.Height} px";
-            }
+
+            // Hiển thị ảnh bo mạch đã cắt
+            var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(newBoard);
+            bitmap.Freeze();
+            ProcessedImageReady?.Invoke(bitmap);
+
+            // So sánh với ảnh mẫu nếu có
+            await CompareWithTemplateAsync(newBoard);
         }
         catch (Exception ex)
         {
@@ -130,9 +138,43 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         }
         finally
         {
-            result?.Dispose();
+            newBoard?.Dispose();
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// Tải ảnh mẫu và danh sách vùng, sau đó so sánh với bo mạch mới.
+    /// </summary>
+    private async Task CompareWithTemplateAsync(Mat newBoard)
+    {
+        var regions = _regionService.Load();
+        if (regions.Count == 0)
+        {
+            StatusText = $"Bo mạch đã cắt. Chưa có vùng mẫu để so sánh.";
+            return;
+        }
+
+        using var templateBoard = await Task.Run(() => _regionService.LoadBoardImage());
+        if (templateBoard is null)
+        {
+            StatusText = "Bo mạch đã cắt. Chưa có ảnh mẫu để so sánh.";
+            return;
+        }
+
+        using var newBoardClone = newBoard.Clone();
+        var results = await Task.Run(() =>
+            _comparisonService.Compare(templateBoard, newBoardClone, regions));
+
+        foreach (var r in results)
+        {
+            if (r.IsMatch)
+                MatchedRegions.Add(r);
+            else
+                DifferentRegions.Add(r);
+        }
+
+        StatusText = $"Hoàn thành. Giống: {MatchedRegions.Count} | Khác: {DifferentRegions.Count} / {results.Count} vùng.";
     }
 
     // ──── INotifyPropertyChanged ──────────────────────────────────────────────
