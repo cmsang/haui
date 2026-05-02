@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using OpenCvSharp;
 using Haui.PCB.Processing;
 
@@ -22,6 +24,14 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _currentFps;
     private readonly Stopwatch _fpsStopwatch = Stopwatch.StartNew();
     private bool _disposed;
+
+    // Vùng nhận diện (tọa độ tương đối 0..1 so với kích thước frame thực)
+    private OpenCvSharp.Rect? _selectedRegion;
+    private const string RegionSettingsPath = "last_region.json";
+
+    // Kích thước frame thực tế mới nhất để tính toán vùng
+    private int _lastFrameWidth;
+    private int _lastFrameHeight;
 
     // ──── Sự kiện ────────────────────────────────────────────────────────────
 
@@ -67,12 +77,29 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsRunning => _cameraService.IsRunning;
 
+    /// <summary>Vùng nhận diện trên frame thực (pixel). Null = toàn bộ khung hình.</summary>
+    public OpenCvSharp.Rect? SelectedRegion
+    {
+        get => _selectedRegion;
+        set
+        {
+            _selectedRegion = value;
+            OnPropertyChanged();
+            SaveRegion();
+        }
+    }
+
+    /// <summary>Kích thước frame thực tế mới nhất (để View tính toán tỉ lệ).</summary>
+    public int LastFrameWidth => _lastFrameWidth;
+    public int LastFrameHeight => _lastFrameHeight;
+
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
     public MainViewModel(ICameraService cameraService)
     {
         _cameraService = cameraService;
         _cameraService.FrameArrived += OnFrameArrived;
+        LoadRegion();
     }
 
     // ──── Commands / Actions ──────────────────────────────────────────────────
@@ -161,8 +188,20 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        // Crop theo vùng đã chọn nếu có
+        if (_selectedRegion.HasValue)
+        {
+            var roi = ClampRect(_selectedRegion.Value, frame.Width, frame.Height);
+            if (roi.Width > 0 && roi.Height > 0)
+            {
+                var cropped = new Mat(frame, roi);
+                frame.Dispose();
+                frame = cropped.Clone();
+                cropped.Dispose();
+            }
+        }
+
         StatusText = "Đã mở Test Pipeline.";
-        // Phát sự kiện — View chịu trách nhiệm mở cửa sổ
         TestFrameCaptured?.Invoke(frame);
     }
 
@@ -179,10 +218,70 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             _fpsStopwatch.Restart();
         }
 
+        // Lưu kích thước frame để View tính tỉ lệ
+        if (frame.Width != _lastFrameWidth || frame.Height != _lastFrameHeight)
+        {
+            _lastFrameWidth = frame.Width;
+            _lastFrameHeight = frame.Height;
+        }
+
+        // Vẽ hình chữ nhật xanh cho vùng nhận diện
+        if (_selectedRegion.HasValue)
+        {
+            var roi = ClampRect(_selectedRegion.Value, frame.Width, frame.Height);
+            if (roi.Width > 0 && roi.Height > 0)
+                Cv2.Rectangle(frame, roi, new Scalar(0, 200, 0), 2);
+        }
+
         // Convert sang BitmapSource trên thread hiện tại (background), freeze để cross-thread an toàn
         var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(frame);
         bitmap.Freeze();
         FrameReady?.Invoke(bitmap);
+    }
+
+    private static OpenCvSharp.Rect ClampRect(OpenCvSharp.Rect r, int w, int h)
+    {
+        int x = Math.Max(0, r.X);
+        int y = Math.Max(0, r.Y);
+        int width = Math.Min(r.Width, w - x);
+        int height = Math.Min(r.Height, h - y);
+        return new OpenCvSharp.Rect(x, y, Math.Max(0, width), Math.Max(0, height));
+    }
+
+    private void SaveRegion()
+    {
+        try
+        {
+            if (_selectedRegion.HasValue)
+            {
+                var r = _selectedRegion.Value;
+                var json = JsonSerializer.Serialize(new { r.X, r.Y, r.Width, r.Height });
+                File.WriteAllText(RegionSettingsPath, json);
+            }
+            else
+            {
+                File.Delete(RegionSettingsPath);
+            }
+        }
+        catch { /* bỏ qua lỗi ghi file */ }
+    }
+
+    private void LoadRegion()
+    {
+        try
+        {
+            if (!File.Exists(RegionSettingsPath)) return;
+            var json = File.ReadAllText(RegionSettingsPath);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            int x = root.GetProperty("X").GetInt32();
+            int y = root.GetProperty("Y").GetInt32();
+            int width = root.GetProperty("Width").GetInt32();
+            int height = root.GetProperty("Height").GetInt32();
+            if (width > 0 && height > 0)
+                _selectedRegion = new OpenCvSharp.Rect(x, y, width, height);
+        }
+        catch { /* bỏ qua lỗi đọc file */ }
     }
 
     // ──── INotifyPropertyChanged ──────────────────────────────────────────────

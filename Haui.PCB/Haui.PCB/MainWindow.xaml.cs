@@ -1,5 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Shapes;
 using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 using Haui.PCB.Views;
@@ -13,6 +15,11 @@ namespace Haui.PCB;
 public partial class MainWindow : System.Windows.Window
 {
     private readonly MainViewModel _viewModel;
+
+    // Trạng thái kéo thả chọn vùng
+    private bool _isSelectingRegion;
+    private bool _isDragging;
+    private System.Windows.Point _dragStart;
 
     public MainWindow()
     {
@@ -123,6 +130,7 @@ public partial class MainWindow : System.Windows.Window
             SetToolbarEnabled(false);
             BtnStop.IsEnabled = true;
             BtnTest.IsEnabled = true;
+            BtnSelectRegion.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
         }
         catch (Exception ex)
@@ -139,6 +147,9 @@ public partial class MainWindow : System.Windows.Window
         SetToolbarEnabled(true);
         BtnStop.IsEnabled = false;
         BtnTest.IsEnabled = false;
+        BtnSelectRegion.IsEnabled = false;
+        // Thoát chế độ chọn vùng nếu đang chọn
+        ExitSelectMode();
         CameraImage.Source = null;
         CameraPlaceholder.Visibility = Visibility.Visible;
         FpsText.Text = string.Empty;
@@ -163,6 +174,128 @@ public partial class MainWindow : System.Windows.Window
         ResolutionComboBox.IsEnabled = enabled;
         BtnStart.IsEnabled = enabled && _viewModel.Cameras.Count > 0;
         BtnStop.IsEnabled = false;
+    }
+
+    private void BtnSelectRegion_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isSelectingRegion)
+        {
+            ExitSelectMode();
+            return;
+        }
+        _isSelectingRegion = true;
+        BtnSelectRegion.Content = "⏹ Hủy chọn";
+        SelectionCanvas.IsHitTestVisible = true;
+        SelectionCanvas.Cursor = Cursors.Cross;
+        StatusText.Text = "Kéo thả để chọn vùng nhận diện...";
+    }
+
+    private void ExitSelectMode()
+    {
+        _isSelectingRegion = false;
+        _isDragging = false;
+        BtnSelectRegion.Content = "🔲 Chọn vùng";
+        SelectionCanvas.IsHitTestVisible = false;
+        SelectionCanvas.Cursor = Cursors.Arrow;
+        DragRect.Visibility = Visibility.Collapsed;
+    }
+
+    private void SelectionCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isSelectingRegion) return;
+        _dragStart = e.GetPosition(SelectionCanvas);
+        _isDragging = true;
+        Canvas.SetLeft(DragRect, _dragStart.X);
+        Canvas.SetTop(DragRect, _dragStart.Y);
+        DragRect.Width = 0;
+        DragRect.Height = 0;
+        DragRect.Visibility = Visibility.Visible;
+        SelectionCanvas.CaptureMouse();
+    }
+
+    private void SelectionCanvas_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_isDragging) return;
+        var pos = e.GetPosition(SelectionCanvas);
+        double x = Math.Min(pos.X, _dragStart.X);
+        double y = Math.Min(pos.Y, _dragStart.Y);
+        double w = Math.Abs(pos.X - _dragStart.X);
+        double h = Math.Abs(pos.Y - _dragStart.Y);
+        Canvas.SetLeft(DragRect, x);
+        Canvas.SetTop(DragRect, y);
+        DragRect.Width = w;
+        DragRect.Height = h;
+    }
+
+    private void SelectionCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_isDragging) return;
+        SelectionCanvas.ReleaseMouseCapture();
+        _isDragging = false;
+
+        var pos = e.GetPosition(SelectionCanvas);
+        double rx = Math.Min(pos.X, _dragStart.X);
+        double ry = Math.Min(pos.Y, _dragStart.Y);
+        double rw = Math.Abs(pos.X - _dragStart.X);
+        double rh = Math.Abs(pos.Y - _dragStart.Y);
+
+        if (rw < 5 || rh < 5)
+        {
+            // Vùng quá nhỏ, bỏ qua
+            ExitSelectMode();
+            return;
+        }
+
+        // Chuyển tọado điểm ảnh hiển thị sang tọa độ frame thực tế
+        var canvasSize = new System.Windows.Size(SelectionCanvas.ActualWidth, SelectionCanvas.ActualHeight);
+        var frameRect = GetImageRenderRect(canvasSize,
+            _viewModel.LastFrameWidth, _viewModel.LastFrameHeight);
+
+        if (frameRect.Width <= 0 || frameRect.Height <= 0)
+        {
+            ExitSelectMode();
+            return;
+        }
+
+        double scaleX = _viewModel.LastFrameWidth / frameRect.Width;
+        double scaleY = _viewModel.LastFrameHeight / frameRect.Height;
+
+        int fx = (int)((rx - frameRect.X) * scaleX);
+        int fy = (int)((ry - frameRect.Y) * scaleY);
+        int fw = (int)(rw * scaleX);
+        int fh = (int)(rh * scaleY);
+
+        // Giới hạn trong frame
+        fx = Math.Max(0, fx);
+        fy = Math.Max(0, fy);
+        fw = Math.Min(fw, _viewModel.LastFrameWidth - fx);
+        fh = Math.Min(fh, _viewModel.LastFrameHeight - fy);
+
+        if (fw > 0 && fh > 0)
+        {
+            _viewModel.SelectedRegion = new OpenCvSharp.Rect(fx, fy, fw, fh);
+            StatusText.Text = $"Đã chọn vùng: ({fx},{fy}) {fw}×{fh} px";
+        }
+
+        ExitSelectMode();
+    }
+
+    /// <summary>
+    /// Tính toán hình chữ nhật hiển thị thực sự của ảnh trên canvas (Stretch=Uniform).
+    /// </summary>
+    private static System.Windows.Rect GetImageRenderRect(
+        System.Windows.Size canvas, int imgW, int imgH)
+    {
+        if (imgW <= 0 || imgH <= 0) return System.Windows.Rect.Empty;
+
+        double scaleX = canvas.Width / imgW;
+        double scaleY = canvas.Height / imgH;
+        double scale = Math.Min(scaleX, scaleY);
+        double renderW = imgW * scale;
+        double renderH = imgH * scale;
+        double offsetX = (canvas.Width - renderW) / 2;
+        double offsetY = (canvas.Height - renderH) / 2;
+        return new System.Windows.Rect(offsetX, offsetY, renderW, renderH);
     }
 
     private void Window_Closed(object sender, EventArgs e)
