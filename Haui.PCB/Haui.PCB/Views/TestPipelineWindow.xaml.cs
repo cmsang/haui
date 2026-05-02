@@ -56,6 +56,16 @@ public partial class TestPipelineWindow : System.Windows.Window
         // Bind 2 grid kết quả
         MatchedGrid.ItemsSource = _viewModel.MatchedRegions;
         DifferentGrid.ItemsSource = _viewModel.DifferentRegions;
+
+        // Hiển thị ảnh đã vẽ annotations lên ảnh bo mạch sau khi so sánh xong
+        _viewModel.AnnotatedImageReady += bitmap =>
+        {
+            if (bitmap is not null)
+            {
+                ProcessedImage.Source = bitmap;
+                ProcessedPlaceholder.Visibility = Visibility.Collapsed;
+            }
+        };
     }
 
     // ──── Public API ──────────────────────────────────────────────────────────

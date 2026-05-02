@@ -133,6 +133,11 @@
                               FontSize="12"
                               SelectionChanged="RegionsGrid_SelectionChanged">
                         <DataGrid.Columns>
+                            <!-- Cột STT -->
+                            <DataGridTextColumn Header="STT"
+                                               Binding="{Binding Stt}"
+                                               Width="36"
+                                               IsReadOnly="True"/>
                             <!-- Cột màu: ô vuông màu tương ứng với màu vùng trên canvas -->
                             <DataGridTemplateColumn Header="" Width="24" IsReadOnly="True">
                                 <DataGridTemplateColumn.CellTemplate>

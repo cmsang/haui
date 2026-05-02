@@ -1,4 +1,5 @@
-<Window x:Class="Haui.PCB.Views.TestPipelineWindow"
+<Window
+    x:Class="Haui.PCB.Views.TestPipelineWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Kiểm tra bo mạch"
@@ -147,6 +148,9 @@
                               FontSize="12"
                               BorderThickness="0">
                         <DataGrid.Columns>
+                            <DataGridTextColumn Header="STT"
+                                               Binding="{Binding Stt}"
+                                               Width="40"/>
                             <DataGridTextColumn Header="Tên vùng"
                                                Binding="{Binding Name}"
                                                Width="*" />
@@ -192,6 +196,9 @@
                               FontSize="12"
                               BorderThickness="0">
                         <DataGrid.Columns>
+                            <DataGridTextColumn Header="STT"
+                                               Binding="{Binding Stt}"
+                                               Width="40"/>
                             <DataGridTextColumn Header="Tên vùng"
                                                Binding="{Binding Name}"
                                                Width="*" />

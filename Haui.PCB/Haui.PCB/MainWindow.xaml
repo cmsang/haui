@@ -189,7 +189,15 @@
                         Content="📋 Tạo mẫu"
                         Height="30" Width="100"
                         IsEnabled="False"
+                        Margin="0,0,8,0"
                         Click="BtnCreateTemplate_Click"
+                        Style="{StaticResource SecondaryButtonStyle}" />
+
+                <!-- Nút xem mẫu -->
+                <Button x:Name="BtnViewTemplates"
+                        Content="🖼 Xem mẫu"
+                        Height="30" Width="110"
+                        Click="BtnViewTemplates_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
 
             </WrapPanel>

@@ -18,10 +18,18 @@ public class RegionComparisonService : IRegionComparisonService
         foreach (var region in regions)
         {
             double similarity = CompareRegion(templateBoard, newBoard, region);
+
+            // Tính tọa độ tuyệt đối của vùng trên ảnh bo mạch mới
+            int bx = Math.Clamp((int)(region.RelX * newBoard.Width), 0, newBoard.Width - 1);
+            int by = Math.Clamp((int)(region.RelY * newBoard.Height), 0, newBoard.Height - 1);
+            int bw = Math.Clamp((int)(region.RelWidth * newBoard.Width), 1, newBoard.Width - bx);
+            int bh = Math.Clamp((int)(region.RelHeight * newBoard.Height), 1, newBoard.Height - by);
+
             results.Add(new RegionComparisonResult
             {
                 Name = region.Name,
-                Similarity = Math.Round(similarity * 100.0, 1)
+                Similarity = Math.Round(similarity * 100.0, 1),
+                BoardRect = new Rect(bx, by, bw, bh)
             });
         }
 
