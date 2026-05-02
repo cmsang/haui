@@ -196,7 +196,7 @@ public partial class MainWindow : System.Windows.Window
 
         // Convert sang BitmapSource trên background thread, freeze để cross-thread an toàn
         var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(frame);
-        //bitmap.Freeze();
+        bitmap.Freeze();
 
         Dispatcher.InvokeAsync(() => CameraImage.Source = bitmap);
     }
