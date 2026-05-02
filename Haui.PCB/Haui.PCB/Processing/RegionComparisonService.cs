@@ -46,21 +46,21 @@ public class RegionComparisonService : IRegionComparisonService
             Cv2.Resize(tCrop, tResized, new OpenCvSharp.Size(64, 64));
             Cv2.Resize(nCrop, nResized, new OpenCvSharp.Size(64, 64));
 
-            // So sánh histogram HSV
-            using var tHsv = new Mat();
-            using var nHsv = new Mat();
-            Cv2.CvtColor(tResized, tHsv, ColorConversionCodes.BGR2HSV);
-            Cv2.CvtColor(nResized, nHsv, ColorConversionCodes.BGR2HSV);
+            // Chuyển về grayscale trước khi so sánh để loại bỏ ảnh hưởng ánh sáng màu
+            using var tGray = new Mat();
+            using var nGray = new Mat();
+            Cv2.CvtColor(tResized, tGray, ColorConversionCodes.BGR2GRAY);
+            Cv2.CvtColor(nResized, nGray, ColorConversionCodes.BGR2GRAY);
 
             using var tHist = new Mat();
             using var nHist = new Mat();
 
-            int[] channels = [0, 1];
-            int[] histSize = [50, 60];
-            Rangef[] ranges = [new Rangef(0, 180), new Rangef(0, 256)];
+            int[] channels = [0];
+            int[] histSize = [256];
+            Rangef[] ranges = [new Rangef(0, 256)];
 
-            Cv2.CalcHist([tHsv], channels, null, tHist, 2, histSize, ranges);
-            Cv2.CalcHist([nHsv], channels, null, nHist, 2, histSize, ranges);
+            Cv2.CalcHist([tGray], channels, null, tHist, 1, histSize, ranges);
+            Cv2.CalcHist([nGray], channels, null, nHist, 1, histSize, ranges);
 
             Cv2.Normalize(tHist, tHist, 0, 1, NormTypes.MinMax);
             Cv2.Normalize(nHist, nHist, 0, 1, NormTypes.MinMax);

@@ -137,8 +137,14 @@ public partial class CreateTemplateWindow : System.Windows.Window
         var renderRect = GetImageRenderRect();
         if (renderRect.Width <= 0) return;
 
-        foreach (var region in _viewModel.Regions)
+        var selectedItem = RegionsGrid.SelectedItem as TemplateRegionItem;
+
+        for (int i = 0; i < _viewModel.Regions.Count; i++)
         {
+            var region = _viewModel.Regions[i];
+            var color = region.RegionColor;
+            bool isSelected = region == selectedItem;
+
             double x = renderRect.X + region.RelX * renderRect.Width;
             double y = renderRect.Y + region.RelY * renderRect.Height;
             double w = region.RelWidth * renderRect.Width;
@@ -146,9 +152,11 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
             var rect = new Rectangle
             {
-                Stroke = new SolidColorBrush(Color.FromRgb(0, 180, 80)),
-                StrokeThickness = 2,
-                Fill = new SolidColorBrush(Color.FromArgb(40, 0, 200, 80)),
+                Stroke = new SolidColorBrush(isSelected
+                    ? Color.FromRgb(255, 255, 255)
+                    : color),
+                StrokeThickness = isSelected ? 3 : 2,
+                Fill = new SolidColorBrush(Color.FromArgb(50, color.R, color.G, color.B)),
                 Width = w,
                 Height = h
             };
@@ -192,14 +200,15 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
     private void RegionsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        // Highlight vùng được chọn (đổi màu border)
+        // Highlight vùng được chọn: viền trắng khi chọn, màu của vùng khi không chọn
         var selectedItem = RegionsGrid.SelectedItem as TemplateRegionItem;
         for (int i = 0; i < _viewModel.Regions.Count && i < _regionRects.Count; i++)
         {
             bool isSelected = _viewModel.Regions[i] == selectedItem;
+            var color = _viewModel.Regions[i].RegionColor;
             _regionRects[i].Stroke = new SolidColorBrush(isSelected
-                ? Color.FromRgb(255, 200, 0)
-                : Color.FromRgb(0, 180, 80));
+                ? Color.FromRgb(255, 255, 255)
+                : color);
             _regionRects[i].StrokeThickness = isSelected ? 3 : 2;
         }
     }

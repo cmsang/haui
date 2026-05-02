@@ -133,6 +133,18 @@
                               FontSize="12"
                               SelectionChanged="RegionsGrid_SelectionChanged">
                         <DataGrid.Columns>
+                            <!-- Cột màu: ô vuông màu tương ứng với màu vùng trên canvas -->
+                            <DataGridTemplateColumn Header="" Width="24" IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border Width="14" Height="14"
+                                                CornerRadius="2"
+                                                Background="{Binding RegionBrush}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Tên vùng"
                                                Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
                                                Width="*"
