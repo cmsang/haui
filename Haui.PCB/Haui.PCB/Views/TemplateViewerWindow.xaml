@@ -68,16 +68,10 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                            <Grid>
-                                <TextBlock Text="📋 Danh sách ảnh mẫu"
-                                           Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center"/>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button Content="✏ Sửa" Height="24" Width="58" Margin="0,0,4,0"
-                                            Style="{StaticResource WarningBtn}" Click="BtnEditTemplate_Click"/>
-                                    <Button Content="🗑 Xóa" Height="24" Width="58"
-                                            Style="{StaticResource DangerBtn}" Click="BtnDeleteTemplate_Click"/>
-                                </StackPanel>
-                            </Grid>
+                        <Border Grid.Row="0" Style="{StaticResource HeaderBorderStyle}" CornerRadius="4,4,0,0">
+                            <TextBlock Text="📋 Danh sách ảnh mẫu"
+                                       Style="{StaticResource SectionTitleStyle}"/>
+                        </Border>
                         <DataGrid Grid.Row="1"
                                   x:Name="TemplatesGrid"
                                   Style="{StaticResource DataGridStyle}"
@@ -211,15 +205,21 @@
                            FontSize="12"
                            Text="Sẵn sàng."/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="✏ Sửa"
+                            Height="30" Width="80"
+                            Margin="0,0,8,0"
+                            Click="BtnEditTemplate_Click"/>
+                    <Button Content="🗑 Xóa"
+                            Height="30" Width="80"
+                            Margin="0,0,8,0"
+                            Click="BtnDeleteTemplate_Click"/>
                     <Button x:Name="BtnSaveLibrary"
                             Content="💾 Lưu"
                             Height="30" Width="90"
                             Margin="0,0,8,0"
-                            Style="{StaticResource PrimaryBtn}"
                             Click="BtnSaveLibrary_Click"/>
                     <Button Content="✕ Đóng"
                             Height="30" Width="80"
-                            Style="{StaticResource DangerBtn}"
                             Click="BtnClose_Click"/>
                 </StackPanel>
             </Grid>
