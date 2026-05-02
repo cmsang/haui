@@ -28,4 +28,11 @@ public interface ICameraService : IDisposable
 
     /// <summary>Trả về clone của frame cuối cùng nhận được.</summary>
     Mat? GrabFrame();
+
+    /// <summary>
+    /// Thu thập frame trong <paramref name="durationMs"/> mili-giây, đo độ sắc nét từng frame
+    /// bằng phương sai Laplacian, rồi trả về frame sắc nét nhất (clone).
+    /// Trả về null nếu camera chưa chạy hoặc không nhận được frame nào.
+    /// </summary>
+    Task<Mat?> CaptureSharpestFrameAsync(int durationMs = 1500, CancellationToken cancellationToken = default);
 }

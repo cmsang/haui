@@ -110,6 +110,76 @@ public class CameraService : ICameraService
             return _lastFrame?.Clone();
     }
 
+    /// <summary>
+    /// Thu thập frame trong <paramref name="durationMs"/> mili-giây, tính phương sai Laplacian
+    /// để đo độ sắc nét từng frame, rồi trả về frame có độ sắc nét cao nhất (clone).
+    /// Phương sai Laplacian càng lớn → ảnh càng nét.
+    /// </summary>
+    public async Task<Mat?> CaptureSharpestFrameAsync(int durationMs = 1500, CancellationToken cancellationToken = default)
+    {
+        if (!IsRunning)
+            return null;
+
+        Mat? bestFrame = null;
+        double bestSharpness = -1;
+        var tcs = new TaskCompletionSource();
+
+        void OnFrame(Mat frame)
+        {
+            double sharpness = ComputeLaplacianVariance(frame);
+            lock (_frameLock)
+            {
+                if (sharpness > bestSharpness)
+                {
+                    bestSharpness = sharpness;
+                    bestFrame?.Dispose();
+                    bestFrame = frame.Clone();
+                }
+            }
+        }
+
+        FrameArrived += OnFrame;
+        try
+        {
+            await Task.Delay(durationMs, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Trả về frame tốt nhất đã thu thập được dù bị huỷ
+        }
+        finally
+        {
+            FrameArrived -= OnFrame;
+        }
+
+        lock (_frameLock)
+            return bestFrame;
+    }
+
+    /// <summary>
+    /// Tính phương sai của ảnh Laplacian — thước đo độ sắc nét của frame.
+    /// Giá trị càng lớn → ảnh càng nét, ít mờ.
+    /// </summary>
+    private static double ComputeLaplacianVariance(Mat src)
+    {
+        using var gray = new Mat();
+        using var lap = new Mat();
+
+        // Chuyển sang ảnh xám nếu ảnh màu
+        if (src.Channels() > 1)
+            Cv2.CvtColor(src, gray, ColorConversionCodes.BGR2GRAY);
+        else
+            src.CopyTo(gray);
+
+        // Áp dụng bộ lọc Laplacian để phát hiện cạnh / chi tiết
+        Cv2.Laplacian(gray, lap, MatType.CV_64F);
+
+        // Tính mean và stddev; phương sai = stddev²
+        Cv2.MeanStdDev(lap, out _, out var stdDev);
+        double sigma = stdDev.Val0;
+        return sigma * sigma;
+    }
+
     public void Stop()
     {
         if (!IsRunning) return;
