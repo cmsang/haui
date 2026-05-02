@@ -1,3 +1,5 @@
+using OpenCvSharp;
+
 namespace Haui.PCB.Models;
 
 /// <summary>
@@ -16,4 +18,7 @@ public class RegionComparisonResult
 
     /// <summary>True nếu độ tương đồng >= 80%.</summary>
     public bool IsMatch => Similarity >= 80.0;
+
+    /// <summary>Tọa độ tuyệt đối (pixel) của vùng trên ảnh bo mạch mới.</summary>
+    public Rect BoardRect { get; init; }
 }

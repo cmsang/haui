@@ -27,6 +27,9 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Phát khi ảnh đã xử lý (bo mạch đã cắt) sẵn sàng — BitmapSource đã Freeze.</summary>
     public event Action<System.Windows.Media.Imaging.BitmapSource?>? ProcessedImageReady;
 
+    /// <summary>Phát khi ảnh đã vẽ các vùng so sánh sẵn sàng — BitmapSource đã Freeze.</summary>
+    public event Action<System.Windows.Media.Imaging.BitmapSource?>? AnnotatedImageReady;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     // ──── Properties ─────────────────────────────────────────────────────────
@@ -174,7 +177,49 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
                 DifferentRegions.Add(r);
         }
 
+        // Vẽ các vùng so sánh lên ảnh bo mạch (xanh = giống, đỏ = khác)
+        var annotated = DrawAnnotations(newBoard, results);
+        if (annotated is not null)
+            AnnotatedImageReady?.Invoke(annotated);
+
         StatusText = $"Hoàn thành. Giống: {MatchedRegions.Count} | Khác: {DifferentRegions.Count} / {results.Count} vùng.";
+    }
+
+    /// <summary>
+    /// Vẽ hình chữ nhật lên ảnh bo mạch: xanh lá = giống, đỏ = khác.
+    /// Trả về BitmapSource đã Freeze, hoặc null nếu lỗi.
+    /// </summary>
+    private static System.Windows.Media.Imaging.BitmapSource? DrawAnnotations(
+        Mat board, IReadOnlyList<RegionComparisonResult> results)
+    {
+        try
+        {
+            using var canvas = board.Clone();
+            var green = new Scalar(0, 200, 0);
+            var red = new Scalar(0, 0, 220);
+            const int thickness = 2;
+            const double fontScale = 0.45;
+
+            foreach (var r in results)
+            {
+                var color = r.IsMatch ? green : red;
+                Cv2.Rectangle(canvas, r.BoardRect, color, thickness);
+
+                // Vẽ nhãn tên vùng phía trên hình chữ nhật
+                var labelPos = new Point(r.BoardRect.X + 2, r.BoardRect.Y - 4);
+                if (labelPos.Y < 10) labelPos.Y = r.BoardRect.Y + 12;
+                Cv2.PutText(canvas, r.Name, labelPos,
+                    HersheyFonts.HersheySimplex, fontScale, color, 1, LineTypes.AntiAlias);
+            }
+
+            var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(canvas);
+            bitmap.Freeze();
+            return bitmap;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     // ──── INotifyPropertyChanged ──────────────────────────────────────────────
