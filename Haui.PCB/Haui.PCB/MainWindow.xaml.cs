@@ -53,6 +53,18 @@ public partial class MainWindow : System.Windows.Window
             });
         };
 
+        // Nhận frame Test 2 → mở PipelineStepsWindow trên UI thread
+        _viewModel.Test2FrameCaptured += frame =>
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                var stepsWindow = new PipelineStepsWindow { Owner = this };
+                stepsWindow.LoadImage(frame);
+                frame.Dispose();
+                stepsWindow.Show();
+            });
+        };
+
         // Nhận frame tạo mẫu → mở CreateTemplateWindow trên UI thread
         _viewModel.TemplateFrameCaptured += frame =>
         {
@@ -142,6 +154,7 @@ public partial class MainWindow : System.Windows.Window
             SetToolbarEnabled(false);
             BtnStop.IsEnabled = true;
             BtnTest.IsEnabled = true;
+            BtnTest2.IsEnabled = true;
             BtnSelectRegion.IsEnabled = true;
             BtnCreateTemplate.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
@@ -160,6 +173,7 @@ public partial class MainWindow : System.Windows.Window
         SetToolbarEnabled(true);
         BtnStop.IsEnabled = false;
         BtnTest.IsEnabled = false;
+        BtnTest2.IsEnabled = false;
         BtnSelectRegion.IsEnabled = false;
         BtnCreateTemplate.IsEnabled = false;
         // Thoát chế độ chọn vùng nếu đang chọn
@@ -179,6 +193,19 @@ public partial class MainWindow : System.Windows.Window
         finally
         {
             BtnTest.IsEnabled = _viewModel.IsRunning;
+        }
+    }
+
+    private async void BtnTest2_Click(object sender, RoutedEventArgs e)
+    {
+        BtnTest2.IsEnabled = false;
+        try
+        {
+            await _viewModel.CaptureTest2FrameAsync();
+        }
+        finally
+        {
+            BtnTest2.IsEnabled = _viewModel.IsRunning;
         }
     }
 

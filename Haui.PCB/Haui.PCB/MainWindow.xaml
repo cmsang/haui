@@ -166,6 +166,15 @@
                         Click="BtnTest_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
 
+                <!-- Nút Test 2: xem từng bước pipeline -->
+                <Button x:Name="BtnTest2"
+                        Content="🧪 Test 2"
+                        Height="30" Width="90"
+                        Margin="0,0,8,0"
+                        IsEnabled="False"
+                        Click="BtnTest2_Click"
+                        Style="{StaticResource SecondaryButtonStyle}" />
+
                 <!-- Nút chọn vùng nhận diện -->
                 <Button x:Name="BtnSelectRegion"
                         Content="🔲 Chọn vùng"

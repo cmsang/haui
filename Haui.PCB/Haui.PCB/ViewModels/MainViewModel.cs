@@ -44,6 +44,9 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Phát khi người dùng nhấn Test — truyền frame để mở TestPipelineWindow.</summary>
     public event Action<Mat>? TestFrameCaptured;
 
+    /// <summary>Phát khi người dùng nhấn Test 2 — truyền frame để mở PipelineStepsWindow.</summary>
+    public event Action<Mat>? Test2FrameCaptured;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     // ──── Properties ─────────────────────────────────────────────────────────
@@ -206,6 +209,37 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
         StatusText = "Đã mở Test Pipeline.";
         TestFrameCaptured?.Invoke(frame);
+    }
+
+    /// <summary>Chụp frame từ vùng đã chọn và phát sự kiện Test2FrameCaptured để mở PipelineStepsWindow.</summary>
+    public async Task CaptureTest2FrameAsync()
+    {
+        StatusText = "Đang chụp ảnh (Test 2)...";
+
+        var frame = await Task.Run(() => _cameraService.GrabFrame());
+
+        if (frame is null || frame.Empty())
+        {
+            frame?.Dispose();
+            StatusText = "Không thể chụp ảnh từ camera.";
+            return;
+        }
+
+        // Crop theo vùng đã chọn nếu có
+        if (_selectedRegion.HasValue)
+        {
+            var roi = ClampRect(_selectedRegion.Value, frame.Width, frame.Height);
+            if (roi.Width > 0 && roi.Height > 0)
+            {
+                var cropped = new Mat(frame, roi);
+                frame.Dispose();
+                frame = cropped.Clone();
+                cropped.Dispose();
+            }
+        }
+
+        StatusText = "Đã mở Pipeline Debug.";
+        Test2FrameCaptured?.Invoke(frame);
     }
 
     /// <summary>Chụp frame hiện tại và phát sự kiện TemplateFrameCaptured để mở form tạo mẫu.</summary>

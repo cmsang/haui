@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Haui.PCB.Models;
 using Haui.PCB.Processing;
@@ -27,6 +28,12 @@ public class TemplateRegionItem : INotifyPropertyChanged
     public double RelWidth { get; set; }
     public double RelHeight { get; set; }
 
+    /// <summary>Màu hiển thị của vùng này trên canvas và trong grid.</summary>
+    public Color RegionColor { get; set; } = Colors.LimeGreen;
+
+    /// <summary>Brush từ RegionColor để bind trong XAML.</summary>
+    public SolidColorBrush RegionBrush => new(RegionColor);
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
@@ -41,13 +48,14 @@ public class TemplateRegionItem : INotifyPropertyChanged
         RelHeight = RelHeight
     };
 
-    public static TemplateRegionItem FromModel(TemplateRegion m) => new()
+    public static TemplateRegionItem FromModel(TemplateRegion m, Color color) => new()
     {
         Name = m.Name,
         RelX = m.RelX,
         RelY = m.RelY,
         RelWidth = m.RelWidth,
-        RelHeight = m.RelHeight
+        RelHeight = m.RelHeight,
+        RegionColor = color
     };
 }
 
@@ -85,6 +93,76 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     public int BoardWidth => _boardImage?.Width ?? 0;
     public int BoardHeight => _boardImage?.Height ?? 0;
 
+    // ──── Bảng 50 màu phân biệt ───────────────────────────────────────────────
+
+    internal static readonly Color[] RegionPalette =
+    [
+        Color.FromRgb(255,  80,  80),  //  1 đỏ
+        Color.FromRgb( 80, 160, 255),  //  2 xanh dương
+        Color.FromRgb(255, 215,  40),  //  3 vàng
+        Color.FromRgb( 60, 210, 110),  //  4 xanh lá
+        Color.FromRgb(210,  80, 255),  //  5 tím
+        Color.FromRgb(255, 140,  40),  //  6 cam
+        Color.FromRgb( 40, 215, 215),  //  7 cyan
+        Color.FromRgb(255, 100, 180),  //  8 hồng
+        Color.FromRgb(160, 230,  60),  //  9 xanh lá nõn
+        Color.FromRgb(255, 180, 100),  // 10 cam nhạt
+        Color.FromRgb(100, 100, 255),  // 11 xanh mực
+        Color.FromRgb(255,  50, 150),  // 12 hồng đậm
+        Color.FromRgb( 50, 200, 170),  // 13 tím xanh
+        Color.FromRgb(200, 160,  40),  // 14 vàng đồng
+        Color.FromRgb(255, 120, 120),  // 15 đỏ hồng
+        Color.FromRgb( 40, 180, 255),  // 16 xanh trời
+        Color.FromRgb(180, 255,  80),  // 17 vàng xanh
+        Color.FromRgb(255,  80, 200),  // 18 tím hồng
+        Color.FromRgb( 80, 255, 160),  // 19 xanh bạc hà
+        Color.FromRgb(255, 200,  60),  // 20 vàng sáng
+        Color.FromRgb(200,  80,  80),  // 21 đỏ đậm
+        Color.FromRgb( 60, 120, 220),  // 22 xanh navy nhạt
+        Color.FromRgb(220, 200,  50),  // 23 vàng ô liu
+        Color.FromRgb( 80, 220,  60),  // 24 xanh cỏ
+        Color.FromRgb(180,  60, 220),  // 25 tím hồng
+        Color.FromRgb(255, 160,  60),  // 26 cam vàng
+        Color.FromRgb( 60, 220, 220),  // 27 ngọc lam
+        Color.FromRgb(220, 100, 160),  // 28 hồng đỏ
+        Color.FromRgb(140, 220,  80),  // 29 xanh lá sáng
+        Color.FromRgb(255, 140, 180),  // 30 hồng nhạt
+        Color.FromRgb( 80, 200,  80),  // 31 xanh lá vừa
+        Color.FromRgb(200, 120, 255),  // 32 tím nhạt
+        Color.FromRgb(255, 220, 100),  // 33 vàng nhạt
+        Color.FromRgb( 80, 140, 200),  // 34 xanh xám
+        Color.FromRgb(240,  80,  40),  // 35 đỏ cam
+        Color.FromRgb(100, 240, 200),  // 36 xanh lá biển
+        Color.FromRgb(240, 160, 240),  // 37 hồng tím nhạt
+        Color.FromRgb(200, 240,  80),  // 38 vàng xanh nhạt
+        Color.FromRgb(255,  80, 100),  // 39 đỏ hồng đậm
+        Color.FromRgb( 60, 200, 240),  // 40 xanh sáng
+        Color.FromRgb(255, 180, 200),  // 41 hồng phấn
+        Color.FromRgb(160, 255, 120),  // 42 xanh lá nõn nhạt
+        Color.FromRgb(255, 120,  60),  // 43 cam đậm
+        Color.FromRgb(120, 120, 240),  // 44 đỏ tím
+        Color.FromRgb( 80, 240, 140),  // 45 bạc hà sáng
+        Color.FromRgb(240, 200,  80),  // 46 vàng kim
+        Color.FromRgb(200,  60, 100),  // 47 đỏ rượu
+        Color.FromRgb( 60, 180, 160),  // 48 xanh rêu
+        Color.FromRgb(240, 120, 200),  // 49 hồng neon
+        Color.FromRgb(180, 240, 180),  // 50 xanh lá pastel
+    ];
+
+    /// <summary>
+    /// Chọn màu tiếp theo chưa được dùng bởi bất kỳ vùng nào đang có trong danh sách.
+    /// </summary>
+    internal Color GetNextColor()
+    {
+        var usedColors = Regions.Select(r => r.RegionColor).ToHashSet();
+        foreach (var color in RegionPalette)
+            if (!usedColors.Contains(color))
+                return color;
+
+        // Tất cả 50 màu đã dùng hết — quay vòng theo index
+        return RegionPalette[Regions.Count % RegionPalette.Length];
+    }
+
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
     public CreateTemplateViewModel(
@@ -114,8 +192,9 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 
         // Tải các vùng đã lưu
         Regions.Clear();
+        int idx = 0;
         foreach (var r in _regionService.Load())
-            Regions.Add(TemplateRegionItem.FromModel(r));
+            Regions.Add(TemplateRegionItem.FromModel(r, RegionPalette[idx++ % RegionPalette.Length]));
 
         StatusText = Regions.Count > 0
             ? $"Đã tải {Regions.Count} vùng mẫu."
@@ -133,7 +212,8 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             RelX = relX,
             RelY = relY,
             RelWidth = relW,
-            RelHeight = relH
+            RelHeight = relH,
+            RegionColor = GetNextColor()
         };
         Regions.Add(item);
         StatusText = $"Đã thêm \"{item.Name}\".";
