@@ -161,9 +161,28 @@
                 <Button x:Name="BtnTest"
                         Content="🔬 Test"
                         Height="30" Width="90"
+                        Margin="0,0,8,0"
                         IsEnabled="False"
                         Click="BtnTest_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
+
+                <!-- Nút chọn vùng nhận diện -->
+                <Button x:Name="BtnSelectRegion"
+                        Content="🔲 Chọn vùng"
+                        Height="30" Width="110"
+                        Margin="0,0,8,0"
+                        IsEnabled="False"
+                        Click="BtnSelectRegion_Click"
+                        Style="{StaticResource SecondaryButtonStyle}" />
+
+                <!-- Nút tạo mẫu -->
+                <Button x:Name="BtnCreateTemplate"
+                        Content="📋 Tạo mẫu"
+                        Height="30" Width="100"
+                        IsEnabled="False"
+                        Click="BtnCreateTemplate_Click"
+                        Style="{StaticResource SecondaryButtonStyle}" />
+
             </WrapPanel>
         </Border>
 
@@ -181,6 +200,21 @@
                            VerticalAlignment="Center"
                            Foreground="#888888"
                            FontSize="16" />
+                <!-- Canvas kéo thả chọn vùng -->
+                <Canvas x:Name="SelectionCanvas"
+                        Background="Transparent"
+                        MouseLeftButtonDown="SelectionCanvas_MouseLeftButtonDown"
+                        MouseMove="SelectionCanvas_MouseMove"
+                        MouseLeftButtonUp="SelectionCanvas_MouseLeftButtonUp"
+                        IsHitTestVisible="False">
+                    <!-- Hình chữ nhật kéo thả (chỉ hiện khi đang kéo) -->
+                    <Rectangle x:Name="DragRect"
+                               Stroke="Yellow"
+                               StrokeThickness="2"
+                               StrokeDashArray="4 2"
+                               Fill="Transparent"
+                               Visibility="Collapsed" />
+                </Canvas>
             </Grid>
         </Border>
 
