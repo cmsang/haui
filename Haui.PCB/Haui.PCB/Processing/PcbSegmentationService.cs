@@ -4,8 +4,9 @@ namespace Haui.PCB.Processing;
 
 /// <summary>
 /// Dịch vụ phân vùng và cắt bo mạch PCB từ ảnh nền bằng thuật toán phát hiện đường biên.
+/// Implements <see cref="IPcbSegmentationService"/>.
 /// </summary>
-public class PcbSegmentationService
+public class PcbSegmentationService : IPcbSegmentationService
 {
     // Ngưỡng Canny để phát hiện cạnh
     private const double CannyThreshold1 = 50;

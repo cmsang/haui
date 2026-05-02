@@ -14,6 +14,7 @@
 - **D**ependency Inversion: depend on abstractions, not on concrete implementations
 
 ## Coding Guidelines
+- **Separate main logic from UI forms**: all business logic must reside in ViewModel or Service; Form/Window should only contain UI event handling code and control updates
 - Separate UI logic from processing and ML logic
 - Avoid putting business logic inside Form classes
 - Use async/await for long-running operations

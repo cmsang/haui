@@ -21,8 +21,9 @@ public record ResolutionInfo(int Width, int Height)
 
 /// <summary>
 /// Dịch vụ quản lý camera: dò tìm, kết nối và lấy frame đều dùng AForge.Video.DirectShow.
+/// Implements <see cref="ICameraService"/>.
 /// </summary>
-public class CameraService : IDisposable
+public class CameraService : ICameraService
 {
     private VideoCaptureDevice? _device;
     private Mat? _lastFrame;
@@ -37,47 +38,46 @@ public class CameraService : IDisposable
     public event Action<Mat>? FrameArrived;
 
     /// <summary>
-    /// Dò tìm tất cả camera có sẵn trên máy bằng DirectShow.
+    /// Dò tìm tất cả camera có sẵn trên máy bằng DirectShow (bất đồng bộ).
     /// </summary>
-    public static List<CameraInfo> EnumerateCameras()
-    {
-        var result = new List<CameraInfo>();
-        var devices = new FilterInfoCollection(FilterCategory.VideoInputDevice);
-
-        for (int i = 0; i < devices.Count; i++)
-            result.Add(new CameraInfo(i, devices[i].Name, devices[i].MonikerString));
-
-        return result;
-    }
+    public Task<IReadOnlyList<CameraInfo>> EnumerateCamerasAsync()
+        => Task.Run<IReadOnlyList<CameraInfo>>(() =>
+        {
+            var result = new List<CameraInfo>();
+            var devices = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+            for (int i = 0; i < devices.Count; i++)
+                result.Add(new CameraInfo(i, devices[i].Name, devices[i].MonikerString));
+            return result;
+        });
 
     /// <summary>
-    /// Lấy danh sách độ phân giải thực sự mà camera hỗ trợ qua DirectShow VideoCapabilities.
+    /// Lấy danh sách độ phân giải thực sự mà camera hỗ trợ qua DirectShow VideoCapabilities (bất đồng bộ).
     /// </summary>
-    public static List<ResolutionInfo> GetSupportedResolutions(string monikerString)
-    {
-        var result = new List<ResolutionInfo>();
-        var seen = new HashSet<(int, int)>();
-
-        try
+    public Task<IReadOnlyList<ResolutionInfo>> GetSupportedResolutionsAsync(string monikerString)
+        => Task.Run<IReadOnlyList<ResolutionInfo>>(() =>
         {
-            var device = new VideoCaptureDevice(monikerString);
-            foreach (var cap in device.VideoCapabilities)
+            var result = new List<ResolutionInfo>();
+            var seen = new HashSet<(int, int)>();
+            try
             {
-                int w = cap.FrameSize.Width;
-                int h = cap.FrameSize.Height;
-                if (w > 0 && h > 0 && seen.Add((w, h)))
-                    result.Add(new ResolutionInfo(w, h));
+                var device = new VideoCaptureDevice(monikerString);
+                foreach (var cap in device.VideoCapabilities)
+                {
+                    int w = cap.FrameSize.Width;
+                    int h = cap.FrameSize.Height;
+                    if (w > 0 && h > 0 && seen.Add((w, h)))
+                        result.Add(new ResolutionInfo(w, h));
+                }
             }
-        }
-        catch
-        {
-            // Bỏ qua nếu không truy vấn được capabilities
-        }
+            catch
+            {
+                // Bỏ qua nếu không truy vấn được capabilities
+            }
 
-        // Sắp xếp tăng dần theo diện tích
-        result.Sort((a, b) => (a.Width * a.Height).CompareTo(b.Width * b.Height));
-        return result;
-    }
+            // Sắp xếp tăng dần theo diện tích
+            result.Sort((a, b) => (a.Width * a.Height).CompareTo(b.Width * b.Height));
+            return result;
+        });
 
     /// <summary>
     /// Bắt đầu kết nối camera bằng AForge VideoCaptureDevice theo monikerString và độ phân giải.

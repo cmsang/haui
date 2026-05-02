@@ -1,39 +1,73 @@
-using System.IO;
 using System.Windows;
-using System.Windows.Media.Imaging;
 using Microsoft.Win32;
-using OpenCvSharp;
-using OpenCvSharp.WpfExtensions;
 using Haui.PCB.Processing;
+using Haui.PCB.ViewModels;
+using OpenCvSharp;
 
 namespace Haui.PCB.Views;
 
+/// <summary>
+/// Code-behind của TestPipelineWindow — chỉ chứa logic giao diện thuần túy.
+/// Toàn bộ nghiệp vụ xử lý ảnh được uỷ thác cho <see cref="TestPipelineViewModel"/>.
+/// </summary>
 public partial class TestPipelineWindow : System.Windows.Window
 {
-    private readonly PcbSegmentationService _segmentation = new();
-    private Mat? _sourceMat;
+    private readonly TestPipelineViewModel _viewModel;
 
     public TestPipelineWindow()
     {
         InitializeComponent();
+        _viewModel = new TestPipelineViewModel(new PcbSegmentationService());
+        DataContext = _viewModel;
+
+        // Lắng nghe ảnh gốc sẵn sàng
+        _viewModel.SourceImageReady += bitmap =>
+        {
+            OriginalImage.Source = bitmap;
+            OriginalPlaceholder.Visibility = Visibility.Collapsed;
+        };
+
+        // Lắng nghe ảnh đã xử lý sẵn sàng
+        _viewModel.ProcessedImageReady += bitmap =>
+        {
+            if (bitmap is null)
+            {
+                ProcessedImage.Source = null;
+                ProcessedPlaceholder.Visibility = Visibility.Visible;
+                ProcessedPlaceholder.Text = "Không tìm thấy bo mạch";
+            }
+            else
+            {
+                ProcessedImage.Source = bitmap;
+                ProcessedPlaceholder.Visibility = Visibility.Collapsed;
+            }
+        };
+
+        // Đồng bộ StatusText và trạng thái nút từ ViewModel
+        _viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(TestPipelineViewModel.StatusText))
+                StatusText.Text = _viewModel.StatusText;
+            else if (e.PropertyName == nameof(TestPipelineViewModel.IsBusy))
+            {
+                BtnTest.IsEnabled = !_viewModel.IsBusy && _viewModel.HasSource;
+                BtnSelectImage.IsEnabled = !_viewModel.IsBusy;
+            }
+            else if (e.PropertyName == nameof(TestPipelineViewModel.HasSource))
+                BtnTest.IsEnabled = _viewModel.HasSource && !_viewModel.IsBusy;
+        };
     }
 
-    /// <summary>
-    /// Nạp ảnh từ bên ngoài (ví dụ từ camera chụp).
-    /// </summary>
+    // ──── Public API ──────────────────────────────────────────────────────────
+
+    /// <summary>Nạp ảnh từ bên ngoài (ví dụ từ camera chụp).</summary>
     public void LoadImage(Mat mat)
     {
-        _sourceMat?.Dispose();
-        _sourceMat = mat.Clone();
-
-        OriginalImage.Source = _sourceMat.ToWriteableBitmap();
-        OriginalPlaceholder.Visibility = Visibility.Collapsed;
-
-        ProcessedImage.Source = null;
-        ProcessedPlaceholder.Visibility = Visibility.Visible;
-        StatusText.Text = "Ảnh đã tải. Bấm ▶ Test để xử lý.";
+        _viewModel.LoadImage(mat);
         BtnTest.IsEnabled = true;
     }
+
+    // ──── Event Handlers ──────────────────────────────────────────────────────
 
     private void BtnSelectImage_Click(object sender, RoutedEventArgs e)
     {
@@ -47,74 +81,17 @@ public partial class TestPipelineWindow : System.Windows.Window
         if (dialog.ShowDialog() != true)
             return;
 
-        _sourceMat?.Dispose();
-        _sourceMat = Cv2.ImRead(dialog.FileName, ImreadModes.Color);
-
-        if (_sourceMat.Empty())
-        {
-            StatusText.Text = "Không thể đọc ảnh.";
-            return;
-        }
-
-        OriginalImage.Source = _sourceMat.ToWriteableBitmap();
-        OriginalPlaceholder.Visibility = Visibility.Collapsed;
-
-        ProcessedImage.Source = null;
-        ProcessedPlaceholder.Visibility = Visibility.Visible;
-        ProcessedPlaceholder.Text = "Chưa xử lý";
-        StatusText.Text = $"Đã chọn: {Path.GetFileName(dialog.FileName)}";
-        BtnTest.IsEnabled = true;
+        _viewModel.LoadImageFromFile(dialog.FileName);
     }
 
     private async void BtnTest_Click(object sender, RoutedEventArgs e)
     {
-        if (_sourceMat is null || _sourceMat.Empty())
-        {
-            StatusText.Text = "Vui lòng chọn ảnh trước.";
-            return;
-        }
-
-        BtnTest.IsEnabled = false;
-        BtnSelectImage.IsEnabled = false;
-        StatusText.Text = "Đang xử lý...";
-
-        Mat? result = null;
-        var source = _sourceMat.Clone();
-
-        try
-        {
-            // Chạy phân vùng trên thread nền để không block UI
-            result = await Task.Run(() => _segmentation.Segment(source));
-
-            if (result is null)
-            {
-                StatusText.Text = "Không phát hiện được bo mạch. Thử điều chỉnh ảnh.";
-                ProcessedPlaceholder.Text = "Không tìm thấy bo mạch";
-                ProcessedPlaceholder.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                ProcessedImage.Source = result.ToWriteableBitmap();
-                ProcessedPlaceholder.Visibility = Visibility.Collapsed;
-                StatusText.Text = $"Hoàn thành. Kích thước PCB: {result.Width}×{result.Height} px";
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusText.Text = $"Lỗi: {ex.Message}";
-        }
-        finally
-        {
-            source.Dispose();
-            result?.Dispose();
-            BtnTest.IsEnabled = true;
-            BtnSelectImage.IsEnabled = true;
-        }
+        await _viewModel.RunSegmentationAsync();
     }
 
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);
-        _sourceMat?.Dispose();
+        _viewModel.Dispose();
     }
 }
