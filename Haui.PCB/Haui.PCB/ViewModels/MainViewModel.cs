@@ -38,6 +38,9 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Phát khi có frame mới sẵn sàng để hiển thị (đã Freeze).</summary>
     public event Action<System.Windows.Media.Imaging.BitmapSource>? FrameReady;
 
+    /// <summary>Phát khi người dùng nhấn Tạo mẫu — truyền frame để mở CreateTemplateWindow.</summary>
+    public event Action<Mat>? TemplateFrameCaptured;
+
     /// <summary>Phát khi người dùng nhấn Test — truyền frame để mở TestPipelineWindow.</summary>
     public event Action<Mat>? TestFrameCaptured;
 
@@ -203,6 +206,24 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
         StatusText = "Đã mở Test Pipeline.";
         TestFrameCaptured?.Invoke(frame);
+    }
+
+    /// <summary>Chụp frame hiện tại và phát sự kiện TemplateFrameCaptured để mở form tạo mẫu.</summary>
+    public async Task CaptureTemplateFrameAsync()
+    {
+        StatusText = "Đang chụp ảnh để tạo mẫu...";
+
+        var frame = await Task.Run(() => _cameraService.GrabFrame());
+
+        if (frame is null || frame.Empty())
+        {
+            frame?.Dispose();
+            StatusText = "Không thể chụp ảnh từ camera.";
+            return;
+        }
+
+        StatusText = "Đã mở form tạo mẫu.";
+        TemplateFrameCaptured?.Invoke(frame);
     }
 
     // ──── Xử lý frame ────────────────────────────────────────────────────────

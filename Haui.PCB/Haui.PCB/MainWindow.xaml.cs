@@ -53,6 +53,18 @@ public partial class MainWindow : System.Windows.Window
             });
         };
 
+        // Nhận frame tạo mẫu → mở CreateTemplateWindow trên UI thread
+        _viewModel.TemplateFrameCaptured += frame =>
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                var templateWindow = new CreateTemplateWindow { Owner = this };
+                templateWindow.LoadFrame(frame);
+                frame.Dispose();
+                templateWindow.Show();
+            });
+        };
+
         Loaded += async (_, _) => await LoadCamerasAsync();
     }
 
@@ -131,6 +143,7 @@ public partial class MainWindow : System.Windows.Window
             BtnStop.IsEnabled = true;
             BtnTest.IsEnabled = true;
             BtnSelectRegion.IsEnabled = true;
+            BtnCreateTemplate.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
         }
         catch (Exception ex)
@@ -148,6 +161,7 @@ public partial class MainWindow : System.Windows.Window
         BtnStop.IsEnabled = false;
         BtnTest.IsEnabled = false;
         BtnSelectRegion.IsEnabled = false;
+        BtnCreateTemplate.IsEnabled = false;
         // Thoát chế độ chọn vùng nếu đang chọn
         ExitSelectMode();
         CameraImage.Source = null;
@@ -165,6 +179,19 @@ public partial class MainWindow : System.Windows.Window
         finally
         {
             BtnTest.IsEnabled = _viewModel.IsRunning;
+        }
+    }
+
+    private async void BtnCreateTemplate_Click(object sender, RoutedEventArgs e)
+    {
+        BtnCreateTemplate.IsEnabled = false;
+        try
+        {
+            await _viewModel.CaptureTemplateFrameAsync();
+        }
+        finally
+        {
+            BtnCreateTemplate.IsEnabled = _viewModel.IsRunning;
         }
     }
 
