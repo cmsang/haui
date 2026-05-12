@@ -3,8 +3,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using OpenCvSharp;
+using Haui.GTObjectDetector.Models;
 using Haui.GTObjectDetector.Processing;
+using OpenCvSharp;
 
 namespace Haui.GTObjectDetector.ViewModels;
 
@@ -15,6 +16,7 @@ namespace Haui.GTObjectDetector.ViewModels;
 public class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly ICameraService _cameraService;
+    private readonly IObjectDetectionService? _detectionService;
 
     private IReadOnlyList<CameraInfo> _cameras = [];
     private IReadOnlyList<ResolutionInfo> _resolutions = [];
@@ -24,6 +26,16 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _currentFps;
     private readonly Stopwatch _fpsStopwatch = Stopwatch.StartNew();
     private bool _disposed;
+
+    // Bật/tắt tính năng nhận diện đối tượng YOLO
+    private bool _isDetectionEnabled;
+
+    // Ngưỡng confidence và NMS
+    private float _confidenceThreshold = 0.45f;
+    private float _nmsThreshold = 0.45f;
+
+    // Tùy chọn tiền xử lý ảnh trước khi detect
+    private readonly PreprocessOptions _preprocessOptions = new();
 
     // Vùng nhận diện (tọa độ tương đối 0..1 so với kích thước frame thực)
     private OpenCvSharp.Rect? _selectedRegion;
@@ -83,6 +95,33 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsRunning => _cameraService.IsRunning;
 
+    /// <summary>Bật/tắt nhận diện đối tượng YOLO trên luồng camera.</summary>
+    public bool IsDetectionEnabled
+    {
+        get => _isDetectionEnabled;
+        set { _isDetectionEnabled = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>Ngưỡng confidence tối thiểu (0.0–1.0).</summary>
+    public float ConfidenceThreshold
+    {
+        get => _confidenceThreshold;
+        set { _confidenceThreshold = Math.Clamp(value, 0.01f, 1f); OnPropertyChanged(); }
+    }
+
+    /// <summary>Ngưỡng NMS (0.0–1.0).</summary>
+    public float NmsThreshold
+    {
+        get => _nmsThreshold;
+        set { _nmsThreshold = Math.Clamp(value, 0.01f, 1f); OnPropertyChanged(); }
+    }
+
+    /// <summary>True nếu detection service đã được nạp thành công.</summary>
+    public bool IsDetectionAvailable => _detectionService is not null;
+
+    /// <summary>Tùy chọn tiền xử lý (CLAHE, Denoise) — có thể điều chỉnh từ ngoài.</summary>
+    public PreprocessOptions PreprocessOptions => _preprocessOptions;
+
     /// <summary>Vùng nhận diện trên frame thực (pixel). Null = toàn bộ khung hình.</summary>
     public OpenCvSharp.Rect? SelectedRegion
     {
@@ -101,9 +140,10 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
-    public MainViewModel(ICameraService cameraService)
+    public MainViewModel(ICameraService cameraService, IObjectDetectionService? detectionService = null)
     {
         _cameraService = cameraService;
+        _detectionService = detectionService;
         _cameraService.FrameArrived += OnFrameArrived;
         LoadRegion();
     }
@@ -280,6 +320,51 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             _lastFrameHeight = frame.Height;
         }
 
+        // ── Nhận diện đối tượng YOLO (nếu bật) ───────────────────────────
+        if (_isDetectionEnabled && _detectionService is not null)
+        {
+            // Xác định vùng cần detect
+            Mat detectMat = frame;
+            OpenCvSharp.Rect roiForDetect = default;
+            bool hasRoi = _selectedRegion.HasValue;
+
+            if (hasRoi)
+            {
+                roiForDetect = ClampRect(_selectedRegion.Value, frame.Width, frame.Height);
+                hasRoi = roiForDetect.Width > 0 && roiForDetect.Height > 0;
+            }
+
+            if (hasRoi)
+                detectMat = new Mat(frame, roiForDetect);
+
+            try
+            {
+                var detections = _detectionService.Detect(detectMat, _confidenceThreshold, _nmsThreshold, _preprocessOptions);
+
+                // Nếu detect trên ROI thì bù offset tọa độ về frame gốc
+                if (hasRoi && detections.Count > 0)
+                {
+                    var shifted = detections.Select(d => d with
+                    {
+                        BoundingBox = new OpenCvSharp.Rect(
+                            d.BoundingBox.X + roiForDetect.X,
+                            d.BoundingBox.Y + roiForDetect.Y,
+                            d.BoundingBox.Width,
+                            d.BoundingBox.Height)
+                    }).ToList();
+                    YoloDetectionService.DrawDetections(frame, shifted);
+                }
+                else
+                {
+                    YoloDetectionService.DrawDetections(frame, detections);
+                }
+            }
+            finally
+            {
+                if (hasRoi) detectMat.Dispose();
+            }
+        }
+
         // Vẽ hình chữ nhật xanh cho vùng nhận diện
         if (_selectedRegion.HasValue)
         {
@@ -351,6 +436,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed) return;
         _cameraService.FrameArrived -= OnFrameArrived;
         _cameraService.Dispose();
+        _detectionService?.Dispose();
         _disposed = true;
     }
 }

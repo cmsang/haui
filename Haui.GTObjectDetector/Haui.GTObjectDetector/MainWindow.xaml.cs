@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.IO;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Shapes;
@@ -24,7 +25,17 @@ public partial class MainWindow : System.Windows.Window
     public MainWindow()
     {
         InitializeComponent();
-        _viewModel = new MainViewModel(new CameraService());
+
+        // Khởi tạo detection service nếu model tồn tại
+        IObjectDetectionService? detectionService = null;
+        const string modelPath = "best.onnx";
+        const string classPath = "object_class.txt";
+        if (File.Exists(modelPath) && File.Exists(classPath))
+        {
+            detectionService = new YoloDetectionService(modelPath, classPath);
+        }
+
+        _viewModel = new MainViewModel(new CameraService(), detectionService);
         DataContext = _viewModel;
 
         // Lắng nghe frame mới để hiển thị lên UI
@@ -234,6 +245,21 @@ public partial class MainWindow : System.Windows.Window
         ResolutionComboBox.IsEnabled = enabled;
         BtnStart.IsEnabled = enabled && _viewModel.Cameras.Count > 0;
         BtnStop.IsEnabled = false;
+    }
+
+    private void BtnDetection_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.IsDetectionAvailable)
+        {
+            StatusText.Text = "Model YOLO chưa được nạp (kiểm tra best.onnx và object_class.txt).";
+            return;
+        }
+        _viewModel.IsDetectionEnabled = !_viewModel.IsDetectionEnabled;
+        if (sender is Button btn)
+            btn.Content = _viewModel.IsDetectionEnabled ? "🟢 Detection: BẬT" : "🔴 Detection: TẮT";
+        StatusText.Text = _viewModel.IsDetectionEnabled
+            ? "Nhận diện YOLO đang chạy."
+            : "Nhận diện YOLO đã tắt.";
     }
 
     private void BtnSelectRegion_Click(object sender, RoutedEventArgs e)

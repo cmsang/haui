@@ -200,6 +200,16 @@
                         Click="BtnViewTemplates_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
 
+                <Separator Width="1" Height="28" Background="#CCCCCC" Margin="8,0,8,0" />
+
+                <!-- Nút bật/tắt nhận diện YOLO -->
+                <Button x:Name="BtnDetection"
+                        Content="🔴 Detection: TẮT"
+                        Height="30" Width="150"
+                        Margin="0,0,0,0"
+                        Click="BtnDetection_Click"
+                        Style="{StaticResource SecondaryButtonStyle}" />
+
             </WrapPanel>
         </Border>
 
