@@ -49,6 +49,7 @@ namespace Haui.GT
             btnPrepareDataset = new Button();
             btnSettings = new Button();
             btnSaveResults = new Button();
+            btnVideoCapture = new Button();
             btnCapture = new Button();
             btnStop = new Button();
             btnStartCamera = new Button();
@@ -233,6 +234,7 @@ namespace Haui.GT
             pnlBottom.Controls.Add(btnPrepareDataset);
             pnlBottom.Controls.Add(btnSettings);
             pnlBottom.Controls.Add(btnSaveResults);
+            pnlBottom.Controls.Add(btnVideoCapture);
             pnlBottom.Controls.Add(btnCapture);
             pnlBottom.Controls.Add(btnStop);
             pnlBottom.Controls.Add(btnStartCamera);
@@ -255,7 +257,7 @@ namespace Haui.GT
             btnTest.FlatStyle = FlatStyle.Flat;
             btnTest.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
             btnTest.ForeColor = Color.White;
-            btnTest.Location = new Point(826, 11);
+            btnTest.Location = new Point(981, 11);
             btnTest.Margin = new Padding(10, 0, 0, 0);
             btnTest.Name = "btnTest";
             btnTest.Size = new Size(140, 36);
@@ -310,7 +312,7 @@ namespace Haui.GT
             btnSettings.FlatStyle = FlatStyle.Flat;
             btnSettings.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
             btnSettings.ForeColor = Color.White;
-            btnSettings.Location = new Point(668, 11);
+            btnSettings.Location = new Point(821, 11);
             btnSettings.Margin = new Padding(10, 0, 0, 0);
             btnSettings.Name = "btnSettings";
             btnSettings.Size = new Size(140, 36);
@@ -330,7 +332,7 @@ namespace Haui.GT
             btnSaveResults.FlatStyle = FlatStyle.Flat;
             btnSaveResults.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
             btnSaveResults.ForeColor = Color.White;
-            btnSaveResults.Location = new Point(508, 11);
+            btnSaveResults.Location = new Point(661, 11);
             btnSaveResults.Margin = new Padding(10, 0, 0, 0);
             btnSaveResults.Name = "btnSaveResults";
             btnSaveResults.Size = new Size(140, 36);
@@ -358,6 +360,26 @@ namespace Haui.GT
             btnCapture.Text = "Capture";
             btnCapture.UseVisualStyleBackColor = false;
             btnCapture.Click += btnCapture_Click;
+            // 
+            // btnVideoCapture
+            // 
+            btnVideoCapture.Anchor = AnchorStyles.Left;
+            btnVideoCapture.BackColor = Color.FromArgb(0, 150, 136);
+            btnVideoCapture.Cursor = Cursors.Hand;
+            btnVideoCapture.FlatAppearance.BorderSize = 0;
+            btnVideoCapture.FlatAppearance.MouseDownBackColor = Color.FromArgb(0, 105, 92);
+            btnVideoCapture.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 130, 116);
+            btnVideoCapture.FlatStyle = FlatStyle.Flat;
+            btnVideoCapture.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
+            btnVideoCapture.ForeColor = Color.White;
+            btnVideoCapture.Location = new Point(496, 11);
+            btnVideoCapture.Margin = new Padding(10, 0, 0, 0);
+            btnVideoCapture.Name = "btnVideoCapture";
+            btnVideoCapture.Size = new Size(155, 36);
+            btnVideoCapture.TabIndex = 7;
+            btnVideoCapture.Text = "🎞 Ảnh từ Video";
+            btnVideoCapture.UseVisualStyleBackColor = false;
+            btnVideoCapture.Click += btnVideoCapture_Click;
             // 
             // btnStop
             // 
@@ -502,6 +524,7 @@ namespace Haui.GT
         private Button btnSettings;
         private Button btnTest;
         private Button btnPrepareDataset;
+        private Button btnVideoCapture;
         private System.Windows.Forms.Timer timerCheckJob;
         private Label label1;
         private Label label3;
