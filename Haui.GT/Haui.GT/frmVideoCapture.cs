@@ -198,7 +198,7 @@ namespace Haui.GT
                 if (bestFrame != null && !token.IsCancellationRequested)
                 {
                     savedCount++;
-                    string fileName = Path.Combine(outputFolder, $"frame_{savedCount:D5}_t{segStart:F1}s.jpg");
+                    string fileName = Path.Combine(outputFolder, $"v{videoIdx:D3}_frame_{savedCount:D5}_t{segStart:F1}s.jpg");
                     Cv2.ImWrite(fileName, bestFrame);
                     bestFrame.Dispose();
 
