@@ -379,7 +379,6 @@ namespace Haui.GT
             btnVideoCapture.TabIndex = 7;
             btnVideoCapture.Text = "🎞 Ảnh từ Video";
             btnVideoCapture.UseVisualStyleBackColor = false;
-            btnVideoCapture.Click += btnVideoCapture_Click;
             // 
             // btnStop
             // 
