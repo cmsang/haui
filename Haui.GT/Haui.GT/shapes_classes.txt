@@ -1,8 +1,8 @@
-  car
-  van
-  truck
-  pedestrian
-  Person_sitting
-  cyclist
-  tram
-  misc
+  Oto
+  XeChoHangNho
+  XeTai
+  NguoiDiBo
+  Nguoi
+  NguoiDiXeDap
+  Tau
+  DoiTuongKhac
