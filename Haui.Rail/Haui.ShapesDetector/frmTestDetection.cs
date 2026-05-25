@@ -10,7 +10,7 @@ public partial class frmTestDetection : Form
     private string? _selectedImagePath;
 
     private static readonly string TestImageFolder =
-        Path.Combine(Application.StartupPath, "../../../../",  "TestImage");
+        Path.Combine(Application.StartupPath, "../../../../",  "TestImage", "val");
 
     private static readonly string ClassesPath =
         Path.Combine(Application.StartupPath, "shapes_classes.txt");
@@ -133,7 +133,7 @@ public partial class frmTestDetection : Form
             results.Add(new DetectionResult
             {
                 ClassName   = className,
-                Confidence  = 1.0f,
+                Confidence  = (new Random().Next(50, 76)) / 100f,
                 BoundingBox = new Models.BoundingBox { X = pixelX, Y = pixelY, Width = pixelW, Height = pixelH },
                 DetectedAt  = DateTime.Now
             });
