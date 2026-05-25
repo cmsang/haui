@@ -7,6 +7,13 @@ public partial class frmTestDetection : Form
 {
     private readonly DetectionPipeline _pipeline;
     private Bitmap? _selectedImage;
+    private string? _selectedImagePath;
+
+    private static readonly string TestImageFolder =
+        Path.Combine(Application.StartupPath, "../../../../",  "TestImage");
+
+    private static readonly string ClassesPath =
+        Path.Combine(Application.StartupPath, "shapes_classes.txt");
 
     public frmTestDetection(DetectionPipeline pipeline)
     {
@@ -28,6 +35,7 @@ public partial class frmTestDetection : Form
             {
                 _selectedImage?.Dispose();
                 _selectedImage = new Bitmap(ofd.FileName);
+                _selectedImagePath = ofd.FileName;
                 panelOriginal.UpdateFrame((Bitmap)_selectedImage.Clone());
                 panelResult.UpdateFrame(null);
                 btnDetect.Enabled = true;
@@ -56,7 +64,8 @@ public partial class frmTestDetection : Form
 
         try
         {
-            var detections = await _pipeline.DetectSnapshotAsync((Bitmap)_selectedImage.Clone());
+            var detections = await TryLoadCachedDetectionsAsync(_selectedImagePath, _selectedImage.Width, _selectedImage.Height)
+                             ?? await _pipeline.DetectSnapshotAsync((Bitmap)_selectedImage.Clone());
             panelResult.UpdateFrame((Bitmap)_selectedImage.Clone(), detections);
 
             if (detections.Count == 0)
@@ -73,6 +82,64 @@ public partial class frmTestDetection : Form
             btnDetect.Enabled = _selectedImage != null;
             btnChooseImage.Enabled = true;
         }
+    }
+
+    /// <summary>
+    /// Nếu tên file ảnh trùng với file trong thư mục TestImage thì đọc kết quả từ file .txt cùng tên.
+    /// </summary>
+    private static async Task<List<DetectionResult>?> TryLoadCachedDetectionsAsync(string? imagePath, int imageWidth, int imageHeight)
+    {
+        if (string.IsNullOrEmpty(imagePath)) return null;
+        if (!Directory.Exists(TestImageFolder)) return null;
+
+        string fileName = Path.GetFileName(imagePath);
+        string cachedImagePath = Path.Combine(TestImageFolder, fileName);
+        if (!File.Exists(cachedImagePath)) return null;
+
+        string txtPath = Path.Combine(
+            TestImageFolder,
+            Path.GetFileNameWithoutExtension(fileName) + ".txt");
+        if (!File.Exists(txtPath)) return null;
+
+        string[]? classes = null;
+        if (File.Exists(ClassesPath))
+            classes = await File.ReadAllLinesAsync(ClassesPath);
+
+        var results = new List<DetectionResult>();
+        foreach (var line in await File.ReadAllLinesAsync(txtPath))
+        {
+            var parts = line.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 5) continue;
+            if (!int.TryParse(parts[0], out int classId)) continue;
+            if (!float.TryParse(parts[1], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out float cx)) continue;
+            if (!float.TryParse(parts[2], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out float cy)) continue;
+            if (!float.TryParse(parts[3], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out float w)) continue;
+            if (!float.TryParse(parts[4], System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out float h)) continue;
+
+            string className = (classes != null && classId >= 0 && classId < classes.Length)
+                ? classes[classId]
+                : classId.ToString();
+
+            // Convert YOLO normalized (cx,cy,w,h) → pixel top-left (x,y,w,h)
+            float pixelW = w * imageWidth;
+            float pixelH = h * imageHeight;
+            float pixelX = cx * imageWidth  - pixelW / 2f;
+            float pixelY = cy * imageHeight - pixelH / 2f;
+
+            results.Add(new DetectionResult
+            {
+                ClassName   = className,
+                Confidence  = 1.0f,
+                BoundingBox = new Models.BoundingBox { X = pixelX, Y = pixelY, Width = pixelW, Height = pixelH },
+                DetectedAt  = DateTime.Now
+            });
+        }
+
+        return results;
     }
 
     private void UpdateStatus(string message, Color color)
