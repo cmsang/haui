@@ -351,7 +351,7 @@ namespace Haui.GT
                     detection.ClassName,
                     $"{detection.Confidence:P0}",
                     detection.DetectedAt.ToString("HH:mm:ss")
-                );             
+                );
             }
         }
 
@@ -476,5 +476,10 @@ namespace Haui.GT
             frm.ShowDialog(this);
         }
 
+        private void btnVideoCapture_Click(object sender, EventArgs e)
+        {
+            using var frm = new frmVideoCapture();
+            frm.ShowDialog(this);
+        }
     }
 }
