@@ -44,6 +44,9 @@ public partial class MainWindow : System.Windows.Window
                      or nameof(MainViewModel.GainDb)
                      or nameof(MainViewModel.Gamma))
                 Dispatcher.InvokeAsync(UpdateCameraParametersUi);
+            else if (e.PropertyName is nameof(MainViewModel.CannyThreshold1)
+                     or nameof(MainViewModel.CannyThreshold2))
+                Dispatcher.InvokeAsync(UpdatePipelineParametersUi);
         };
 
         _viewModel.TestFrameCaptured += frame =>
@@ -80,6 +83,7 @@ public partial class MainWindow : System.Windows.Window
         };
 
         WireParameterControls();
+        UpdatePipelineParametersUi();
         Loaded += async (_, _) => await LoadCamerasAsync();
     }
 
@@ -92,6 +96,11 @@ public partial class MainWindow : System.Windows.Window
         ExposureTextBox.LostFocus += (_, _) => SyncExposureFromTextBox();
         GainTextBox.LostFocus += (_, _) => SyncGainFromTextBox();
         GammaTextBox.LostFocus += (_, _) => SyncGammaFromTextBox();
+
+        Canny1Slider.ValueChanged += (_, _) => SyncCanny1FromSlider();
+        Canny2Slider.ValueChanged += (_, _) => SyncCanny2FromSlider();
+        Canny1TextBox.LostFocus += (_, _) => SyncCanny1FromTextBox();
+        Canny2TextBox.LostFocus += (_, _) => SyncCanny2FromTextBox();
     }
 
     private async Task LoadCamerasAsync()
@@ -204,6 +213,11 @@ public partial class MainWindow : System.Windows.Window
         _viewModel.ResetCameraParameters();
     }
 
+    private void BtnResetCanny_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ResetPipelineParameters();
+    }
+
     private void UpdateCameraParametersUi()
     {
         CameraParamsPanel.Visibility = Visibility.Visible;
@@ -295,6 +309,54 @@ public partial class MainWindow : System.Windows.Window
 
     private static double Clamp(Slider slider, double value)
         => Math.Max(slider.Minimum, Math.Min(slider.Maximum, value));
+
+    private void UpdatePipelineParametersUi()
+    {
+        _syncingParamsFromViewModel = true;
+        try
+        {
+            Canny1Slider.Value = Clamp(Canny1Slider, _viewModel.CannyThreshold1);
+            Canny2Slider.Value = Clamp(Canny2Slider, _viewModel.CannyThreshold2);
+            Canny1TextBox.Text = _viewModel.CannyThreshold1.ToString("F0", CultureInfo.InvariantCulture);
+            Canny2TextBox.Text = _viewModel.CannyThreshold2.ToString("F0", CultureInfo.InvariantCulture);
+        }
+        finally
+        {
+            _syncingParamsFromViewModel = false;
+        }
+    }
+
+    private void SyncCanny1FromSlider()
+    {
+        if (_syncingParamsFromViewModel) return;
+        _viewModel.CannyThreshold1 = Canny1Slider.Value;
+        Canny1TextBox.Text = Canny1Slider.Value.ToString("F0", CultureInfo.InvariantCulture);
+    }
+
+    private void SyncCanny2FromSlider()
+    {
+        if (_syncingParamsFromViewModel) return;
+        _viewModel.CannyThreshold2 = Canny2Slider.Value;
+        Canny2TextBox.Text = Canny2Slider.Value.ToString("F0", CultureInfo.InvariantCulture);
+    }
+
+    private void SyncCanny1FromTextBox()
+    {
+        if (_syncingParamsFromViewModel) return;
+        if (!double.TryParse(Canny1TextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            return;
+        _viewModel.CannyThreshold1 = value;
+        Canny1Slider.Value = Clamp(Canny1Slider, value);
+    }
+
+    private void SyncCanny2FromTextBox()
+    {
+        if (_syncingParamsFromViewModel) return;
+        if (!double.TryParse(Canny2TextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            return;
+        _viewModel.CannyThreshold2 = value;
+        Canny2Slider.Value = Clamp(Canny2Slider, value);
+    }
 
     private async void BtnTest_Click(object sender, RoutedEventArgs e)
     {

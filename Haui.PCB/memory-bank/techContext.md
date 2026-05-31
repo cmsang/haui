@@ -35,7 +35,7 @@ Runtime **working directory** = process CWD (typically `bin/Debug/net10.0-window
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `CannyThreshold1/2` | 50 / 150 | Edge detection |
+| `CannyThreshold1/2` | 50 / 150 (default; chỉnh trên MainWindow) | Edge detection — `SegmentationSettings.Current` |
 | `MorphKernelSize` | 5 | Close gaps in edges |
 | `MinAreaRatio` | 0.01 | Min contour area vs image |
 | `EdgePadding` | 2 px | Crop padding |

@@ -636,13 +636,15 @@
             <!-- Panel tham số Basler -->
             <Border Grid.Column="1"
                     x:Name="CameraParamsPanel"
-                    Width="260"
+                    Width="280"
                     Background="#FAFAFA"
                     BorderBrush="#DDDDDD"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="12"
                     Visibility="Visible">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
                     <TextBlock Text="Tham số camera Basler"
                                FontSize="14"
@@ -730,7 +732,69 @@
                                Foreground="#666666"
                                FontSize="11"
                                Margin="0,10,0,0" />
+
+                    <Separator Margin="0,14,0,12" Background="#DDDDDD" />
+
+                    <TextBlock Text="Pipeline — Canny edges"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,10" />
+
+                    <TextBlock Text="Ngưỡng thấp (threshold1)" FontSize="12" Margin="0,0,0,4" />
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="48" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="Canny1Slider"
+                                Grid.Column="0"
+                                Minimum="0"
+                                Maximum="255"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="False"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0" />
+                        <TextBox x:Name="Canny1TextBox"
+                                 Grid.Column="1"
+                                 Height="26"
+                                 VerticalContentAlignment="Center"
+                                 FontSize="12" />
+                    </Grid>
+
+                    <TextBlock Text="Ngưỡng cao (threshold2)" FontSize="12" Margin="0,0,0,4" />
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="48" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="Canny2Slider"
+                                Grid.Column="0"
+                                Minimum="0"
+                                Maximum="255"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="False"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0" />
+                        <TextBox x:Name="Canny2TextBox"
+                                 Grid.Column="1"
+                                 Height="26"
+                                 VerticalContentAlignment="Center"
+                                 FontSize="12" />
+                    </Grid>
+
+                    <Button x:Name="BtnResetCanny"
+                            Content="Đặt lại Canny"
+                            Height="32"
+                            Click="BtnResetCanny_Click"
+                            Style="{StaticResource SecondaryButtonStyle}" />
+
+                    <TextBlock Text="Áp dụng ngay cho Test, Test 2 và Tạo mẫu. Chạy lại pipeline sau khi chỉnh."
+                               TextWrapping="Wrap"
+                               Foreground="#666666"
+                               FontSize="11"
+                               Margin="0,10,0,0" />
                 </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
 

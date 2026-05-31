@@ -28,7 +28,7 @@ Haui.PCB/                 # WPF app project
 | `ITemplateRegionService` | `TemplateRegionService` | Single active template JSON + PNG |
 | `ITemplateLibraryService` | `TemplateLibraryService` | Multi-template `templates/` catalog |
 | `IRegionComparisonService` | `RegionComparisonService` | Per-region histogram compare |
-| `IPipelineDebugService` | `PipelineDebugService` | Step images for PipelineStepsWindow |
+| `IPipelineDebugService` | `PipelineDebugService` | Wraps `RunPipeline()` → step images for PipelineStepsWindow (no duplicate CV logic) |
 
 ## Dual template storage (critical)
 
