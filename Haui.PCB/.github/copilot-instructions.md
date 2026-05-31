@@ -2,6 +2,12 @@
 
 > **Important:** This file must be read and fully applied every time Copilot performs any task in this workspace.
 
+## AI Context (Cursor)
+
+- **Memory Bank:** `memory-bank/` — architecture, progress, active work
+- **Agent entry:** `AGENTS.md`
+- **Cursor rules:** `.cursor/rules/`
+
 ## Workspace & Project Info
 - **Workspace root:** `D:\haui\Haui.PCB\`
 - **Target framework:** .NET 10
