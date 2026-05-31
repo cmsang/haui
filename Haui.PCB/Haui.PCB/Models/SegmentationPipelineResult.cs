@@ -22,6 +22,10 @@ public sealed class SegmentationPipelineResult : IDisposable
     public Point2f[]? Quad { get; init; }
     public string? BoundingBoxDescription { get; init; }
 
+    public bool UsedFiducialDetection { get; init; }
+    public Point2f[]? FiducialCenters { get; init; }
+    public string? FiducialDescription { get; init; }
+
     /// <summary>Ảnh bo mạch đã warp; null nếu không phát hiện được.</summary>
     public Mat? Warped { get; init; }
 

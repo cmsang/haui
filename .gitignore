@@ -418,3 +418,4 @@ FodyWeavers.xsd
 *.msp
 
 *.png
+!**/fiducial_holes/*.png

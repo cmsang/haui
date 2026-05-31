@@ -7,6 +7,7 @@
 - [x] Optional ROI selection on main preview (`last_region.json`)
 - [x] PCB segmentation (rotated rect → perspective-corrected board image)
 - [x] **Canny thresholds** on MainWindow (slider 0–255; shared by Test / Test 2 / Tạo mẫu)
+- [x] **4 lỗ tròn định vị** — thư viện nhiều mẫu `hole_*.png`; matching trên Morphology Close; tìm 4 vị trí (lỗ giống nhau)
 - [x] Pipeline step debugger window (Test 2)
 - [x] Create template: draw regions on segmented board, save PNG + JSON
 - [x] Multi-template library (`templates/index.json`) with viewer and edit/delete

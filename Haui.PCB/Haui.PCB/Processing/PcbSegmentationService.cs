@@ -12,15 +12,27 @@ namespace Haui.PCB.Processing;
 public class PcbSegmentationService : IPcbSegmentationService
 {
     private readonly SegmentationParameters _parameters;
+    private readonly IFiducialHoleTemplateService? _fiducialTemplates;
+    private readonly IFiducialHoleDetectionService? _fiducialDetection;
 
     public PcbSegmentationService()
-        : this(SegmentationSettings.Current)
+        : this(SegmentationSettings.Current, new FiducialHoleTemplateService(), new FiducialHoleDetectionService())
     {
     }
 
     public PcbSegmentationService(SegmentationParameters parameters)
+        : this(parameters, new FiducialHoleTemplateService(), new FiducialHoleDetectionService())
+    {
+    }
+
+    public PcbSegmentationService(
+        SegmentationParameters parameters,
+        IFiducialHoleTemplateService? fiducialTemplates,
+        IFiducialHoleDetectionService? fiducialDetection)
     {
         _parameters = parameters;
+        _fiducialTemplates = fiducialTemplates;
+        _fiducialDetection = fiducialDetection;
     }
 
     // Kích thước kernel morphology để đóng lỗ hổng biên
@@ -60,6 +72,39 @@ public class PcbSegmentationService : IPcbSegmentationService
         Cv2.Canny(blurredWork, edgesWork, t1, t2);
         Cv2.MorphologyEx(edgesWork, closedWork, MorphTypes.Close, kernel, iterations: 3);
 
+        Point2f[]? fiducialCenters = null;
+        string? fiducialDescription = null;
+        bool usedFiducial = false;
+
+        if (_fiducialTemplates?.HasTemplates() == true && _fiducialDetection is not null)
+        {
+            var settings = _fiducialTemplates.LoadSettings();
+            var templates = _fiducialTemplates.LoadTemplates();
+            try
+            {
+                var fiducialResult = _fiducialDetection.Detect(
+                    closedWork,
+                    templates,
+                    settings.MinMatchScore);
+
+                if (fiducialResult.Success && fiducialResult.Centers is not null)
+                {
+                    fiducialCenters = fiducialResult.Centers;
+                    fiducialDescription = fiducialResult.Message;
+                    usedFiducial = true;
+                }
+                else
+                {
+                    fiducialDescription = fiducialResult.Message ?? "Không nhận diện được 4 lỗ định vị.";
+                }
+            }
+            finally
+            {
+                foreach (var template in templates)
+                    template.Dispose();
+            }
+        }
+
         Cv2.FindContours(
             closedWork,
             out var contours,
@@ -90,7 +135,13 @@ public class PcbSegmentationService : IPcbSegmentationService
         string? boxDesc = null;
         Mat? warped = null;
 
-        if (bestContour is not null)
+        if (fiducialCenters is not null)
+        {
+            quad = fiducialCenters;
+            boxDesc = "4 lỗ tròn định vị (template matching)";
+            warped = WarpPerspective(source, quad);
+        }
+        else if (bestContour is not null)
         {
             double epsilon = 0.02 * Cv2.ArcLength(bestContour, true);
             var approx = Cv2.ApproxPolyDP(bestContour, epsilon, true);
@@ -123,6 +174,9 @@ public class PcbSegmentationService : IPcbSegmentationService
             BestArea = bestArea,
             Quad = quad,
             BoundingBoxDescription = boxDesc,
+            UsedFiducialDetection = usedFiducial,
+            FiducialCenters = fiducialCenters,
+            FiducialDescription = fiducialDescription,
             Warped = warped
         };
     }

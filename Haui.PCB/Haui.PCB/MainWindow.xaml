@@ -793,6 +793,49 @@
                                Foreground="#666666"
                                FontSize="11"
                                Margin="0,10,0,0" />
+
+                    <Separator Margin="0,14,0,12" Background="#DDDDDD" />
+
+                    <TextBlock Text="4 lỗ tròn định vị"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,10" />
+
+                    <TextBlock Text="Thư mục thư viện mẫu"
+                               FontSize="12"
+                               Margin="0,0,0,4" />
+                    <TextBlock Text="4 lỗ giống nhau — mỗi lần lưu thêm một ảnh mẫu; pipeline so khớp tất cả."
+                               TextWrapping="Wrap"
+                               Foreground="#666666"
+                               FontSize="11"
+                               Margin="0,0,0,8" />
+                    <TextBox x:Name="FiducialFolderTextBox"
+                             Height="26"
+                             IsReadOnly="True"
+                             VerticalContentAlignment="Center"
+                             FontSize="12"
+                             Margin="0,0,0,8" />
+
+                    <Button x:Name="BtnBrowseFiducialFolder"
+                            Content="Chọn thư mục..."
+                            Height="30"
+                            Margin="0,0,0,8"
+                            Click="BtnBrowseFiducialFolder_Click"
+                            Style="{StaticResource SecondaryButtonStyle}" />
+
+                    <Button x:Name="BtnCreateFiducialTemplates"
+                            Content="⭕ Thêm mẫu lỗ"
+                            Height="32"
+                            IsEnabled="False"
+                            Margin="0,0,0,8"
+                            Click="BtnCreateFiducialTemplates_Click"
+                            Style="{StaticResource SecondaryButtonStyle}" />
+
+                    <TextBlock x:Name="FiducialStatusText"
+                               TextWrapping="Wrap"
+                               Foreground="#666666"
+                               FontSize="11"
+                               Margin="0,0,0,0" />
                 </StackPanel>
                 </ScrollViewer>
             </Border>

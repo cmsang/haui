@@ -42,6 +42,20 @@ public class PipelineDebugService : IPipelineDebugService
         steps.Add(MakeStep("Morphology Close", pipeline.Closed.Clone(),
             "Đóng kín khoảng hở trên biên (Close, 3 lần lặp)"));
 
+        if (pipeline.FiducialCenters is not null)
+        {
+            using var fiducialVis = new Mat();
+            Cv2.CvtColor(pipeline.Closed, fiducialVis, ColorConversionCodes.GRAY2BGR);
+            DrawFiducialHoles(fiducialVis, pipeline.FiducialCenters, pipeline.Quad);
+            steps.Add(MakeStep("Fiducial Matching", fiducialVis,
+                pipeline.FiducialDescription ?? "Template matching 4 lỗ trên ảnh Morphology Close"));
+        }
+        else if (!string.IsNullOrWhiteSpace(pipeline.FiducialDescription))
+        {
+            steps.Add(MakeStep("Fiducial Matching", pipeline.Closed.Clone(),
+                pipeline.FiducialDescription));
+        }
+
         using var contourVis = source.Clone();
         if (pipeline.BestContour is not null)
         {
@@ -88,5 +102,20 @@ public class PipelineDebugService : IPipelineDebugService
             var p2 = new Point((int)pts[(i + 1) % 4].X, (int)pts[(i + 1) % 4].Y);
             Cv2.Line(img, p1, p2, color, 2);
         }
+    }
+
+    private static void DrawFiducialHoles(Mat img, Point2f[] centers, Point2f[]? quad)
+    {
+        for (int i = 0; i < centers.Length; i++)
+        {
+            var center = new Point((int)centers[i].X, (int)centers[i].Y);
+            Cv2.Circle(img, center, 12, new Scalar(0, 255, 255), 2);
+            Cv2.PutText(img, (i + 1).ToString(),
+                new Point(center.X + 14, center.Y + 5),
+                HersheyFonts.HersheySimplex, 0.7, new Scalar(0, 255, 255), 2);
+        }
+
+        if (quad is not null)
+            DrawQuad(img, quad, new Scalar(255, 128, 0));
     }
 }

@@ -7,6 +7,7 @@ using System.Windows.Shapes;
 using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 using Haui.PCB.Views;
+using Microsoft.Win32;
 
 namespace Haui.PCB;
 
@@ -17,6 +18,7 @@ namespace Haui.PCB;
 public partial class MainWindow : System.Windows.Window
 {
     private readonly MainViewModel _viewModel;
+    private readonly IFiducialHoleTemplateService _fiducialTemplateService = new FiducialHoleTemplateService();
     private bool _syncingParamsFromViewModel;
 
     private bool _isSelectingRegion;
@@ -82,8 +84,21 @@ public partial class MainWindow : System.Windows.Window
             });
         };
 
+        _viewModel.FiducialTemplateFrameCaptured += frame =>
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                var fiducialWindow = new FiducialTemplateWindow(_fiducialTemplateService) { Owner = this };
+                fiducialWindow.Closed += (_, _) => UpdateFiducialTemplateUi();
+                fiducialWindow.LoadFrame(frame);
+                frame.Dispose();
+                fiducialWindow.Show();
+            });
+        };
+
         WireParameterControls();
         UpdatePipelineParametersUi();
+        UpdateFiducialTemplateUi();
         Loaded += async (_, _) => await LoadCamerasAsync();
     }
 
@@ -175,6 +190,7 @@ public partial class MainWindow : System.Windows.Window
             BtnTest2.IsEnabled = true;
             BtnSelectRegion.IsEnabled = true;
             BtnCreateTemplate.IsEnabled = true;
+            BtnCreateFiducialTemplates.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
             UpdateCameraParametersUi();
         }
@@ -195,6 +211,7 @@ public partial class MainWindow : System.Windows.Window
         BtnTest2.IsEnabled = false;
         BtnSelectRegion.IsEnabled = false;
         BtnCreateTemplate.IsEnabled = false;
+        BtnCreateFiducialTemplates.IsEnabled = false;
         ExitSelectMode();
         CameraImage.Source = null;
         CameraPlaceholder.Visibility = Visibility.Visible;
@@ -395,6 +412,43 @@ public partial class MainWindow : System.Windows.Window
         {
             BtnCreateTemplate.IsEnabled = _viewModel.IsRunning;
         }
+    }
+
+    private async void BtnCreateFiducialTemplates_Click(object sender, RoutedEventArgs e)
+    {
+        BtnCreateFiducialTemplates.IsEnabled = false;
+        try
+        {
+            await _viewModel.CaptureFiducialTemplateFrameAsync();
+        }
+        finally
+        {
+            BtnCreateFiducialTemplates.IsEnabled = _viewModel.IsRunning;
+        }
+    }
+
+    private void BtnBrowseFiducialFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Chọn thư mục lưu mẫu 4 lỗ tròn",
+            InitialDirectory = _viewModel.FiducialTemplateFolder
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        _viewModel.SetFiducialTemplateFolder(dialog.FolderName);
+        UpdateFiducialTemplateUi();
+    }
+
+    private void UpdateFiducialTemplateUi()
+    {
+        _viewModel.RefreshFiducialTemplateStatus();
+        FiducialFolderTextBox.Text = _viewModel.FiducialTemplateFolder;
+        FiducialStatusText.Text = _viewModel.HasFiducialTemplates
+            ? $"Đã có {_fiducialTemplateService.ListTemplateFileNames().Count} mẫu lỗ — pipeline so khớp tất cả trên ảnh Close."
+            : "Chưa có mẫu lỗ — pipeline dùng contour như trước.";
     }
 
     private void BtnViewTemplates_Click(object sender, RoutedEventArgs e)
