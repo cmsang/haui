@@ -30,6 +30,8 @@ Runtime **working directory** = process CWD (typically `bin/Debug/net10.0-window
 | `template_board.png` | `TemplateRegionService` | Active template board image |
 | `templates/index.json` | `TemplateLibraryService` | Library catalog |
 | `templates/*.png` | `TemplateLibraryService` | Per-template board images |
+| `fiducial_settings.json` | `FiducialHoleTemplateService` | Thư mục + ngưỡng matching lỗ tròn |
+| `fiducial_holes/hole_*.png` | `FiducialHoleTemplateService` | Thư viện mẫu lỗ (nhiều ảnh, cùng hình dạng) |
 
 ## Segmentation constants (`PcbSegmentationService`)
 

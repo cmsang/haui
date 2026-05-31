@@ -31,6 +31,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private double _gamma = 1.0;
 
     private readonly SegmentationParameters _pipelineParameters = SegmentationSettings.Current;
+    private readonly IFiducialHoleTemplateService _fiducialTemplateService = new FiducialHoleTemplateService();
 
     private OpenCvSharp.Rect? _selectedRegion;
     private const string RegionSettingsPath = "last_region.json";
@@ -40,6 +41,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public event Action<System.Windows.Media.Imaging.BitmapSource>? FrameReady;
     public event Action<Mat>? TemplateFrameCaptured;
+    public event Action<Mat>? FiducialTemplateFrameCaptured;
     public event Action<Mat>? TestFrameCaptured;
     public event Action<Mat>? Test2FrameCaptured;
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -129,6 +131,9 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public int LastFrameWidth => _lastFrameWidth;
     public int LastFrameHeight => _lastFrameHeight;
+
+    public string FiducialTemplateFolder => _fiducialTemplateService.GetTemplateFolder();
+    public bool HasFiducialTemplates => _fiducialTemplateService.HasTemplates();
 
     public MainViewModel()
     {
@@ -350,6 +355,66 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
         StatusText = "Đã mở form tạo mẫu.";
         TemplateFrameCaptured?.Invoke(frame);
+    }
+
+    public async Task CaptureFiducialTemplateFrameAsync()
+    {
+        StatusText = "Đang chụp ảnh và chạy Morphology Close...";
+
+        if (_cameraService is null)
+        {
+            StatusText = "Camera chưa khởi động.";
+            return;
+        }
+
+        var frame = await Task.Run(() => _cameraService.GrabFrame());
+
+        if (frame is null || frame.Empty())
+        {
+            frame?.Dispose();
+            StatusText = "Không thể chụp ảnh từ camera.";
+            return;
+        }
+
+        frame = CropToSelectedRegion(frame);
+
+        Mat? closedImage = await Task.Run(() =>
+        {
+            var segmentation = new PcbSegmentationService(_pipelineParameters);
+            using var pipeline = segmentation.RunPipeline(frame);
+            return pipeline.Closed.Clone();
+        });
+        frame.Dispose();
+
+        if (closedImage is null || closedImage.Empty())
+        {
+            closedImage?.Dispose();
+            StatusText = "Không tạo được ảnh Morphology Close.";
+            return;
+        }
+
+        StatusText = "Đã mở form tạo mẫu 4 lỗ tròn (Morphology Close).";
+        FiducialTemplateFrameCaptured?.Invoke(closedImage);
+    }
+
+    public void SetFiducialTemplateFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            StatusText = "Thư mục mẫu lỗ tròn không hợp lệ.";
+            return;
+        }
+
+        _fiducialTemplateService.SetTemplateFolder(folderPath);
+        OnPropertyChanged(nameof(FiducialTemplateFolder));
+        OnPropertyChanged(nameof(HasFiducialTemplates));
+        StatusText = $"Thư mục mẫu lỗ tròn: {FiducialTemplateFolder}";
+    }
+
+    public void RefreshFiducialTemplateStatus()
+    {
+        OnPropertyChanged(nameof(FiducialTemplateFolder));
+        OnPropertyChanged(nameof(HasFiducialTemplates));
     }
 
     private CameraParameters BuildParametersFromUi(int width, int height) => new()
