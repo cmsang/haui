@@ -48,6 +48,8 @@ public partial class frmMain : Form
         // Khôi phục trạng thái AutoDetect từ settings
         ApplyAutoDetectSetting(AppSettings.Instance.AutoDetect);
 
+        GetDetectCount();
+
         // Khởi tạo kết nối serial với robot
         if (!Robot.IsOpen)
         {
@@ -140,9 +142,10 @@ public partial class frmMain : Form
     /// Tận dụng luồng xử lý có sẵn trong GarlicPipeline.SegmentFrame().
     /// </summary>
     /// <param name="retryCount">Số lần đã thử (0-2), tối đa 3 lần</param>
-    private void ImageDetect(int retryCount = 0)
+    private async void ImageDetect(int retryCount = 0)
     {
         const int MAX_RETRY = 3;
+        lblStatus.Text = "Đang nhận diện...";
 
         if (_pipeline == null)
         {
@@ -157,103 +160,106 @@ public partial class frmMain : Form
 
         try
         {
-            // Chụp snapshot từ camera
-            var snapshot = _pipeline.CaptureSnapshot();
-            if (snapshot == null)
-            {
-                // Retry nếu chưa vượt quá giới hạn
-                if (retryCount < MAX_RETRY - 1)
-                {
-                    BeginInvoke(() => lblStatus.Text = $"Không thể chụp ảnh. Thử lại... ({retryCount + 1}/{MAX_RETRY})");
-                    Thread.Sleep(500); // Đợi 500ms trước khi thử lại
-                    ImageDetect(retryCount + 1);
-                    return;
-                }
+            await Task.Run(() =>
+             {
+                 var snapshot = _pipeline.CaptureSnapshot();
+                 if (snapshot == null)
+                 {
+                     if (retryCount < MAX_RETRY - 1)
+                     {
+                         BeginInvoke(() => lblStatus.Text = $"Không thể chụp ảnh. Thử lại... ({retryCount + 1}/{MAX_RETRY})");
+                         Thread.Sleep(500); // Đợi 500ms trước khi thử lại
+                         ImageDetect(retryCount + 1);
+                         return;
+                     }
 
-                // Đã thử 3 lần vẫn lỗi
-                BeginInvoke(() =>
-                {
-                    lblStatus.Text = "Lỗi: Không thể chụp ảnh sau 3 lần thử.";
-                    MessageBox.Show(
-                        "Không thể chụp ảnh từ camera sau 3 lần thử.\nVui lòng kiểm tra lại camera.",
-                        "Lỗi chụp ảnh",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                });
-                SendResultToRobot(null);
-                ConveyerRun();
-                return;
-            }
+                     BeginInvoke(() =>
+                     {
+                         lblStatus.Text = "Lỗi: Không thể chụp ảnh sau 3 lần thử.";
+                         MessageBox.Show(
+                             "Không thể chụp ảnh từ camera sau 3 lần thử.\nVui lòng kiểm tra lại camera.",
+                             "Lỗi chụp ảnh",
+                             MessageBoxButtons.OK,
+                             MessageBoxIcon.Error);
+                     });
+                     ConveyerRun();
+                     return;
+                 }
 
-            // Tận dụng luồng xử lý có sẵn trong GarlicPipeline
-            // (preprocess → segment → classify với SVM → phân kích thước)
-            var regions = _pipeline.SegmentFrame(snapshot, _pipeline.DetectionRegion);
+                 var regions = _pipeline.SegmentFrame(snapshot, _pipeline.DetectionRegion);
+                 // Kiểm tra có phát hiện củ tỏi không
+                 if (regions.Count == 0)
+                 {
+                     // Retry nếu chưa vượt quá giới hạn
+                     if (retryCount < MAX_RETRY - 1)
+                     {
+                         BeginInvoke(() => lblStatus.Text = $"Không phát hiện tỏi. Thử lại... ({retryCount + 1}/{MAX_RETRY})");
+                         snapshot.Dispose();
+                         Thread.Sleep(500); // Đợi 500ms trước khi thử lại
+                         ImageDetect(retryCount + 1);
+                         return;
+                     }
 
-            // Kiểm tra có phát hiện củ tỏi không
-            if (regions.Count == 0)
-            {
-                // Retry nếu chưa vượt quá giới hạn
-                if (retryCount < MAX_RETRY - 1)
-                {
-                    BeginInvoke(() => lblStatus.Text = $"Không phát hiện tỏi. Thử lại... ({retryCount + 1}/{MAX_RETRY})");
-                    snapshot.Dispose();
-                    Thread.Sleep(500); // Đợi 500ms trước khi thử lại
-                    ImageDetect(retryCount + 1);
-                    return;
-                }
+                     // Đã thử 3 lần vẫn không phát hiện
+                     BeginInvoke(() =>
+                     {
+                         lblStatus.Text = "Cảnh báo: Không phát hiện tỏi sau 3 lần thử.";
+                         MessageBox.Show(
+                             "Không phát hiện củ tỏi nào trong khung hình sau 3 lần thử.\n" +
+                             "Có thể không có tỏi hoặc ngưỡng HSV chưa phù hợp.",
+                             "Cảnh báo",
+                             MessageBoxButtons.OK,
+                             MessageBoxIcon.Warning);
+                     });
+                     ConveyerRun();
+                     snapshot.Dispose();
+                     return;
+                 }
 
-                // Đã thử 3 lần vẫn không phát hiện
-                BeginInvoke(() =>
-                {
-                    lblStatus.Text = "Cảnh báo: Không phát hiện tỏi sau 3 lần thử.";
-                    MessageBox.Show(
-                        "Không phát hiện củ tỏi nào trong khung hình sau 3 lần thử.\n" +
-                        "Có thể không có tỏi hoặc ngưỡng HSV chưa phù hợp.",
-                        "Cảnh báo",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                });
-                SendResultToRobot(null);
-                ConveyerRun();
-                snapshot.Dispose();
-                return;
-            }
+                 // Vẽ annotation lên ảnh
+                 // Lấy vùng tỏi lớn nhất (bỏ qua nhiễu nhỏ)
+                 var largestRegion = regions.OrderByDescending(r => r.Area).First();
+                 var garlicLabel = largestRegion.FinalLabel ?? GarlicLabel.ToNho;
 
-            // Lấy vùng tỏi lớn nhất (bỏ qua nhiễu nhỏ)
-            var largestRegion = regions.OrderByDescending(r => r.Area).First();
-            var garlicLabel = largestRegion.FinalLabel ?? GarlicLabel.ToNho;
+                 // Vẽ kết quả lên ảnh
+                 var annotated = (Bitmap)snapshot.Clone();
+                 GarlicPipeline.DrawRegions(annotated, new List<GarlicRegion> { largestRegion });
+                 snapshot.Dispose();
 
-            // Vẽ kết quả lên ảnh
-            var resultBitmap = (Bitmap)snapshot.Clone();
-            GarlicPipeline.DrawRegions(resultBitmap, new List<GarlicRegion> { largestRegion });
+                 BeginInvoke(() =>
+                 {
+                     // Hiển thị ảnh annotated
+                     SetFrame(annotated);
 
-            // Tên loại tỏi để hiển thị
-            string labelText = garlicLabel switch
-            {
-                GarlicLabel.ToTo => "Tỏi to",
-                GarlicLabel.ToNho => "Tỏi nhỏ",
-                GarlicLabel.ToHong => "Tỏi hỏng",
-                _ => "Không xác định"
-            };
+                     // Ghi kết quả vào grid
+                     foreach (var r in regions)
+                     {
+                         AddResultToGrid(r);
+                         SaveToDatabase(r);
+                         // Gửi kết quả về robot
+                         SendResultToRobot(r.FinalLabel);
+                         GetDetectCount();
+                     }
 
-            // Hiển thị kết quả lên UI
-            BeginInvoke(() =>
-            {
-                lblStatus.Text = $"✓ Phát hiện: {labelText} (Area: {largestRegion.Area:F0} px², Circ: {largestRegion.Circularity:F2})";
-                SetFrame(resultBitmap);
+                     lblStatus.Text = regions.Count > 0
+                         ? $"Phát hiện {regions.Count} củ tỏi."
+                         : "Không phát hiện tỏi.";
 
-
-                AddResultToGrid(largestRegion);
-            });
-
-            // Gửi kết quả về robot
-            SendResultToRobot(garlicLabel);
-
-            // Tiếp tục chạy băng tải
-            ConveyerRun();
-
-            // Dọn dẹp
-            snapshot.Dispose();
+                     // Sau 2 giây, trả về frame live
+                     _annotationTimer?.Stop();
+                     _annotationTimer?.Dispose();
+                     _annotationTimer = new System.Windows.Forms.Timer { Interval = 250 };
+                     _annotationTimer.Tick += (_, _) =>
+                     {
+                         _annotationTimer.Stop();
+                         _annotationTimer.Dispose();
+                         _annotationTimer = null;
+                         btnDetect.Enabled = _pipeline != null;
+                         lblStatus.Text = "";
+                     };
+                     _annotationTimer.Start();
+                 });
+             });
         }
         catch (Exception ex)
         {
@@ -276,9 +282,39 @@ public partial class frmMain : Form
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             });
-            SendResultToRobot(null);
             ConveyerRun();
         }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// 
+    private void GetDetectCount()
+    {
+        DatabaseService.GetTodayDetectCount(out int _big, out int _small, out int _error);
+        lblLargeCount.Text = _big.ToString();
+        lblSmallCount.Text = _small.ToString();
+        lblErrorCount.Text = _error.ToString();
+    }
+
+    /// <summary>
+    /// Lưu kết quả nhận dạng vào database
+    /// </summary>
+    /// <param name="r"></param>
+    private void SaveToDatabase(GarlicRegion r)
+    {
+        DatabaseService.SaveGarlicRegionHistory(r);
+        //{
+        //    DetectedAt = r.DetectedAt,
+        //    Area = r.Area,
+        //    Circularity = r.Circularity,
+        //    BoundingBoxX = r.BoundingBox.X,
+        //    BoundingBoxY = r.BoundingBox.Y,
+        //    BoundingBoxWidth = r.BoundingBox.Width,
+        //    BoundingBoxHeight = r.BoundingBox.Height,
+        //    Label = r.FinalLabel?.ToString() ?? "Unknown"
+        //});
     }
 
     /// <summary>
@@ -291,7 +327,7 @@ public partial class frmMain : Form
         try
         {
             // Gửi tín hiệu tiếp tục băng tải
-            Robot.Write("C:1x"); // C:1 = Continue conveyer
+            Robot.Write("O"); // C:1 = Continue conveyer
             BeginInvoke(() => lblStatus.Text = "Băng tải tiếp tục...");
         }
         catch (Exception ex)
@@ -310,11 +346,21 @@ public partial class frmMain : Form
 
         try
         {
-            // Format: "R:<loại tỏi>x" 
-            // 0 = Tỏi to, 1 = Tỏi nhỏ, 2 = Tỏi hỏng, -1 = Không có tỏi
-            int labelValue = garlicLabel.HasValue ? (int)garlicLabel.Value : -1;
-            string message = $"R:{labelValue}x";
-            Robot.Write(message);
+            switch (garlicLabel)
+            {
+                case GarlicLabel.ToTo:
+                    Robot.Write("L"); // C:2 = Tỏi to
+                    break;
+                case GarlicLabel.ToNho:
+                    Robot.Write("S"); // C:3 = Tỏi nhỏ
+                    break;
+                case GarlicLabel.ToHong:
+                    Robot.Write("O"); // C:4 = Tỏi hỏng
+                    break;
+                default:
+                    Robot.Write("O"); // C:5 = Không xác định
+                    break;
+            }
         }
         catch (Exception ex)
         {
@@ -804,69 +850,9 @@ public partial class frmMain : Form
     /// </summary>
     private async void btnDetect_Click(object sender, EventArgs e)
     {
-        if (_pipeline == null) return;
-
-        btnDetect.Enabled = false;
-        lblStatus.Text = "Đang nhận diện...";
-
-        try
-        {
-            await Task.Run(() =>
-            {
-                var snapshot = _pipeline.CaptureSnapshot();
-                if (snapshot == null)
-                {
-                    BeginInvoke(() =>
-                    {
-                        lblStatus.Text = "Không thể chụp ảnh từ camera.";
-                        btnDetect.Enabled = true;
-                    });
-                    return;
-                }
-
-                var regions = _pipeline.SegmentFrame(snapshot, _pipeline.DetectionRegion);
-
-                // Vẽ annotation lên ảnh
-                var annotated = (Bitmap)snapshot.Clone();
-                if (regions.Count > 0)
-                    GarlicPipeline.DrawRegions(annotated, regions);
-                snapshot.Dispose();
-
-                BeginInvoke(() =>
-                {
-                    // Hiển thị ảnh annotated
-                    SetFrame(annotated);
-
-                    // Ghi kết quả vào grid
-                    foreach (var r in regions)
-                        AddResultToGrid(r);
-
-                    lblStatus.Text = regions.Count > 0
-                        ? $"Phát hiện {regions.Count} củ tỏi."
-                        : "Không phát hiện tỏi.";
-
-                    // Sau 2 giây, trả về frame live
-                    _annotationTimer?.Stop();
-                    _annotationTimer?.Dispose();
-                    _annotationTimer = new System.Windows.Forms.Timer { Interval = 250 };
-                    _annotationTimer.Tick += (_, _) =>
-                    {
-                        _annotationTimer.Stop();
-                        _annotationTimer.Dispose();
-                        _annotationTimer = null;
-                        btnDetect.Enabled = _pipeline != null;
-                        lblStatus.Text = "";
-                    };
-                    _annotationTimer.Start();
-                });
-            });
-        }
-        catch (Exception ex)
-        {
-            lblStatus.Text = $"Lỗi: {ex.Message}";
-            btnDetect.Enabled = true;
-        }
+        ImageDetect(retryCount: 0);
     }
+
 
     // ─── Grid kết quả nhận diện ──────────────────────────────────────────────
 
@@ -902,5 +888,20 @@ public partial class frmMain : Form
     private void btnClearResults_Click(object sender, EventArgs e)
     {
         dgvResults.Rows.Clear();
+    }
+
+    /// <summary>Mở form lịch sử phát hiện tỏi.</summary>
+    private void btnHistory_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            using var frmHist = new frmHistory();
+            frmHist.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Lỗi mở form lịch sử:\n{ex.Message}", "Lỗi", 
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 }

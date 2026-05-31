@@ -28,6 +28,8 @@ partial class frmMain
     private Label lblResultTitle;
     private DataGridView dgvResults;
     private Button btnClearResults;
+    private Button btnHistory;
+    private Panel pnlBottomButtons; // Panel chứa các nút ở dưới
 
     protected override void Dispose(bool disposing)
     {
@@ -38,7 +40,10 @@ partial class frmMain
 
     private void InitializeComponent()
     {
-        DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
+        DataGridViewCellStyle dataGridViewCellStyle5 = new DataGridViewCellStyle();
+        DataGridViewCellStyle dataGridViewCellStyle6 = new DataGridViewCellStyle();
+        DataGridViewCellStyle dataGridViewCellStyle7 = new DataGridViewCellStyle();
+        DataGridViewCellStyle dataGridViewCellStyle8 = new DataGridViewCellStyle();
         pnlTop = new Panel();
         lblCamera = new Label();
         cmbCameras = new ComboBox();
@@ -55,6 +60,9 @@ partial class frmMain
         lblStatus = new Label();
         picCamera = new PictureBox();
         pnlRight = new Panel();
+        pnlBottomButtons = new Panel();
+        btnHistory = new Button();
+        btnClearResults = new Button();
         panel2 = new Panel();
         dgvResults = new DataGridView();
         dataGridViewTextBoxColumn1 = new DataGridViewTextBoxColumn();
@@ -62,16 +70,16 @@ partial class frmMain
         dataGridViewTextBoxColumn3 = new DataGridViewTextBoxColumn();
         dataGridViewTextBoxColumn4 = new DataGridViewTextBoxColumn();
         panel1 = new Panel();
+        lblTotalCount = new Label();
+        lblErrorCount = new Label();
+        lblSmallCount = new Label();
+        lblLargeCount = new Label();
+        label3 = new Label();
+        label4 = new Label();
         label2 = new Label();
         label1 = new Label();
         lblResultTitle = new Label();
         btnClearResults = new Button();
-        label3 = new Label();
-        label4 = new Label();
-        lblLargeCount = new Label();
-        lblSmallCount = new Label();
-        lblErrorCount = new Label();
-        lblTotalCount = new Label();
         pnlTop.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)picCamera).BeginInit();
         pnlRight.SuspendLayout();
@@ -263,9 +271,11 @@ partial class frmMain
         // 
         // lblStatus
         // 
+        lblStatus.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         lblStatus.ForeColor = Color.LightGray;
-        lblStatus.Location = new Point(1488, 17);
+        lblStatus.Location = new Point(1325, 17);
         lblStatus.Name = "lblStatus";
+        lblStatus.RightToLeft = RightToLeft.Yes;
         lblStatus.Size = new Size(250, 20);
         lblStatus.TabIndex = 11;
         lblStatus.Text = "Sẵn sàng.";
@@ -286,13 +296,57 @@ partial class frmMain
         pnlRight.BackColor = SystemColors.Control;
         pnlRight.Controls.Add(panel2);
         pnlRight.Controls.Add(panel1);
-        pnlRight.Controls.Add(btnClearResults);
+        pnlRight.Controls.Add(pnlBottomButtons);
         pnlRight.Dock = DockStyle.Right;
         pnlRight.Location = new Point(1224, 52);
         pnlRight.Name = "pnlRight";
         pnlRight.Padding = new Padding(6);
         pnlRight.Size = new Size(356, 668);
         pnlRight.TabIndex = 1;
+        // 
+        // pnlBottomButtons
+        // 
+        pnlBottomButtons.BackColor = SystemColors.Control;
+        pnlBottomButtons.Controls.Add(btnHistory);
+        pnlBottomButtons.Controls.Add(btnClearResults);
+        pnlBottomButtons.Dock = DockStyle.Bottom;
+        pnlBottomButtons.Location = new Point(6, 626);
+        pnlBottomButtons.Name = "pnlBottomButtons";
+        pnlBottomButtons.Size = new Size(344, 36);
+        pnlBottomButtons.TabIndex = 4;
+        // 
+        // btnHistory
+        // 
+        btnHistory.BackColor = Color.FromArgb(60, 130, 180);
+        btnHistory.Dock = DockStyle.Left;
+        btnHistory.FlatAppearance.BorderSize = 0;
+        btnHistory.FlatStyle = FlatStyle.Flat;
+        btnHistory.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+        btnHistory.ForeColor = Color.White;
+        btnHistory.Location = new Point(0, 0);
+        btnHistory.Margin = new Padding(3, 2, 3, 2);
+        btnHistory.Name = "btnHistory";
+        btnHistory.Size = new Size(172, 36);
+        btnHistory.TabIndex = 0;
+        btnHistory.Text = "📊 Lịch sử";
+        btnHistory.UseVisualStyleBackColor = false;
+        btnHistory.Click += btnHistory_Click;
+        // 
+        // btnClearResults
+        // 
+        btnClearResults.BackColor = Color.FromArgb(220, 60, 60);
+        btnClearResults.Dock = DockStyle.Right;
+        btnClearResults.FlatAppearance.BorderSize = 0;
+        btnClearResults.FlatStyle = FlatStyle.Flat;
+        btnClearResults.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+        btnClearResults.ForeColor = Color.White;
+        btnClearResults.Location = new Point(172, 0);
+        btnClearResults.Name = "btnClearResults";
+        btnClearResults.Size = new Size(172, 36);
+        btnClearResults.TabIndex = 1;
+        btnClearResults.Text = "🗑 Xóa danh sách";
+        btnClearResults.UseVisualStyleBackColor = false;
+        btnClearResults.Click += btnClearResults_Click;
         // 
         // panel2
         // 
@@ -302,30 +356,43 @@ partial class frmMain
         panel2.Location = new Point(6, 169);
         panel2.Margin = new Padding(3, 2, 3, 2);
         panel2.Name = "panel2";
-        panel2.Size = new Size(344, 463);
+        panel2.Size = new Size(344, 457);
         panel2.TabIndex = 3;
         // 
         // dgvResults
         // 
         dgvResults.AllowUserToAddRows = false;
         dgvResults.AllowUserToDeleteRows = false;
+        dataGridViewCellStyle5.BackColor = Color.FromArgb(250, 250, 250);
+        dataGridViewCellStyle5.ForeColor = Color.Black;
+        dgvResults.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle5;
         dgvResults.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         dgvResults.BackgroundColor = SystemColors.Window;
         dgvResults.BorderStyle = BorderStyle.None;
-        dataGridViewCellStyle1.BackColor = SystemColors.Control;
-        dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-        dataGridViewCellStyle1.ForeColor = SystemColors.ControlText;
-        dgvResults.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
+        dataGridViewCellStyle6.BackColor = SystemColors.Control;
+        dataGridViewCellStyle6.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+        dataGridViewCellStyle6.ForeColor = SystemColors.ControlText;
+        dgvResults.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle6;
         dgvResults.ColumnHeadersHeight = 28;
         dgvResults.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
         dgvResults.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn1, dataGridViewTextBoxColumn2, dataGridViewTextBoxColumn3, dataGridViewTextBoxColumn4 });
+        dataGridViewCellStyle7.Alignment = DataGridViewContentAlignment.MiddleLeft;
+        dataGridViewCellStyle7.BackColor = SystemColors.Window;
+        dataGridViewCellStyle7.Font = new Font("Segoe UI", 9F);
+        dataGridViewCellStyle7.ForeColor = Color.White;
+        dataGridViewCellStyle7.SelectionBackColor = SystemColors.Highlight;
+        dataGridViewCellStyle7.SelectionForeColor = SystemColors.HighlightText;
+        dataGridViewCellStyle7.WrapMode = DataGridViewTriState.False;
+        dgvResults.DefaultCellStyle = dataGridViewCellStyle7;
         dgvResults.Dock = DockStyle.Fill;
-        dgvResults.GridColor = SystemColors.ControlLight;
+        dgvResults.GridColor = SystemColors.Control;
         dgvResults.Location = new Point(0, 0);
         dgvResults.Name = "dgvResults";
         dgvResults.ReadOnly = true;
         dgvResults.RowHeadersVisible = false;
         dgvResults.RowHeadersWidth = 51;
+        dataGridViewCellStyle8.ForeColor = Color.Black;
+        dgvResults.RowsDefaultCellStyle = dataGridViewCellStyle8;
         dgvResults.RowTemplate.Height = 24;
         dgvResults.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         dgvResults.Size = new Size(344, 463);
@@ -378,6 +445,72 @@ partial class frmMain
         panel1.Size = new Size(344, 163);
         panel1.TabIndex = 2;
         // 
+        // lblTotalCount
+        // 
+        lblTotalCount.AutoSize = true;
+        lblTotalCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        lblTotalCount.ForeColor = Color.Black;
+        lblTotalCount.Location = new Point(243, 109);
+        lblTotalCount.Name = "lblTotalCount";
+        lblTotalCount.Size = new Size(19, 21);
+        lblTotalCount.TabIndex = 8;
+        lblTotalCount.Text = "0";
+        // 
+        // lblErrorCount
+        // 
+        lblErrorCount.AutoSize = true;
+        lblErrorCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        lblErrorCount.ForeColor = Color.Black;
+        lblErrorCount.Location = new Point(69, 110);
+        lblErrorCount.Name = "lblErrorCount";
+        lblErrorCount.Size = new Size(19, 21);
+        lblErrorCount.TabIndex = 7;
+        lblErrorCount.Text = "0";
+        // 
+        // lblSmallCount
+        // 
+        lblSmallCount.AutoSize = true;
+        lblSmallCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        lblSmallCount.ForeColor = Color.Black;
+        lblSmallCount.Location = new Point(223, 56);
+        lblSmallCount.Name = "lblSmallCount";
+        lblSmallCount.Size = new Size(19, 21);
+        lblSmallCount.TabIndex = 6;
+        lblSmallCount.Text = "0";
+        // 
+        // lblLargeCount
+        // 
+        lblLargeCount.AutoSize = true;
+        lblLargeCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        lblLargeCount.ForeColor = Color.Black;
+        lblLargeCount.Location = new Point(65, 56);
+        lblLargeCount.Name = "lblLargeCount";
+        lblLargeCount.Size = new Size(19, 21);
+        lblLargeCount.TabIndex = 5;
+        lblLargeCount.Text = "0";
+        // 
+        // label3
+        // 
+        label3.AutoSize = true;
+        label3.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+        label3.ForeColor = Color.Black;
+        label3.Location = new Point(160, 112);
+        label3.Name = "label3";
+        label3.Size = new Size(84, 19);
+        label3.TabIndex = 4;
+        label3.Text = "Tổng cộng:";
+        // 
+        // label4
+        // 
+        label4.AutoSize = true;
+        label4.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+        label4.ForeColor = Color.Black;
+        label4.Location = new Point(14, 112);
+        label4.Name = "label4";
+        label4.Size = new Size(59, 19);
+        label4.TabIndex = 3;
+        label4.Text = "Tỏi lỗi: ";
+        // 
         // label2
         // 
         label2.AutoSize = true;
@@ -411,87 +544,6 @@ partial class frmMain
         lblResultTitle.Text = "Kết quả nhận diện";
         lblResultTitle.TextAlign = ContentAlignment.MiddleLeft;
         // 
-        // btnClearResults
-        // 
-        btnClearResults.BackColor = SystemColors.ControlDark;
-        btnClearResults.Dock = DockStyle.Bottom;
-        btnClearResults.FlatAppearance.BorderSize = 0;
-        btnClearResults.FlatStyle = FlatStyle.Flat;
-        btnClearResults.ForeColor = SystemColors.ControlLightLight;
-        btnClearResults.Location = new Point(6, 632);
-        btnClearResults.Name = "btnClearResults";
-        btnClearResults.Size = new Size(344, 30);
-        btnClearResults.TabIndex = 1;
-        btnClearResults.Text = "🗑 Xóa danh sách";
-        btnClearResults.UseVisualStyleBackColor = false;
-        btnClearResults.Click += btnClearResults_Click;
-        // 
-        // label3
-        // 
-        label3.AutoSize = true;
-        label3.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-        label3.ForeColor = Color.Black;
-        label3.Location = new Point(160, 112);
-        label3.Name = "label3";
-        label3.Size = new Size(84, 19);
-        label3.TabIndex = 4;
-        label3.Text = "Tổng cộng:";
-        // 
-        // label4
-        // 
-        label4.AutoSize = true;
-        label4.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-        label4.ForeColor = Color.Black;
-        label4.Location = new Point(14, 112);
-        label4.Name = "label4";
-        label4.Size = new Size(59, 19);
-        label4.TabIndex = 3;
-        label4.Text = "Tỏi lỗi: ";
-        // 
-        // lblLargeCount
-        // 
-        lblLargeCount.AutoSize = true;
-        lblLargeCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-        lblLargeCount.ForeColor = Color.Black;
-        lblLargeCount.Location = new Point(65, 56);
-        lblLargeCount.Name = "lblLargeCount";
-        lblLargeCount.Size = new Size(19, 21);
-        lblLargeCount.TabIndex = 5;
-        lblLargeCount.Text = "0";
-        // 
-        // lblSmallCount
-        // 
-        lblSmallCount.AutoSize = true;
-        lblSmallCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-        lblSmallCount.ForeColor = Color.Black;
-        lblSmallCount.Location = new Point(223, 56);
-        lblSmallCount.Name = "lblSmallCount";
-        lblSmallCount.Size = new Size(19, 21);
-        lblSmallCount.TabIndex = 6;
-        lblSmallCount.Text = "0";
-        // 
-        // lblErrorCount
-        // 
-        lblErrorCount.AutoSize = true;
-        lblErrorCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-        lblErrorCount.ForeColor = Color.Black;
-        lblErrorCount.Location = new Point(69, 110);
-        lblErrorCount.Name = "lblErrorCount";
-        lblErrorCount.Size = new Size(19, 21);
-        lblErrorCount.TabIndex = 7;
-        lblErrorCount.Text = "0";
-        // 
-        // lblTotalCount
-        // 
-        lblTotalCount.AutoSize = true;
-        lblTotalCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-        lblTotalCount.ForeColor = Color.Black;
-        lblTotalCount.Location = new Point(243, 109);
-        lblTotalCount.Name = "lblTotalCount";
-        lblTotalCount.Size = new Size(19, 21);
-        lblTotalCount.TabIndex = 8;
-        lblTotalCount.Text = "0";
-        // 
         // frmMain
         // 
         AutoScaleDimensions = new SizeF(7F, 15F);
@@ -513,6 +565,7 @@ partial class frmMain
         pnlTop.PerformLayout();
         ((System.ComponentModel.ISupportInitialize)picCamera).EndInit();
         pnlRight.ResumeLayout(false);
+        pnlBottomButtons.ResumeLayout(false);
         panel2.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)dgvResults).EndInit();
         panel1.ResumeLayout(false);

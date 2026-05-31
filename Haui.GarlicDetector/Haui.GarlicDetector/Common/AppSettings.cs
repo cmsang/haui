@@ -129,6 +129,12 @@ public sealed class AppSettings
     /// <summary>Tốc độ baud rate kết nối với robot. Mặc định 9600.</summary>
     public int RobotBaudRate { get; set; } = 9600;
 
+    /// <summary>
+    /// ConnectionString kết nối SQL Server.
+    /// TrustServerCertificate=True cho phép kết nối với LocalDB/Express mà không cần SSL certificate hợp lệ.
+    /// </summary>
+    public string ConnectionString { get; set; } = "Data Source=.\\SQLEXPRESS;Initial Catalog=GarlicDetector;Integrated Security=True;TrustServerCertificate=True"; 
+
     // ─── Camera / UI ─────────────────────────────────────────────────────────
 
     /// <summary>Label độ phân giải đã chọn lần cuối (ví dụ: "640 × 480"). Null = dùng mặc định.</summary>

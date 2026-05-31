@@ -26,5 +26,6 @@
   "RobotPortName": "COM20",
   "RobotBaudRate": 115200,
   "LastResolutionLabel": "1280 \u00D7 720 (HD)",
-  "AutoDetect": false
+  "AutoDetect": false,
+  "ConnectionString": "Data Source=.\\SQLEXPRESS;Initial Catalog=GarlicDetector;Integrated Security=True;TrustServerCertificate=True"
 }

@@ -108,8 +108,8 @@ partial class frmSettings
         trkVMax = new TrackBar();
         lblVMax = new Label();
         pnlBottom = new Panel();
-        btnSave = new Button();
         btnReset = new Button();
+        btnSave = new Button();
         btnClose = new Button();
         grpSegmentation = new GroupBox();
         lblCircularityTxt = new Label();
@@ -214,7 +214,7 @@ partial class frmSettings
         trkHMin.Location = new Point(58, 22);
         trkHMin.Maximum = 179;
         trkHMin.Name = "trkHMin";
-        trkHMin.Size = new Size(140, 56);
+        trkHMin.Size = new Size(140, 45);
         trkHMin.TabIndex = 1;
         trkHMin.TickStyle = TickStyle.None;
         trkHMin.ValueChanged += trkHsv_ValueChanged;
@@ -243,7 +243,7 @@ partial class frmSettings
         trkHMax.Location = new Point(58, 60);
         trkHMax.Maximum = 179;
         trkHMax.Name = "trkHMax";
-        trkHMax.Size = new Size(140, 56);
+        trkHMax.Size = new Size(140, 45);
         trkHMax.TabIndex = 4;
         trkHMax.TickStyle = TickStyle.None;
         trkHMax.Value = 179;
@@ -273,7 +273,7 @@ partial class frmSettings
         trkSMin.Location = new Point(58, 98);
         trkSMin.Maximum = 255;
         trkSMin.Name = "trkSMin";
-        trkSMin.Size = new Size(140, 56);
+        trkSMin.Size = new Size(140, 45);
         trkSMin.TabIndex = 7;
         trkSMin.TickStyle = TickStyle.None;
         trkSMin.ValueChanged += trkHsv_ValueChanged;
@@ -302,7 +302,7 @@ partial class frmSettings
         trkSMax.Location = new Point(58, 136);
         trkSMax.Maximum = 255;
         trkSMax.Name = "trkSMax";
-        trkSMax.Size = new Size(140, 56);
+        trkSMax.Size = new Size(140, 45);
         trkSMax.TabIndex = 10;
         trkSMax.TickStyle = TickStyle.None;
         trkSMax.Value = 60;
@@ -332,7 +332,7 @@ partial class frmSettings
         trkVMin.Location = new Point(58, 174);
         trkVMin.Maximum = 255;
         trkVMin.Name = "trkVMin";
-        trkVMin.Size = new Size(140, 56);
+        trkVMin.Size = new Size(140, 45);
         trkVMin.TabIndex = 13;
         trkVMin.TickStyle = TickStyle.None;
         trkVMin.Value = 170;
@@ -362,7 +362,7 @@ partial class frmSettings
         trkVMax.Location = new Point(58, 212);
         trkVMax.Maximum = 255;
         trkVMax.Name = "trkVMax";
-        trkVMax.Size = new Size(140, 56);
+        trkVMax.Size = new Size(140, 45);
         trkVMax.TabIndex = 16;
         trkVMax.TickStyle = TickStyle.None;
         trkVMax.Value = 255;
@@ -385,9 +385,9 @@ partial class frmSettings
         pnlBottom.Controls.Add(btnSave);
         pnlBottom.Controls.Add(btnClose);
         pnlBottom.Dock = DockStyle.Bottom;
-        pnlBottom.Margin = new Padding(3, 4, 3, 4);
+        pnlBottom.Location = new Point(0, 302);
         pnlBottom.Name = "pnlBottom";
-        pnlBottom.Size = new Size(313, 64);
+        pnlBottom.Size = new Size(274, 48);
         pnlBottom.TabIndex = 3;
         // 
         // btnReset
@@ -396,10 +396,9 @@ partial class frmSettings
         btnReset.FlatAppearance.BorderSize = 0;
         btnReset.FlatStyle = FlatStyle.Flat;
         btnReset.ForeColor = Color.White;
-        btnReset.Location = new Point(6, 12);
-        btnReset.Margin = new Padding(3, 4, 3, 4);
+        btnReset.Location = new Point(5, 9);
         btnReset.Name = "btnReset";
-        btnReset.Size = new Size(90, 40);
+        btnReset.Size = new Size(79, 30);
         btnReset.TabIndex = 0;
         btnReset.Text = "↺ Đặt lại";
         btnReset.UseVisualStyleBackColor = false;
@@ -411,10 +410,9 @@ partial class frmSettings
         btnSave.FlatAppearance.BorderSize = 0;
         btnSave.FlatStyle = FlatStyle.Flat;
         btnSave.ForeColor = Color.White;
-        btnSave.Location = new Point(102, 12);
-        btnSave.Margin = new Padding(3, 4, 3, 4);
+        btnSave.Location = new Point(89, 9);
         btnSave.Name = "btnSave";
-        btnSave.Size = new Size(100, 40);
+        btnSave.Size = new Size(88, 30);
         btnSave.TabIndex = 1;
         btnSave.Text = "💾 Lưu";
         btnSave.UseVisualStyleBackColor = false;
@@ -426,10 +424,9 @@ partial class frmSettings
         btnClose.FlatAppearance.BorderSize = 0;
         btnClose.FlatStyle = FlatStyle.Flat;
         btnClose.ForeColor = Color.White;
-        btnClose.Location = new Point(208, 12);
-        btnClose.Margin = new Padding(3, 4, 3, 4);
+        btnClose.Location = new Point(182, 9);
         btnClose.Name = "btnClose";
-        btnClose.Size = new Size(99, 40);
+        btnClose.Size = new Size(87, 30);
         btnClose.TabIndex = 2;
         btnClose.Text = "✕ Đóng";
         btnClose.UseVisualStyleBackColor = false;
@@ -442,11 +439,10 @@ partial class frmSettings
         grpSegmentation.Controls.Add(lblCircularity);
         grpSegmentation.Dock = DockStyle.Top;
         grpSegmentation.ForeColor = Color.White;
-        grpSegmentation.Location = new Point(0, 256);
-        grpSegmentation.Margin = new Padding(3, 4, 3, 4);
+        grpSegmentation.Location = new Point(0, 192);
         grpSegmentation.Name = "grpSegmentation";
-        grpSegmentation.Padding = new Padding(11);
-        grpSegmentation.Size = new Size(313, 83);
+        grpSegmentation.Padding = new Padding(10, 8, 10, 8);
+        grpSegmentation.Size = new Size(274, 62);
         grpSegmentation.TabIndex = 0;
         grpSegmentation.TabStop = false;
         grpSegmentation.Text = "Phân vùng";
@@ -454,19 +450,18 @@ partial class frmSettings
         // lblCircularityTxt
         // 
         lblCircularityTxt.ForeColor = Color.LightGray;
-        lblCircularityTxt.Location = new Point(11, 37);
+        lblCircularityTxt.Location = new Point(10, 28);
         lblCircularityTxt.Name = "lblCircularityTxt";
-        lblCircularityTxt.Size = new Size(50, 27);
+        lblCircularityTxt.Size = new Size(44, 20);
         lblCircularityTxt.TabIndex = 0;
         lblCircularityTxt.Text = "Độ tròn";
         // 
         // trkCircularity
         // 
-        trkCircularity.Location = new Point(87, 29);
-        trkCircularity.Margin = new Padding(3, 4, 3, 4);
+        trkCircularity.Location = new Point(76, 22);
         trkCircularity.Maximum = 100;
         trkCircularity.Name = "trkCircularity";
-        trkCircularity.Size = new Size(160, 56);
+        trkCircularity.Size = new Size(140, 45);
         trkCircularity.TabIndex = 1;
         trkCircularity.TickStyle = TickStyle.None;
         trkCircularity.Value = 60;
@@ -475,9 +470,9 @@ partial class frmSettings
         // lblCircularity
         // 
         lblCircularity.ForeColor = Color.Yellow;
-        lblCircularity.Location = new Point(252, 37);
+        lblCircularity.Location = new Point(220, 28);
         lblCircularity.Name = "lblCircularity";
-        lblCircularity.Size = new Size(41, 27);
+        lblCircularity.Size = new Size(36, 20);
         lblCircularity.TabIndex = 2;
         lblCircularity.Text = "0.60";
         lblCircularity.TextAlign = ContentAlignment.MiddleRight;
@@ -495,11 +490,10 @@ partial class frmSettings
         grpClassification.Controls.Add(lblRoiPaddingUnit);
         grpClassification.Dock = DockStyle.Top;
         grpClassification.ForeColor = Color.White;
-        grpClassification.Location = new Point(0, 75);
-        grpClassification.Margin = new Padding(3, 4, 3, 4);
+        grpClassification.Location = new Point(0, 56);
         grpClassification.Name = "grpClassification";
-        grpClassification.Padding = new Padding(11);
-        grpClassification.Size = new Size(313, 181);
+        grpClassification.Padding = new Padding(10, 8, 10, 8);
+        grpClassification.Size = new Size(274, 136);
         grpClassification.TabIndex = 1;
         grpClassification.TabStop = false;
         grpClassification.Text = "Phân loại kích thước";
@@ -507,9 +501,9 @@ partial class frmSettings
         // lblSizeThresholdTxt
         // 
         lblSizeThresholdTxt.ForeColor = Color.LightGray;
-        lblSizeThresholdTxt.Location = new Point(11, 37);
+        lblSizeThresholdTxt.Location = new Point(10, 28);
         lblSizeThresholdTxt.Name = "lblSizeThresholdTxt";
-        lblSizeThresholdTxt.Size = new Size(59, 29);
+        lblSizeThresholdTxt.Size = new Size(52, 22);
         lblSizeThresholdTxt.TabIndex = 0;
         lblSizeThresholdTxt.Text = "Tỏi to ≥";
         // 
@@ -518,12 +512,11 @@ partial class frmSettings
         nudSizeThreshold.BackColor = Color.FromArgb(45, 45, 48);
         nudSizeThreshold.ForeColor = Color.Yellow;
         nudSizeThreshold.Increment = new decimal(new int[] { 500, 0, 0, 0 });
-        nudSizeThreshold.Location = new Point(96, 35);
-        nudSizeThreshold.Margin = new Padding(3, 4, 3, 4);
+        nudSizeThreshold.Location = new Point(84, 26);
         nudSizeThreshold.Maximum = new decimal(new int[] { 200000, 0, 0, 0 });
         nudSizeThreshold.Minimum = new decimal(new int[] { 100, 0, 0, 0 });
         nudSizeThreshold.Name = "nudSizeThreshold";
-        nudSizeThreshold.Size = new Size(114, 27);
+        nudSizeThreshold.Size = new Size(100, 23);
         nudSizeThreshold.TabIndex = 1;
         nudSizeThreshold.Value = new decimal(new int[] { 5000, 0, 0, 0 });
         nudSizeThreshold.ValueChanged += nudClassification_ValueChanged;
@@ -531,18 +524,18 @@ partial class frmSettings
         // lblSizeThresholdUnit
         // 
         lblSizeThresholdUnit.ForeColor = Color.LightGray;
-        lblSizeThresholdUnit.Location = new Point(215, 37);
+        lblSizeThresholdUnit.Location = new Point(188, 28);
         lblSizeThresholdUnit.Name = "lblSizeThresholdUnit";
-        lblSizeThresholdUnit.Size = new Size(32, 29);
+        lblSizeThresholdUnit.Size = new Size(28, 22);
         lblSizeThresholdUnit.TabIndex = 2;
         lblSizeThresholdUnit.Text = "px²";
         // 
         // lblMinContourAreaTxt
         // 
         lblMinContourAreaTxt.ForeColor = Color.LightGray;
-        lblMinContourAreaTxt.Location = new Point(11, 83);
+        lblMinContourAreaTxt.Location = new Point(10, 62);
         lblMinContourAreaTxt.Name = "lblMinContourAreaTxt";
-        lblMinContourAreaTxt.Size = new Size(59, 29);
+        lblMinContourAreaTxt.Size = new Size(52, 22);
         lblMinContourAreaTxt.TabIndex = 3;
         lblMinContourAreaTxt.Text = "Nhỏ nhất ≥";
         // 
@@ -551,12 +544,11 @@ partial class frmSettings
         nudMinContourArea.BackColor = Color.FromArgb(45, 45, 48);
         nudMinContourArea.ForeColor = Color.Yellow;
         nudMinContourArea.Increment = new decimal(new int[] { 100, 0, 0, 0 });
-        nudMinContourArea.Location = new Point(96, 80);
-        nudMinContourArea.Margin = new Padding(3, 4, 3, 4);
+        nudMinContourArea.Location = new Point(84, 60);
         nudMinContourArea.Maximum = new decimal(new int[] { 50000, 0, 0, 0 });
         nudMinContourArea.Minimum = new decimal(new int[] { 50, 0, 0, 0 });
         nudMinContourArea.Name = "nudMinContourArea";
-        nudMinContourArea.Size = new Size(114, 27);
+        nudMinContourArea.Size = new Size(100, 23);
         nudMinContourArea.TabIndex = 4;
         nudMinContourArea.Value = new decimal(new int[] { 500, 0, 0, 0 });
         nudMinContourArea.ValueChanged += nudClassification_ValueChanged;
@@ -564,18 +556,18 @@ partial class frmSettings
         // lblMinContourAreaUnit
         // 
         lblMinContourAreaUnit.ForeColor = Color.LightGray;
-        lblMinContourAreaUnit.Location = new Point(215, 83);
+        lblMinContourAreaUnit.Location = new Point(188, 62);
         lblMinContourAreaUnit.Name = "lblMinContourAreaUnit";
-        lblMinContourAreaUnit.Size = new Size(32, 29);
+        lblMinContourAreaUnit.Size = new Size(28, 22);
         lblMinContourAreaUnit.TabIndex = 5;
         lblMinContourAreaUnit.Text = "px²";
         // 
         // lblRoiPaddingTxt
         // 
         lblRoiPaddingTxt.ForeColor = Color.LightGray;
-        lblRoiPaddingTxt.Location = new Point(11, 131);
+        lblRoiPaddingTxt.Location = new Point(10, 98);
         lblRoiPaddingTxt.Name = "lblRoiPaddingTxt";
-        lblRoiPaddingTxt.Size = new Size(79, 29);
+        lblRoiPaddingTxt.Size = new Size(69, 22);
         lblRoiPaddingTxt.TabIndex = 6;
         lblRoiPaddingTxt.Text = "Padding";
         // 
@@ -584,19 +576,18 @@ partial class frmSettings
         nudRoiPadding.BackColor = Color.FromArgb(45, 45, 48);
         nudRoiPadding.ForeColor = Color.Yellow;
         nudRoiPadding.Increment = new decimal(new int[] { 5, 0, 0, 0 });
-        nudRoiPadding.Location = new Point(96, 128);
-        nudRoiPadding.Margin = new Padding(3, 4, 3, 4);
+        nudRoiPadding.Location = new Point(84, 96);
         nudRoiPadding.Name = "nudRoiPadding";
-        nudRoiPadding.Size = new Size(114, 27);
+        nudRoiPadding.Size = new Size(100, 23);
         nudRoiPadding.TabIndex = 7;
         nudRoiPadding.ValueChanged += nudClassification_ValueChanged;
         // 
         // lblRoiPaddingUnit
         // 
         lblRoiPaddingUnit.ForeColor = Color.LightGray;
-        lblRoiPaddingUnit.Location = new Point(215, 131);
+        lblRoiPaddingUnit.Location = new Point(188, 98);
         lblRoiPaddingUnit.Name = "lblRoiPaddingUnit";
-        lblRoiPaddingUnit.Size = new Size(32, 29);
+        lblRoiPaddingUnit.Size = new Size(28, 22);
         lblRoiPaddingUnit.TabIndex = 8;
         lblRoiPaddingUnit.Text = "px";
         // 
@@ -810,10 +801,9 @@ partial class frmSettings
         grpDetection.Dock = DockStyle.Top;
         grpDetection.ForeColor = Color.White;
         grpDetection.Location = new Point(0, 0);
-        grpDetection.Margin = new Padding(3, 4, 3, 4);
         grpDetection.Name = "grpDetection";
-        grpDetection.Padding = new Padding(11);
-        grpDetection.Size = new Size(313, 75);
+        grpDetection.Padding = new Padding(10, 8, 10, 8);
+        grpDetection.Size = new Size(274, 56);
         grpDetection.TabIndex = 2;
         grpDetection.TabStop = false;
         grpDetection.Text = "Chế độ nhận diện";
@@ -822,20 +812,19 @@ partial class frmSettings
         // 
         chkAutoDetect.AutoSize = true;
         chkAutoDetect.ForeColor = Color.White;
-        chkAutoDetect.Location = new Point(14, 32);
-        chkAutoDetect.Margin = new Padding(3, 4, 3, 4);
+        chkAutoDetect.Location = new Point(12, 24);
         chkAutoDetect.Name = "chkAutoDetect";
-        chkAutoDetect.Size = new Size(156, 24);
+        chkAutoDetect.Size = new Size(126, 19);
         chkAutoDetect.TabIndex = 0;
         chkAutoDetect.Text = "Tự động nhận diện";
         chkAutoDetect.CheckedChanged += chkAutoDetect_CheckedChanged;
         // 
         // frmSettings
         // 
-        AutoScaleDimensions = new SizeF(8F, 20F);
+        AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.FromArgb(30, 30, 30);
-        ClientSize = new Size(313, 467);
+        ClientSize = new Size(274, 350);
         Controls.Add(grpSegmentation);
         Controls.Add(grpClassification);
         Controls.Add(grpDetection);
@@ -843,12 +832,11 @@ partial class frmSettings
         Font = new Font("Segoe UI", 9F);
         ForeColor = Color.White;
         FormBorderStyle = FormBorderStyle.FixedDialog;
-        Margin = new Padding(3, 4, 3, 4);
         MaximizeBox = false;
         MinimizeBox = false;
         Name = "frmSettings";
         ShowInTaskbar = false;
-        StartPosition = FormStartPosition.Manual;
+        StartPosition = FormStartPosition.CenterScreen;
         Text = "Cài đặt";
         Load += frmSettings_Load;
         grpHsv.ResumeLayout(false);
