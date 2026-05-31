@@ -22,7 +22,8 @@ Haui.PCB/                 # WPF app project
 
 | Interface | Implementation | Role |
 |-----------|----------------|------|
-| `ICameraService` | `CameraService` | AForge DirectShow, frames as `Mat`, sharpest-frame pick |
+| `ICameraService` | `BaslerCameraService` | Basler pylon; frames as `Mat` |
+| `ICameraParameterService` | `BaslerCameraService` | GenICam Apply / Reset (Basler only) |
 | `IPcbSegmentationService` | `PcbSegmentationService` | Canny + contour + perspective warp → straight board |
 | `ITemplateRegionService` | `TemplateRegionService` | Single active template JSON + PNG |
 | `ITemplateLibraryService` | `TemplateLibraryService` | Multi-template `templates/` catalog |

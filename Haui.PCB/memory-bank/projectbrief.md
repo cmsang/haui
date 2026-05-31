@@ -6,7 +6,7 @@ Desktop WPF application for **PCB board inspection**: live camera capture, autom
 
 ## Goals
 
-- Capture frames from DirectShow cameras (AForge)
+- Capture frames from Basler cameras (pylon SDK)
 - Detect and straighten rotated rectangular PCBs (OpenCV contour + perspective warp)
 - Let operators define named regions on a segmented board (relative 0..1 coordinates)
 - Compare new boards to a template using histogram correlation (80% threshold = match)

@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,14 +17,8 @@ namespace Haui.PCB;
 public partial class MainWindow : System.Windows.Window
 {
     private readonly MainViewModel _viewModel;
-    private readonly RobotTeachViewModel _robotViewModel;
-    private readonly RobotSerialService _serialService = new();
-    private readonly RobotStartupHandshakeService _startupHandshake;
+    private bool _syncingParamsFromViewModel;
 
-    private readonly Queue<string> _robotRxLog = new();
-    private const int MaxRobotRxLines = 30;
-
-    // Trạng thái kéo thả chọn vùng
     private bool _isSelectingRegion;
     private bool _isDragging;
     private System.Windows.Point _dragStart;
@@ -32,38 +26,12 @@ public partial class MainWindow : System.Windows.Window
     public MainWindow()
     {
         InitializeComponent();
-        var appSettingService = new AppSettingService();
-        var materialTransfer = new MaterialTransferService(
-            new RobotConfigService(appSettingService),
-            _serialService,
-            appSettingService);
-        _viewModel = new MainViewModel(new CameraService(), materialTransfer);
-        _robotViewModel = new RobotTeachViewModel(
-            new RobotConfigService(appSettingService),
-            _serialService,
-            appSettingService,
-            disposeSerialService: false,
-            enableSerialEvents: false);
+        _viewModel = new MainViewModel();
         DataContext = _viewModel;
 
-        _serialService.DataReceived += Serial_DataReceived;
-        _startupHandshake = new RobotStartupHandshakeService(_serialService);
-
-        _robotViewModel.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(RobotTeachViewModel.StatusText)
-                or nameof(RobotTeachViewModel.IsSerialConnected)
-                or nameof(RobotTeachViewModel.SerialPortName))
-            {
-                Dispatcher.InvokeAsync(UpdateRobotSerialStatus);
-            }
-        };
-
-        // Lắng nghe frame mới để hiển thị lên UI
         _viewModel.FrameReady += bitmap =>
             Dispatcher.InvokeAsync(() => CameraImage.Source = bitmap);
 
-        // Đồng bộ StatusText và FPS từ ViewModel
         _viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(MainViewModel.CurrentFps))
@@ -71,9 +39,13 @@ public partial class MainWindow : System.Windows.Window
                     FpsText.Text = _viewModel.CurrentFps > 0 ? $"FPS: {_viewModel.CurrentFps}" : string.Empty);
             else if (e.PropertyName == nameof(MainViewModel.StatusText))
                 Dispatcher.InvokeAsync(() => StatusText.Text = _viewModel.StatusText);
+            else if (e.PropertyName is nameof(MainViewModel.CanEditCameraParameters)
+                     or nameof(MainViewModel.ExposureTimeUs)
+                     or nameof(MainViewModel.GainDb)
+                     or nameof(MainViewModel.Gamma))
+                Dispatcher.InvokeAsync(UpdateCameraParametersUi);
         };
 
-        // Nhận frame test → mở TestPipelineWindow trên UI thread
         _viewModel.TestFrameCaptured += frame =>
         {
             Dispatcher.InvokeAsync(() =>
@@ -85,7 +57,6 @@ public partial class MainWindow : System.Windows.Window
             });
         };
 
-        // Nhận frame Test 2 → mở PipelineStepsWindow trên UI thread
         _viewModel.Test2FrameCaptured += frame =>
         {
             Dispatcher.InvokeAsync(() =>
@@ -97,7 +68,6 @@ public partial class MainWindow : System.Windows.Window
             });
         };
 
-        // Nhận frame tạo mẫu → mở CreateTemplateWindow trên UI thread
         _viewModel.TemplateFrameCaptured += frame =>
         {
             Dispatcher.InvokeAsync(() =>
@@ -109,11 +79,20 @@ public partial class MainWindow : System.Windows.Window
             });
         };
 
+        WireParameterControls();
         Loaded += async (_, _) => await LoadCamerasAsync();
-        Closing += Window_Closing;
     }
 
-    // ──── Camera Loading ──────────────────────────────────────────────────────
+    private void WireParameterControls()
+    {
+        ExposureSlider.ValueChanged += (_, _) => SyncExposureFromSlider();
+        GainSlider.ValueChanged += (_, _) => SyncGainFromSlider();
+        GammaSlider.ValueChanged += (_, _) => SyncGammaFromSlider();
+
+        ExposureTextBox.LostFocus += (_, _) => SyncExposureFromTextBox();
+        GainTextBox.LostFocus += (_, _) => SyncGainFromTextBox();
+        GammaTextBox.LostFocus += (_, _) => SyncGammaFromTextBox();
+    }
 
     private async Task LoadCamerasAsync()
     {
@@ -130,19 +109,18 @@ public partial class MainWindow : System.Windows.Window
         }
 
         foreach (var cam in _viewModel.Cameras)
-            CameraComboBox.Items.Add(cam.Name);
+            CameraComboBox.Items.Add(cam.DisplayName);
 
         CameraComboBox.SelectedIndex = 0;
-        // LoadResolutionsAsync được gọi tự động qua SelectionChanged
     }
 
-    private async Task LoadResolutionsAsync(string monikerString)
+    private async Task LoadResolutionsAsync(CameraInfo camera)
     {
         ResolutionComboBox.IsEnabled = false;
         ResolutionComboBox.Items.Clear();
         BtnStart.IsEnabled = false;
 
-        await _viewModel.LoadResolutionsAsync(monikerString);
+        await _viewModel.LoadResolutionsAsync(camera);
 
         if (_viewModel.Resolutions.Count == 0)
         {
@@ -159,15 +137,13 @@ public partial class MainWindow : System.Windows.Window
         BtnStart.IsEnabled = true;
     }
 
-    // ──── Event Handlers ──────────────────────────────────────────────────────
-
     private async void CameraComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_viewModel.Cameras.Count == 0 || CameraComboBox.SelectedIndex < 0)
             return;
 
         var camera = _viewModel.Cameras[CameraComboBox.SelectedIndex];
-        await LoadResolutionsAsync(camera.MonikerString);
+        await LoadResolutionsAsync(camera);
     }
 
     private void BtnStart_Click(object sender, RoutedEventArgs e)
@@ -182,7 +158,7 @@ public partial class MainWindow : System.Windows.Window
 
         try
         {
-            _viewModel.StartCamera(camera.MonikerString, w, h);
+            _viewModel.StartCamera(camera, w, h);
 
             SetToolbarEnabled(false);
             BtnStop.IsEnabled = true;
@@ -191,6 +167,7 @@ public partial class MainWindow : System.Windows.Window
             BtnSelectRegion.IsEnabled = true;
             BtnCreateTemplate.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
+            UpdateCameraParametersUi();
         }
         catch (Exception ex)
         {
@@ -209,12 +186,115 @@ public partial class MainWindow : System.Windows.Window
         BtnTest2.IsEnabled = false;
         BtnSelectRegion.IsEnabled = false;
         BtnCreateTemplate.IsEnabled = false;
-        // Thoát chế độ chọn vùng nếu đang chọn
         ExitSelectMode();
         CameraImage.Source = null;
         CameraPlaceholder.Visibility = Visibility.Visible;
         FpsText.Text = string.Empty;
+        UpdateCameraParametersUi();
     }
+
+    private void BtnApplyParams_Click(object sender, RoutedEventArgs e)
+    {
+        PushParameterEditsToViewModel();
+        _viewModel.ApplyCameraParameters();
+    }
+
+    private void BtnResetParams_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ResetCameraParameters();
+    }
+
+    private void UpdateCameraParametersUi()
+    {
+        CameraParamsPanel.Visibility = Visibility.Visible;
+
+        bool canEdit = _viewModel.CanEditCameraParameters;
+        ExposureSlider.IsEnabled = canEdit;
+        GainSlider.IsEnabled = canEdit;
+        GammaSlider.IsEnabled = canEdit;
+        ExposureTextBox.IsEnabled = canEdit;
+        GainTextBox.IsEnabled = canEdit;
+        GammaTextBox.IsEnabled = canEdit;
+        BtnApplyParams.IsEnabled = canEdit;
+        BtnResetParams.IsEnabled = true;
+
+        _syncingParamsFromViewModel = true;
+        try
+        {
+            ExposureSlider.Value = Clamp(ExposureSlider, _viewModel.ExposureTimeUs);
+            GainSlider.Value = Clamp(GainSlider, _viewModel.GainDb);
+            GammaSlider.Value = Clamp(GammaSlider, _viewModel.Gamma);
+
+            ExposureTextBox.Text = _viewModel.ExposureTimeUs.ToString("F0", CultureInfo.InvariantCulture);
+            GainTextBox.Text = _viewModel.GainDb.ToString("F1", CultureInfo.InvariantCulture);
+            GammaTextBox.Text = _viewModel.Gamma.ToString("F2", CultureInfo.InvariantCulture);
+        }
+        finally
+        {
+            _syncingParamsFromViewModel = false;
+        }
+    }
+
+    private void PushParameterEditsToViewModel()
+    {
+        if (double.TryParse(ExposureTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double exposure))
+            _viewModel.ExposureTimeUs = exposure;
+        if (double.TryParse(GainTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double gain))
+            _viewModel.GainDb = gain;
+        if (double.TryParse(GammaTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double gamma))
+            _viewModel.Gamma = gamma;
+    }
+
+    private void SyncExposureFromSlider()
+    {
+        if (_syncingParamsFromViewModel) return;
+        _viewModel.ExposureTimeUs = ExposureSlider.Value;
+        ExposureTextBox.Text = ExposureSlider.Value.ToString("F0", CultureInfo.InvariantCulture);
+    }
+
+    private void SyncGainFromSlider()
+    {
+        if (_syncingParamsFromViewModel) return;
+        _viewModel.GainDb = GainSlider.Value;
+        GainTextBox.Text = GainSlider.Value.ToString("F1", CultureInfo.InvariantCulture);
+    }
+
+    private void SyncGammaFromSlider()
+    {
+        if (_syncingParamsFromViewModel) return;
+        _viewModel.Gamma = GammaSlider.Value;
+        GammaTextBox.Text = GammaSlider.Value.ToString("F2", CultureInfo.InvariantCulture);
+    }
+
+    private void SyncExposureFromTextBox()
+    {
+        if (_syncingParamsFromViewModel) return;
+        if (!double.TryParse(ExposureTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            return;
+        _viewModel.ExposureTimeUs = value;
+        ExposureSlider.Value = Clamp(ExposureSlider, value);
+    }
+
+    private void SyncGainFromTextBox()
+    {
+        if (_syncingParamsFromViewModel) return;
+        if (!double.TryParse(GainTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            return;
+        _viewModel.GainDb = value;
+        GainSlider.Value = Clamp(GainSlider, value);
+    }
+
+    private void SyncGammaFromTextBox()
+    {
+        if (_syncingParamsFromViewModel) return;
+        if (!double.TryParse(GammaTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            return;
+        _viewModel.Gamma = value;
+        GammaSlider.Value = Clamp(GammaSlider, value);
+    }
+
+    private static double Clamp(Slider slider, double value)
+        => Math.Max(slider.Minimum, Math.Min(slider.Maximum, value));
 
     private async void BtnTest_Click(object sender, RoutedEventArgs e)
     {
@@ -257,7 +337,7 @@ public partial class MainWindow : System.Windows.Window
 
     private void BtnViewTemplates_Click(object sender, RoutedEventArgs e)
     {
-        var viewerWindow = new Views.TemplateViewerWindow { Owner = this };
+        var viewerWindow = new TemplateViewerWindow { Owner = this };
         viewerWindow.Show();
     }
 
@@ -334,12 +414,10 @@ public partial class MainWindow : System.Windows.Window
 
         if (rw < 5 || rh < 5)
         {
-            // Vùng quá nhỏ, bỏ qua
             ExitSelectMode();
             return;
         }
 
-        // Chuyển tọado điểm ảnh hiển thị sang tọa độ frame thực tế
         var canvasSize = new System.Windows.Size(SelectionCanvas.ActualWidth, SelectionCanvas.ActualHeight);
         var frameRect = GetImageRenderRect(canvasSize,
             _viewModel.LastFrameWidth, _viewModel.LastFrameHeight);
@@ -358,7 +436,6 @@ public partial class MainWindow : System.Windows.Window
         int fw = (int)(rw * scaleX);
         int fh = (int)(rh * scaleY);
 
-        // Giới hạn trong frame
         fx = Math.Max(0, fx);
         fy = Math.Max(0, fy);
         fw = Math.Min(fw, _viewModel.LastFrameWidth - fx);
@@ -373,9 +450,6 @@ public partial class MainWindow : System.Windows.Window
         ExitSelectMode();
     }
 
-    /// <summary>
-    /// Tính toán hình chữ nhật hiển thị thực sự của ảnh trên canvas (Stretch=Uniform).
-    /// </summary>
     private static System.Windows.Rect GetImageRenderRect(
         System.Windows.Size canvas, int imgW, int imgH)
     {

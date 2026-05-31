@@ -2,7 +2,8 @@
 
 ## Working features
 
-- [x] DirectShow camera enumeration and live preview with FPS
+- [x] Basler GigE/USB camera via pylon SDK (`BaslerCameraService`) — **only** camera backend
+- [x] **Basler parameter UI** on MainWindow (Exposure, Gain, Gamma; Apply / Reset from `camera_basler_defaults.json`)
 - [x] Optional ROI selection on main preview (`last_region.json`)
 - [x] PCB segmentation (rotated rect → perspective-corrected board image)
 - [x] Pipeline step debugger window (Test 2)
@@ -14,7 +15,8 @@
 
 ## Known limitations
 
-- **No DI** — services wired manually in each window; duplicates instances
+- **Basler requires pylon x64** installed; build uses `PlatformTarget=x64`
+- **Parameter sliders** use fixed ranges; real camera min/max not yet bound to UI
 - **Dual template systems** — Test uses single-template files; library is separate
 - **Paths relative to CWD** — running from different folders breaks saved templates
 - **No unit/integration tests** in repository
