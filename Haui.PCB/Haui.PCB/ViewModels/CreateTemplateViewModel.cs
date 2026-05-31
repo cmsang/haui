@@ -217,22 +217,22 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     public List<TemplateRegion> GetCurrentRegions()
         => Regions.Select(r => r.ToModel()).ToList();
 
-    /// <summary>
-    /// Nạp ảnh chụp từ camera, cắt bo mạch, tải vùng đã lưu.
-    /// </summary>
-    public void LoadFrame(Mat sourceFrame)
+    /// <summary>Nạp ảnh chụp từ camera, cắt bo mạch, tải vùng đã lưu.</summary>
+    public async Task LoadFrameAsync(Mat sourceFrame)
     {
-        // Cắt bo mạch từ ảnh chụp
-        var segmented = _segmentationService.Segment(sourceFrame);
+        StatusText = "Đang cắt bo mạch...";
+        using var source = sourceFrame.Clone();
+
+        var segmented = await Task.Run(() => _segmentationService.Segment(source));
+
         _boardImage?.Dispose();
-        _boardImage = segmented ?? sourceFrame.Clone();
+        _boardImage = segmented ?? source.Clone();
 
         var bitmap = BitmapSourceConverter.ToBitmapSource(_boardImage);
         bitmap.Freeze();
         _boardBitmap = bitmap;
         BoardImageReady?.Invoke(bitmap);
 
-        // Tải các vùng đã lưu
         Regions.Clear();
         int idx = 0;
         foreach (var r in _regionService.Load())

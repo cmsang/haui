@@ -6,16 +6,16 @@
 
 ## Recent change
 
-- `FiducialHoleTemplateService` — thư viện `hole_*.png` (nhiều mẫu, lỗ giống nhau); settings `fiducial_settings.json`
-- `FiducialHoleDetectionService` — so khớp **tất cả** mẫu trên ảnh Close, lấy 4 vị trí cao nhất (không gán mẫu theo góc)
-- MainWindow: chọn thư mục, **Thêm mẫu lỗ**, `FiducialTemplateWindow` (một vùng/lần lưu)
-- `PipelineDebugService` — bước debug **Fiducial Matching**
+- **Tối ưu Segment (Test / Tạo mẫu):** `RunPipelineCore(includeDebugMats)` — fast path không clone 4 Mat trung gian, bỏ contour khi fiducial OK
+- **Fiducial matching:** cache RAM (`FiducialHoleServices.TemplateService`), downscale `MaxMatchDimension=1280`, in-place NMS trên bản đồ match
+- `CreateTemplateViewModel.LoadFrameAsync` — Segment chạy ngoài UI thread
+- Thư viện `hole_*.png`; so khớp tất cả mẫu; `FiducialTemplateWindow` chọn nhiều vùng, lưu một lần
 
 ## Open decisions
 
 1. **Unify template storage** — Should `TestPipelineWindow` use `TemplateLibraryService`?
 2. **Calibrate defaults** — `camera_basler_defaults.json` for acA4600-7gc on real bench
-3. **Ngưỡng matching** — `MinMatchScore` trong `fiducial_settings.json` (mặc định 0.55); chưa có slider UI
+3. **Ngưỡng matching** — `MinMatchScore` / `MaxMatchDimension` trong `fiducial_settings.json`; chưa có slider UI
 
 ## Files to read first for common tasks
 

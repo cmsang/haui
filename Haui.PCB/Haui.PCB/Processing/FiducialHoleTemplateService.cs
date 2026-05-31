@@ -6,7 +6,7 @@ using OpenCvSharp;
 namespace Haui.PCB.Processing;
 
 /// <summary>
-/// Quản lý thư viện mẫu lỗ tròn (<c>hole_*.png</c>) — nhiều ảnh mẫu, cùng hình dạng lỗ.
+/// Quản lý thư viện mẫu lỗ tròn (<c>hole_*.png</c>) — cache RAM, nhiều ảnh mẫu cùng hình dạng lỗ.
 /// </summary>
 public class FiducialHoleTemplateService : IFiducialHoleTemplateService
 {
@@ -15,6 +15,10 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
 
     /// <summary>Số lỗ định vị cần tìm trên bo mạch (không phụ thuộc số file mẫu).</summary>
     public const int RequiredDetectionCount = 4;
+
+    private readonly List<(string FileName, Mat Template)> _cache = [];
+    private string? _cachedFolder;
+    private bool _cacheValid;
 
     public FiducialHoleSettings LoadSettings()
     {
@@ -53,42 +57,25 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
         var settings = LoadSettings();
         settings.TemplateFolder = folderPath;
         SaveSettings(settings);
+        InvalidateCache();
     }
 
-    public bool HasTemplates() => ListTemplateFileNames().Count > 0;
+    public bool HasTemplates()
+    {
+        EnsureCacheLoaded();
+        return _cache.Count > 0;
+    }
 
     public IReadOnlyList<string> ListTemplateFileNames()
     {
-        var folder = GetTemplateFolder();
-        if (!Directory.Exists(folder)) return [];
-
-        return Directory.GetFiles(folder, TemplateSearchPattern)
-            .Select(Path.GetFileName)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Cast<string>()
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        EnsureCacheLoaded();
+        return _cache.Select(c => c.FileName).ToList();
     }
 
     public IReadOnlyList<Mat> LoadTemplates()
     {
-        var folder = GetTemplateFolder();
-        var templates = new List<Mat>();
-
-        foreach (var fileName in ListTemplateFileNames())
-        {
-            var path = Path.Combine(folder, fileName);
-            var mat = Cv2.ImRead(path, ImreadModes.Grayscale);
-            if (mat.Empty())
-            {
-                mat.Dispose();
-                continue;
-            }
-
-            templates.Add(mat);
-        }
-
-        return templates;
+        EnsureCacheLoaded();
+        return _cache.Select(c => c.Template.Clone()).ToList();
     }
 
     public string SaveTemplate(Mat template)
@@ -101,6 +88,7 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
 
         var fileName = $"hole_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png";
         Cv2.ImWrite(Path.Combine(folder, fileName), template);
+        InvalidateCache();
         return fileName;
     }
 
@@ -112,5 +100,49 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
         var path = Path.Combine(GetTemplateFolder(), fileName);
         if (File.Exists(path))
             File.Delete(path);
+
+        InvalidateCache();
+    }
+
+    private void EnsureCacheLoaded()
+    {
+        var folder = GetTemplateFolder();
+        if (_cacheValid && _cachedFolder == folder)
+            return;
+
+        InvalidateCache();
+        _cachedFolder = folder;
+
+        if (!Directory.Exists(folder))
+        {
+            _cacheValid = true;
+            return;
+        }
+
+        foreach (var path in Directory.GetFiles(folder, TemplateSearchPattern).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+        {
+            var fileName = Path.GetFileName(path);
+            if (string.IsNullOrWhiteSpace(fileName)) continue;
+
+            var mat = Cv2.ImRead(path, ImreadModes.Grayscale);
+            if (mat.Empty())
+            {
+                mat.Dispose();
+                continue;
+            }
+
+            _cache.Add((fileName, mat));
+        }
+
+        _cacheValid = true;
+    }
+
+    private void InvalidateCache()
+    {
+        foreach (var (_, mat) in _cache)
+            mat.Dispose();
+        _cache.Clear();
+        _cacheValid = false;
+        _cachedFolder = null;
     }
 }
