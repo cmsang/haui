@@ -1,0 +1,43 @@
+---
+description: C# / WPF conventions for Haui.PCB source
+globs: Haui.PCB/**/*.cs
+alwaysApply: false
+---
+
+# Haui.PCB C# / WPF Rules
+
+## Layering
+
+- **ViewModels** and **Processing** — all business and vision logic
+- **Views** (`*.xaml.cs`) — UI events, `Dispatcher`, control updates only
+- Never put segmentation, comparison, or file I/O in code-behind beyond delegating to ViewModel
+
+## Services
+
+Add abstractions under `Haui.PCB/Processing/`:
+
+- `ICameraService`, `IPcbSegmentationService`, `ITemplateRegionService`
+- `ITemplateLibraryService`, `IRegionComparisonService`, `IPipelineDebugService`
+
+Wire implementations in the window constructor (see `MainWindow.xaml.cs`).
+
+## OpenCV / resources
+
+```csharp
+using var mat = new Mat();
+// Dispose every Mat; caller disposes frames passed between windows
+```
+
+Convert to WPF with `BitmapSourceConverter.ToBitmapSource(mat)` then `.Freeze()`.
+
+## C# style
+
+- File-scoped namespaces: `namespace Haui.PCB.Processing;`
+- `using var` for `IDisposable`
+- `_camelCase` private fields; PascalCase public members
+- Vietnamese comments OK for non-obvious vision logic
+- No new NuGet packages without strong justification
+
+## Async
+
+Use `async`/`await` for camera refresh and long I/O; marshal UI updates via `Dispatcher`.

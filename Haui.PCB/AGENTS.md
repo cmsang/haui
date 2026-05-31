@@ -1,0 +1,50 @@
+# Haui.PCB — Agent Guide
+
+WPF desktop app for **PCB inspection**: camera capture → OpenCV board segmentation → template regions → histogram-based region comparison (80% match threshold).
+
+## Context files (read first)
+
+| Resource | Purpose |
+|----------|---------|
+| [memory-bank/projectbrief.md](memory-bank/projectbrief.md) | Mission, scope, workspace paths |
+| [memory-bank/systemPatterns.md](memory-bank/systemPatterns.md) | Architecture, services, window graph, template gotcha |
+| [memory-bank/techContext.md](memory-bank/techContext.md) | Stack, build/run, data paths, CV constants |
+| [memory-bank/activeContext.md](memory-bank/activeContext.md) | Current focus and open decisions |
+| [memory-bank/progress.md](memory-bank/progress.md) | What works, limitations, roadmap |
+| [memory-bank/productContext.md](memory-bank/productContext.md) | Operator workflow, Vietnamese UI |
+| [.github/copilot-instructions.md](.github/copilot-instructions.md) | SOLID, code style, library policy |
+| [.cursor/rules/](.cursor/rules/) | Cursor session rules |
+
+## Build and run
+
+From workspace root:
+
+```bash
+dotnet build Haui.PCB.slnx
+dotnet run --project Haui.PCB/Haui.PCB.csproj
+```
+
+## Project layout
+
+- Solution: `Haui.PCB.slnx`
+- App project: `Haui.PCB/` (WPF, `net10.0-windows`)
+- Services: `Haui.PCB/Processing/`
+- ViewModels: `Haui.PCB/ViewModels/`
+- Windows: `Haui.PCB/Views/` + `MainWindow.xaml`
+
+## Do not edit
+
+- `Haui.PCB/bin/`, `Haui.PCB/obj/`, `.vs/`
+
+## Extension points
+
+1. New capability → `Processing/IMyService.cs` + implementation
+2. Register in the window that needs it: `new MyViewModel(new MyService(), …)`
+3. UI strings and labels: Vietnamese
+
+## Template data warning
+
+- **Test** (`TestPipelineWindow`) → `template_board.png` + `template_regions.json`
+- **Library** → `templates/index.json` + PNGs under `templates/`
+
+After tasks, update `memory-bank/activeContext.md` and `memory-bank/progress.md`.
