@@ -2,13 +2,12 @@
 
 ## Current focus
 
-**Basler-only camera** — removed DirectShow/AForge; app uses `BaslerCameraService` exclusively.
+**Unified segmentation pipeline** — `RunPipeline()` in `PcbSegmentationService` is the single source of truth; `PipelineDebugService` only visualizes.
 
 ## Recent change
 
-- Deleted `DirectShowCameraService`, `CameraDiscoveryService`, `CameraBackend`
-- Removed NuGet: `AForge.Video.DirectShow`, `OpenCvSharp4.Extensions`
-- `MainViewModel` wires `BaslerCameraService` directly
+- `SegmentationPipelineResult` holds intermediate Mats + metadata
+- `Segment()` delegates to `RunPipeline()`; debug window calls same path via `IPcbSegmentationService`
 
 ## Open decisions
 

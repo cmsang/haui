@@ -6,6 +6,7 @@
 - [x] **Basler parameter UI** on MainWindow (Exposure, Gain, Gamma; Apply / Reset from `camera_basler_defaults.json`)
 - [x] Optional ROI selection on main preview (`last_region.json`)
 - [x] PCB segmentation (rotated rect → perspective-corrected board image)
+- [x] **Canny thresholds** on MainWindow (slider 0–255; shared by Test / Test 2 / Tạo mẫu)
 - [x] Pipeline step debugger window (Test 2)
 - [x] Create template: draw regions on segmented board, save PNG + JSON
 - [x] Multi-template library (`templates/index.json`) with viewer and edit/delete
