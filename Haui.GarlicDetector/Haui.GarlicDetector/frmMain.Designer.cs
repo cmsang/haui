@@ -39,9 +39,6 @@ partial class frmMain
     private void InitializeComponent()
     {
         DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
-        dataGridViewCellStyle1.BackColor = SystemColors.Control;
-        dataGridViewCellStyle1.ForeColor = SystemColors.ControlText;
-        dataGridViewCellStyle1.Font      = new Font("Segoe UI", 9F, FontStyle.Bold);
         pnlTop = new Panel();
         lblCamera = new Label();
         cmbCameras = new ComboBox();
@@ -65,8 +62,16 @@ partial class frmMain
         dataGridViewTextBoxColumn3 = new DataGridViewTextBoxColumn();
         dataGridViewTextBoxColumn4 = new DataGridViewTextBoxColumn();
         panel1 = new Panel();
+        label2 = new Label();
+        label1 = new Label();
         lblResultTitle = new Label();
         btnClearResults = new Button();
+        label3 = new Label();
+        label4 = new Label();
+        lblLargeCount = new Label();
+        lblSmallCount = new Label();
+        lblErrorCount = new Label();
+        lblTotalCount = new Label();
         pnlTop.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)picCamera).BeginInit();
         pnlRight.SuspendLayout();
@@ -93,19 +98,18 @@ partial class frmMain
         pnlTop.Controls.Add(lblStatus);
         pnlTop.Dock = DockStyle.Top;
         pnlTop.Location = new Point(0, 0);
-        pnlTop.Margin = new Padding(3, 4, 3, 4);
         pnlTop.Name = "pnlTop";
-        pnlTop.Padding = new Padding(9, 0, 9, 0);
-        pnlTop.Size = new Size(1806, 69);
+        pnlTop.Padding = new Padding(8, 0, 8, 0);
+        pnlTop.Size = new Size(1580, 52);
         pnlTop.TabIndex = 2;
         // 
         // lblCamera
         // 
         lblCamera.AutoSize = true;
         lblCamera.ForeColor = Color.White;
-        lblCamera.Location = new Point(9, 23);
+        lblCamera.Location = new Point(8, 17);
         lblCamera.Name = "lblCamera";
-        lblCamera.Size = new Size(110, 20);
+        lblCamera.Size = new Size(89, 15);
         lblCamera.TabIndex = 0;
         lblCamera.Text = "Nguồn camera:";
         // 
@@ -114,10 +118,9 @@ partial class frmMain
         cmbCameras.BackColor = Color.FromArgb(60, 60, 60);
         cmbCameras.DropDownStyle = ComboBoxStyle.DropDownList;
         cmbCameras.ForeColor = Color.White;
-        cmbCameras.Location = new Point(126, 17);
-        cmbCameras.Margin = new Padding(3, 4, 3, 4);
+        cmbCameras.Location = new Point(110, 13);
         cmbCameras.Name = "cmbCameras";
-        cmbCameras.Size = new Size(171, 28);
+        cmbCameras.Size = new Size(150, 23);
         cmbCameras.TabIndex = 1;
         cmbCameras.SelectedIndexChanged += cmbCameras_SelectedIndexChanged;
         // 
@@ -125,9 +128,9 @@ partial class frmMain
         // 
         lblResolution.AutoSize = true;
         lblResolution.ForeColor = Color.White;
-        lblResolution.Location = new Point(311, 23);
+        lblResolution.Location = new Point(272, 17);
         lblResolution.Name = "lblResolution";
-        lblResolution.Size = new Size(98, 20);
+        lblResolution.Size = new Size(77, 15);
         lblResolution.TabIndex = 2;
         lblResolution.Text = "Độ phân giải:";
         // 
@@ -136,10 +139,9 @@ partial class frmMain
         cmbResolution.BackColor = Color.FromArgb(60, 60, 60);
         cmbResolution.DropDownStyle = ComboBoxStyle.DropDownList;
         cmbResolution.ForeColor = Color.White;
-        cmbResolution.Location = new Point(417, 17);
-        cmbResolution.Margin = new Padding(3, 4, 3, 4);
+        cmbResolution.Location = new Point(365, 13);
         cmbResolution.Name = "cmbResolution";
-        cmbResolution.Size = new Size(199, 28);
+        cmbResolution.Size = new Size(175, 23);
         cmbResolution.TabIndex = 3;
         cmbResolution.SelectedIndexChanged += cmbResolution_SelectedIndexChanged;
         // 
@@ -149,10 +151,9 @@ partial class frmMain
         btnStart.FlatAppearance.BorderSize = 0;
         btnStart.FlatStyle = FlatStyle.Flat;
         btnStart.ForeColor = Color.White;
-        btnStart.Location = new Point(635, 15);
-        btnStart.Margin = new Padding(3, 4, 3, 4);
+        btnStart.Location = new Point(556, 11);
         btnStart.Name = "btnStart";
-        btnStart.Size = new Size(120, 40);
+        btnStart.Size = new Size(105, 30);
         btnStart.TabIndex = 4;
         btnStart.Text = "▶ Bắt đầu";
         btnStart.UseVisualStyleBackColor = false;
@@ -165,10 +166,9 @@ partial class frmMain
         btnStop.FlatAppearance.BorderSize = 0;
         btnStop.FlatStyle = FlatStyle.Flat;
         btnStop.ForeColor = Color.White;
-        btnStop.Location = new Point(765, 15);
-        btnStop.Margin = new Padding(3, 4, 3, 4);
+        btnStop.Location = new Point(669, 11);
         btnStop.Name = "btnStop";
-        btnStop.Size = new Size(103, 40);
+        btnStop.Size = new Size(90, 30);
         btnStop.TabIndex = 5;
         btnStop.Text = "■ Dừng";
         btnStop.UseVisualStyleBackColor = false;
@@ -180,10 +180,9 @@ partial class frmMain
         btnSelectRegion.FlatAppearance.BorderSize = 0;
         btnSelectRegion.FlatStyle = FlatStyle.Flat;
         btnSelectRegion.ForeColor = Color.White;
-        btnSelectRegion.Location = new Point(881, 15);
-        btnSelectRegion.Margin = new Padding(3, 4, 3, 4);
+        btnSelectRegion.Location = new Point(771, 11);
         btnSelectRegion.Name = "btnSelectRegion";
-        btnSelectRegion.Size = new Size(131, 40);
+        btnSelectRegion.Size = new Size(115, 30);
         btnSelectRegion.TabIndex = 6;
         btnSelectRegion.Text = "⬚ Chọn vùng";
         btnSelectRegion.UseVisualStyleBackColor = false;
@@ -195,10 +194,9 @@ partial class frmMain
         btnLabeling.FlatAppearance.BorderSize = 0;
         btnLabeling.FlatStyle = FlatStyle.Flat;
         btnLabeling.ForeColor = Color.White;
-        btnLabeling.Location = new Point(1026, 15);
-        btnLabeling.Margin = new Padding(3, 4, 3, 4);
+        btnLabeling.Location = new Point(898, 11);
         btnLabeling.Name = "btnLabeling";
-        btnLabeling.Size = new Size(126, 40);
+        btnLabeling.Size = new Size(110, 30);
         btnLabeling.TabIndex = 7;
         btnLabeling.Text = "🏷 Gán nhãn";
         btnLabeling.UseVisualStyleBackColor = false;
@@ -210,10 +208,9 @@ partial class frmMain
         btnSettings.FlatAppearance.BorderSize = 0;
         btnSettings.FlatStyle = FlatStyle.Flat;
         btnSettings.ForeColor = Color.White;
-        btnSettings.Location = new Point(1166, 15);
-        btnSettings.Margin = new Padding(3, 4, 3, 4);
+        btnSettings.Location = new Point(1020, 11);
         btnSettings.Name = "btnSettings";
-        btnSettings.Size = new Size(114, 40);
+        btnSettings.Size = new Size(100, 30);
         btnSettings.TabIndex = 8;
         btnSettings.Text = "⚙ Cài đặt";
         btnSettings.UseVisualStyleBackColor = false;
@@ -225,10 +222,9 @@ partial class frmMain
         btnTrainSvm.FlatAppearance.BorderSize = 0;
         btnTrainSvm.FlatStyle = FlatStyle.Flat;
         btnTrainSvm.ForeColor = Color.White;
-        btnTrainSvm.Location = new Point(1294, 15);
-        btnTrainSvm.Margin = new Padding(3, 4, 3, 4);
+        btnTrainSvm.Location = new Point(1132, 11);
         btnTrainSvm.Name = "btnTrainSvm";
-        btnTrainSvm.Size = new Size(131, 40);
+        btnTrainSvm.Size = new Size(115, 30);
         btnTrainSvm.TabIndex = 9;
         btnTrainSvm.Text = "🤖 Train SVM";
         btnTrainSvm.UseVisualStyleBackColor = false;
@@ -240,10 +236,9 @@ partial class frmMain
         btnTest.FlatAppearance.BorderSize = 0;
         btnTest.FlatStyle = FlatStyle.Flat;
         btnTest.ForeColor = Color.White;
-        btnTest.Location = new Point(1439, 15);
-        btnTest.Margin = new Padding(3, 4, 3, 4);
+        btnTest.Location = new Point(1259, 11);
         btnTest.Name = "btnTest";
-        btnTest.Size = new Size(103, 40);
+        btnTest.Size = new Size(90, 30);
         btnTest.TabIndex = 10;
         btnTest.Text = "\U0001f9ea Test";
         btnTest.UseVisualStyleBackColor = false;
@@ -251,26 +246,27 @@ partial class frmMain
         // 
         // btnDetect
         // 
-        btnDetect.Name                      = "btnDetect";
-        btnDetect.Text                      = "📷 Nhận diện";
-        btnDetect.ForeColor                 = Color.White;
-        btnDetect.BackColor                 = Color.FromArgb(180, 100, 0);
-        btnDetect.FlatStyle                 = FlatStyle.Flat;
+        btnDetect.BackColor = Color.FromArgb(180, 100, 0);
+        btnDetect.Enabled = false;
         btnDetect.FlatAppearance.BorderSize = 0;
-        btnDetect.Location                  = new Point(1556, 15);
-        btnDetect.Size                      = new Size(130, 40);
-        btnDetect.TabIndex                  = 11;
-        btnDetect.Visible                   = false;
-        btnDetect.Enabled                   = false;
-        btnDetect.UseVisualStyleBackColor   = false;
-        btnDetect.Click                    += btnDetect_Click;
+        btnDetect.FlatStyle = FlatStyle.Flat;
+        btnDetect.ForeColor = Color.White;
+        btnDetect.Location = new Point(1362, 11);
+        btnDetect.Margin = new Padding(3, 2, 3, 2);
+        btnDetect.Name = "btnDetect";
+        btnDetect.Size = new Size(114, 30);
+        btnDetect.TabIndex = 11;
+        btnDetect.Text = "📷 Nhận diện";
+        btnDetect.UseVisualStyleBackColor = false;
+        btnDetect.Visible = false;
+        btnDetect.Click += btnDetect_Click;
         // 
         // lblStatus
         // 
         lblStatus.ForeColor = Color.LightGray;
-        lblStatus.Location = new Point(1700, 23);
+        lblStatus.Location = new Point(1488, 17);
         lblStatus.Name = "lblStatus";
-        lblStatus.Size = new Size(286, 27);
+        lblStatus.Size = new Size(250, 20);
         lblStatus.TabIndex = 11;
         lblStatus.Text = "Sẵn sàng.";
         // 
@@ -278,10 +274,9 @@ partial class frmMain
         // 
         picCamera.BackColor = Color.Black;
         picCamera.Dock = DockStyle.Fill;
-        picCamera.Location = new Point(0, 69);
-        picCamera.Margin = new Padding(3, 4, 3, 4);
+        picCamera.Location = new Point(0, 52);
         picCamera.Name = "picCamera";
-        picCamera.Size = new Size(1463, 891);
+        picCamera.Size = new Size(1224, 668);
         picCamera.SizeMode = PictureBoxSizeMode.Zoom;
         picCamera.TabIndex = 0;
         picCamera.TabStop = false;
@@ -293,11 +288,10 @@ partial class frmMain
         pnlRight.Controls.Add(panel1);
         pnlRight.Controls.Add(btnClearResults);
         pnlRight.Dock = DockStyle.Right;
-        pnlRight.Location = new Point(1463, 69);
-        pnlRight.Margin = new Padding(3, 4, 3, 4);
+        pnlRight.Location = new Point(1224, 52);
         pnlRight.Name = "pnlRight";
-        pnlRight.Padding = new Padding(7, 8, 7, 8);
-        pnlRight.Size = new Size(343, 891);
+        pnlRight.Padding = new Padding(6);
+        pnlRight.Size = new Size(356, 668);
         pnlRight.TabIndex = 1;
         // 
         // panel2
@@ -305,9 +299,10 @@ partial class frmMain
         panel2.BackColor = SystemColors.Window;
         panel2.Controls.Add(dgvResults);
         panel2.Dock = DockStyle.Fill;
-        panel2.Location = new Point(7, 52);
+        panel2.Location = new Point(6, 169);
+        panel2.Margin = new Padding(3, 2, 3, 2);
         panel2.Name = "panel2";
-        panel2.Size = new Size(329, 791);
+        panel2.Size = new Size(344, 463);
         panel2.TabIndex = 3;
         // 
         // dgvResults
@@ -316,37 +311,24 @@ partial class frmMain
         dgvResults.AllowUserToDeleteRows = false;
         dgvResults.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         dgvResults.BackgroundColor = SystemColors.Window;
-        dgvResults.ForeColor = SystemColors.WindowText;
-        dgvResults.GridColor = SystemColors.ControlLight;
         dgvResults.BorderStyle = BorderStyle.None;
+        dataGridViewCellStyle1.BackColor = SystemColors.Control;
+        dataGridViewCellStyle1.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+        dataGridViewCellStyle1.ForeColor = SystemColors.ControlText;
         dgvResults.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
         dgvResults.ColumnHeadersHeight = 28;
         dgvResults.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
-        dgvResults.DefaultCellStyle = new DataGridViewCellStyle
-        {
-            BackColor          = SystemColors.Window,
-            ForeColor          = SystemColors.WindowText,
-            SelectionBackColor = SystemColors.Highlight,
-            SelectionForeColor = SystemColors.HighlightText,
-        };
-        dgvResults.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
-        {
-            BackColor          = SystemColors.ButtonFace,
-            ForeColor          = SystemColors.WindowText,
-            SelectionBackColor = SystemColors.Highlight,
-            SelectionForeColor = SystemColors.HighlightText,
-        };
         dgvResults.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn1, dataGridViewTextBoxColumn2, dataGridViewTextBoxColumn3, dataGridViewTextBoxColumn4 });
         dgvResults.Dock = DockStyle.Fill;
+        dgvResults.GridColor = SystemColors.ControlLight;
         dgvResults.Location = new Point(0, 0);
-        dgvResults.Margin = new Padding(3, 4, 3, 4);
         dgvResults.Name = "dgvResults";
         dgvResults.ReadOnly = true;
         dgvResults.RowHeadersVisible = false;
         dgvResults.RowHeadersWidth = 51;
         dgvResults.RowTemplate.Height = 24;
         dgvResults.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-        dgvResults.Size = new Size(329, 791);
+        dgvResults.Size = new Size(344, 463);
         dgvResults.TabIndex = 2;
         // 
         // dataGridViewTextBoxColumn1
@@ -380,21 +362,51 @@ partial class frmMain
         // panel1
         // 
         panel1.BackColor = SystemColors.Control;
+        panel1.Controls.Add(lblTotalCount);
+        panel1.Controls.Add(lblErrorCount);
+        panel1.Controls.Add(lblSmallCount);
+        panel1.Controls.Add(lblLargeCount);
+        panel1.Controls.Add(label3);
+        panel1.Controls.Add(label4);
+        panel1.Controls.Add(label2);
+        panel1.Controls.Add(label1);
         panel1.Controls.Add(lblResultTitle);
         panel1.Dock = DockStyle.Top;
-        panel1.Location = new Point(7, 8);
+        panel1.Location = new Point(6, 6);
+        panel1.Margin = new Padding(3, 2, 3, 2);
         panel1.Name = "panel1";
-        panel1.Size = new Size(329, 44);
+        panel1.Size = new Size(344, 163);
         panel1.TabIndex = 2;
+        // 
+        // label2
+        // 
+        label2.AutoSize = true;
+        label2.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+        label2.ForeColor = Color.Black;
+        label2.Location = new Point(160, 57);
+        label2.Name = "label2";
+        label2.Size = new Size(63, 19);
+        label2.TabIndex = 2;
+        label2.Text = "Tỏi nhỏ:";
+        // 
+        // label1
+        // 
+        label1.AutoSize = true;
+        label1.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+        label1.ForeColor = Color.Black;
+        label1.Location = new Point(14, 57);
+        label1.Name = "label1";
+        label1.Size = new Size(52, 19);
+        label1.TabIndex = 1;
+        label1.Text = "Tỏi to:";
         // 
         // lblResultTitle
         // 
-        lblResultTitle.Dock = DockStyle.Fill;
         lblResultTitle.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
         lblResultTitle.ForeColor = SystemColors.ControlText;
         lblResultTitle.Location = new Point(0, 0);
         lblResultTitle.Name = "lblResultTitle";
-        lblResultTitle.Size = new Size(329, 44);
+        lblResultTitle.Size = new Size(344, 33);
         lblResultTitle.TabIndex = 0;
         lblResultTitle.Text = "Kết quả nhận diện";
         lblResultTitle.TextAlign = ContentAlignment.MiddleLeft;
@@ -406,28 +418,92 @@ partial class frmMain
         btnClearResults.FlatAppearance.BorderSize = 0;
         btnClearResults.FlatStyle = FlatStyle.Flat;
         btnClearResults.ForeColor = SystemColors.ControlLightLight;
-        btnClearResults.Location = new Point(7, 843);
-        btnClearResults.Margin = new Padding(3, 4, 3, 4);
+        btnClearResults.Location = new Point(6, 632);
         btnClearResults.Name = "btnClearResults";
-        btnClearResults.Size = new Size(329, 40);
+        btnClearResults.Size = new Size(344, 30);
         btnClearResults.TabIndex = 1;
         btnClearResults.Text = "🗑 Xóa danh sách";
         btnClearResults.UseVisualStyleBackColor = false;
         btnClearResults.Click += btnClearResults_Click;
         // 
+        // label3
+        // 
+        label3.AutoSize = true;
+        label3.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+        label3.ForeColor = Color.Black;
+        label3.Location = new Point(160, 112);
+        label3.Name = "label3";
+        label3.Size = new Size(84, 19);
+        label3.TabIndex = 4;
+        label3.Text = "Tổng cộng:";
+        // 
+        // label4
+        // 
+        label4.AutoSize = true;
+        label4.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+        label4.ForeColor = Color.Black;
+        label4.Location = new Point(14, 112);
+        label4.Name = "label4";
+        label4.Size = new Size(59, 19);
+        label4.TabIndex = 3;
+        label4.Text = "Tỏi lỗi: ";
+        // 
+        // lblLargeCount
+        // 
+        lblLargeCount.AutoSize = true;
+        lblLargeCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        lblLargeCount.ForeColor = Color.Black;
+        lblLargeCount.Location = new Point(65, 56);
+        lblLargeCount.Name = "lblLargeCount";
+        lblLargeCount.Size = new Size(19, 21);
+        lblLargeCount.TabIndex = 5;
+        lblLargeCount.Text = "0";
+        // 
+        // lblSmallCount
+        // 
+        lblSmallCount.AutoSize = true;
+        lblSmallCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        lblSmallCount.ForeColor = Color.Black;
+        lblSmallCount.Location = new Point(223, 56);
+        lblSmallCount.Name = "lblSmallCount";
+        lblSmallCount.Size = new Size(19, 21);
+        lblSmallCount.TabIndex = 6;
+        lblSmallCount.Text = "0";
+        // 
+        // lblErrorCount
+        // 
+        lblErrorCount.AutoSize = true;
+        lblErrorCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        lblErrorCount.ForeColor = Color.Black;
+        lblErrorCount.Location = new Point(69, 110);
+        lblErrorCount.Name = "lblErrorCount";
+        lblErrorCount.Size = new Size(19, 21);
+        lblErrorCount.TabIndex = 7;
+        lblErrorCount.Text = "0";
+        // 
+        // lblTotalCount
+        // 
+        lblTotalCount.AutoSize = true;
+        lblTotalCount.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        lblTotalCount.ForeColor = Color.Black;
+        lblTotalCount.Location = new Point(243, 109);
+        lblTotalCount.Name = "lblTotalCount";
+        lblTotalCount.Size = new Size(19, 21);
+        lblTotalCount.TabIndex = 8;
+        lblTotalCount.Text = "0";
+        // 
         // frmMain
         // 
-        AutoScaleDimensions = new SizeF(8F, 20F);
+        AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.FromArgb(30, 30, 30);
-        ClientSize = new Size(1806, 960);
+        ClientSize = new Size(1580, 720);
         Controls.Add(picCamera);
         Controls.Add(pnlRight);
         Controls.Add(pnlTop);
         Font = new Font("Segoe UI", 9F);
         ForeColor = Color.White;
-        Margin = new Padding(3, 4, 3, 4);
-        MinimumSize = new Size(1255, 784);
+        MinimumSize = new Size(1100, 598);
         Name = "frmMain";
         StartPosition = FormStartPosition.CenterScreen;
         Text = "Haui Garlic Detector";
@@ -440,6 +516,7 @@ partial class frmMain
         panel2.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)dgvResults).EndInit();
         panel1.ResumeLayout(false);
+        panel1.PerformLayout();
         ResumeLayout(false);
     }
     private Panel panel2;
@@ -448,4 +525,12 @@ partial class frmMain
     private DataGridViewTextBoxColumn dataGridViewTextBoxColumn2;
     private DataGridViewTextBoxColumn dataGridViewTextBoxColumn3;
     private DataGridViewTextBoxColumn dataGridViewTextBoxColumn4;
+    private Label label2;
+    private Label label1;
+    private Label label3;
+    private Label label4;
+    private Label lblLargeCount;
+    private Label lblTotalCount;
+    private Label lblErrorCount;
+    private Label lblSmallCount;
 }
