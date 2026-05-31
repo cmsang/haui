@@ -31,7 +31,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private double _gamma = 1.0;
 
     private readonly SegmentationParameters _pipelineParameters = SegmentationSettings.Current;
-    private readonly IFiducialHoleTemplateService _fiducialTemplateService = new FiducialHoleTemplateService();
+    private readonly IFiducialHoleTemplateService _fiducialTemplateService = FiducialHoleServices.TemplateService;
 
     private OpenCvSharp.Rect? _selectedRegion;
     private const string RegionSettingsPath = "last_region.json";

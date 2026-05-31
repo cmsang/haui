@@ -49,7 +49,7 @@ public partial class FiducialTemplateWindow : System.Windows.Window
     }
 
     public FiducialTemplateWindow()
-        : this(new FiducialHoleTemplateService())
+        : this(FiducialHoleServices.TemplateService)
     {
     }
 

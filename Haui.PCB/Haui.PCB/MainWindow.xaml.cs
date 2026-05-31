@@ -18,7 +18,7 @@ namespace Haui.PCB;
 public partial class MainWindow : System.Windows.Window
 {
     private readonly MainViewModel _viewModel;
-    private readonly IFiducialHoleTemplateService _fiducialTemplateService = new FiducialHoleTemplateService();
+    private readonly IFiducialHoleTemplateService _fiducialTemplateService = FiducialHoleServices.TemplateService;
     private bool _syncingParamsFromViewModel;
 
     private bool _isSelectingRegion;
@@ -75,11 +75,17 @@ public partial class MainWindow : System.Windows.Window
 
         _viewModel.TemplateFrameCaptured += frame =>
         {
-            Dispatcher.InvokeAsync(() =>
+            Dispatcher.InvokeAsync(async () =>
             {
                 var templateWindow = new CreateTemplateWindow { Owner = this };
-                templateWindow.LoadFrame(frame);
-                frame.Dispose();
+                try
+                {
+                    await templateWindow.LoadFrameAsync(frame);
+                }
+                finally
+                {
+                    frame.Dispose();
+                }
                 templateWindow.Show();
             });
         };

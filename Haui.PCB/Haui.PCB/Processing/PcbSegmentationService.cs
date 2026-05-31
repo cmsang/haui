@@ -16,12 +16,12 @@ public class PcbSegmentationService : IPcbSegmentationService
     private readonly IFiducialHoleDetectionService? _fiducialDetection;
 
     public PcbSegmentationService()
-        : this(SegmentationSettings.Current, new FiducialHoleTemplateService(), new FiducialHoleDetectionService())
+        : this(SegmentationSettings.Current, FiducialHoleServices.TemplateService, new FiducialHoleDetectionService())
     {
     }
 
     public PcbSegmentationService(SegmentationParameters parameters)
-        : this(parameters, new FiducialHoleTemplateService(), new FiducialHoleDetectionService())
+        : this(parameters, FiducialHoleServices.TemplateService, new FiducialHoleDetectionService())
     {
     }
 
@@ -35,19 +35,14 @@ public class PcbSegmentationService : IPcbSegmentationService
         _fiducialDetection = fiducialDetection;
     }
 
-    // Kích thước kernel morphology để đóng lỗ hổng biên
     private const int MorphKernelSize = 5;
-
-    // Tỉ lệ diện tích tối thiểu của contour so với ảnh để được coi là bo mạch
     private const double MinAreaRatio = 0.01;
-
-    // Padding (pixel) thêm vào 4 cạnh để không bị cắt sát biên bo mạch
     private const int EdgePadding = 2;
 
     /// <inheritdoc />
     public Mat? Segment(Mat source)
     {
-        using var pipeline = RunPipeline(source);
+        using var pipeline = RunPipelineCore(source, includeDebugMats: false);
         if (pipeline.Warped is null || pipeline.Warped.Empty())
             return null;
         return pipeline.Warped.Clone();
@@ -55,6 +50,9 @@ public class PcbSegmentationService : IPcbSegmentationService
 
     /// <inheritdoc />
     public SegmentationPipelineResult RunPipeline(Mat source)
+        => RunPipelineCore(source, includeDebugMats: true);
+
+    private SegmentationPipelineResult RunPipelineCore(Mat source, bool includeDebugMats)
     {
         using var grayWork = new Mat();
         using var blurredWork = new Mat();
@@ -85,7 +83,8 @@ public class PcbSegmentationService : IPcbSegmentationService
                 var fiducialResult = _fiducialDetection.Detect(
                     closedWork,
                     templates,
-                    settings.MinMatchScore);
+                    settings.MinMatchScore,
+                    settings.MaxMatchDimension);
 
                 if (fiducialResult.Success && fiducialResult.Centers is not null)
                 {
@@ -105,28 +104,33 @@ public class PcbSegmentationService : IPcbSegmentationService
             }
         }
 
-        Cv2.FindContours(
-            closedWork,
-            out var contours,
-            out _,
-            RetrievalModes.External,
-            ContourApproximationModes.ApproxSimple);
-
+        Point[][] contours = [];
         Point[]? bestContour = null;
         double bestArea = 0;
 
-        if (contours.Length > 0)
+        bool skipContour = usedFiducial && !includeDebugMats;
+        if (!skipContour)
         {
-            double imageArea = source.Rows * source.Cols;
-            double minArea = imageArea * MinAreaRatio;
+            Cv2.FindContours(
+                closedWork,
+                out contours,
+                out _,
+                RetrievalModes.External,
+                ContourApproximationModes.ApproxSimple);
 
-            foreach (var contour in contours)
+            if (contours.Length > 0)
             {
-                double area = Cv2.ContourArea(contour);
-                if (area > minArea && area > bestArea)
+                double imageArea = source.Rows * source.Cols;
+                double minArea = imageArea * MinAreaRatio;
+
+                foreach (var contour in contours)
                 {
-                    bestArea = area;
-                    bestContour = contour;
+                    double area = Cv2.ContourArea(contour);
+                    if (area > minArea && area > bestArea)
+                    {
+                        bestArea = area;
+                        bestContour = contour;
+                    }
                 }
             }
         }
@@ -163,10 +167,10 @@ public class PcbSegmentationService : IPcbSegmentationService
 
         return new SegmentationPipelineResult
         {
-            Gray = grayWork.Clone(),
-            Blurred = blurredWork.Clone(),
-            Edges = edgesWork.Clone(),
-            Closed = closedWork.Clone(),
+            Gray = includeDebugMats ? grayWork.Clone() : new Mat(),
+            Blurred = includeDebugMats ? blurredWork.Clone() : new Mat(),
+            Edges = includeDebugMats ? edgesWork.Clone() : new Mat(),
+            Closed = includeDebugMats ? closedWork.Clone() : new Mat(),
             CannyThreshold1 = t1,
             CannyThreshold2 = t2,
             Contours = contours,
@@ -181,10 +185,6 @@ public class PcbSegmentationService : IPcbSegmentationService
         };
     }
 
-    /// <summary>
-    /// Thực hiện perspective transform, căn thẳng bo mạch về ảnh chữ nhật axis-aligned.
-    /// Sau warp, nếu chiều cao lớn hơn chiều rộng thì xoay 90° để bo mạch nằm ngang (landscape).
-    /// </summary>
     private static Mat WarpPerspective(Mat source, Point2f[] quad)
     {
         var ordered = OrderPoints(quad);
@@ -197,7 +197,7 @@ public class PcbSegmentationService : IPcbSegmentationService
             Distance(ordered[0], ordered[3]),
             Distance(ordered[1], ordered[2]));
 
-        float paddedWidth  = width  + EdgePadding * 2;
+        float paddedWidth = width + EdgePadding * 2;
         float paddedHeight = height + EdgePadding * 2;
 
         var dst = new Point2f[]
@@ -226,14 +226,14 @@ public class PcbSegmentationService : IPcbSegmentationService
 
     private static Point2f[] OrderPoints(Point2f[] pts)
     {
-        var sums  = pts.Select(p => p.X + p.Y).ToArray();
+        var sums = pts.Select(p => p.X + p.Y).ToArray();
         var diffs = pts.Select(p => p.Y - p.X).ToArray();
 
         return
         [
-            pts[Array.IndexOf(sums,  sums.Min())],
+            pts[Array.IndexOf(sums, sums.Min())],
             pts[Array.IndexOf(diffs, diffs.Min())],
-            pts[Array.IndexOf(sums,  sums.Max())],
+            pts[Array.IndexOf(sums, sums.Max())],
             pts[Array.IndexOf(diffs, diffs.Max())]
         ];
     }

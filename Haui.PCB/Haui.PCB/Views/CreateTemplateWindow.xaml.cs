@@ -65,10 +65,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
     // ──── Public API ──────────────────────────────────────────────────────────
 
     /// <summary>Nạp frame chụp từ camera vào form.</summary>
-    public void LoadFrame(Mat frame)
-    {
-        _viewModel.LoadFrame(frame);
-    }
+    public Task LoadFrameAsync(Mat frame) => _viewModel.LoadFrameAsync(frame);
 
     /// <summary>Nạp mẫu có sẵn để chỉnh sửa (ảnh + danh sách vùng).</summary>
     public void LoadExistingTemplate(Mat boardImage, IEnumerable<Haui.PCB.Models.TemplateRegion> regions)

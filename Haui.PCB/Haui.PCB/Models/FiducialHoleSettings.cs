@@ -7,7 +7,11 @@ public sealed class FiducialHoleSettings
 {
     public const string DefaultTemplateFolder = "fiducial_holes";
     public const double DefaultMinMatchScore = 0.55;
+    public const int DefaultMaxMatchDimension = 1280;
 
     public string TemplateFolder { get; set; } = DefaultTemplateFolder;
     public double MinMatchScore { get; set; } = DefaultMinMatchScore;
+
+    /// <summary>Cạnh dài nhất của ảnh dùng cho template matching (px); ảnh lớn hơn sẽ downscale.</summary>
+    public int MaxMatchDimension { get; set; } = DefaultMaxMatchDimension;
 }
