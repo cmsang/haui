@@ -2,29 +2,22 @@
 
 ## Current focus
 
-**Memory Bank initialized** — baseline documentation for Cursor/Copilot agents. No feature development in this session.
+**Basler-only camera** — removed DirectShow/AForge; app uses `BaslerCameraService` exclusively.
 
 ## Recent change
 
-- Added `memory-bank/`, `.cursor/rules/`, `AGENTS.md`, `README.md`, `.cursorignore`
-- Linked AI context from `.github/copilot-instructions.md`
+- Deleted `DirectShowCameraService`, `CameraDiscoveryService`, `CameraBackend`
+- Removed NuGet: `AForge.Video.DirectShow`, `OpenCvSharp4.Extensions`
+- `MainViewModel` wires `BaslerCameraService` directly
 
 ## Open decisions
 
-1. **Unify template storage** — Should `TestPipelineWindow` use `TemplateLibraryService` (pick template by name) instead of only `template_board.png` / `template_regions.json`?
-2. **Composition root** — Optional future: register services in `App.xaml.cs` instead of per-window `new`
-3. **CWD vs app data folder** — Templates currently live next to the executable; consider `%AppData%/Haui.PCB/` for production
+1. **Unify template storage** — Should `TestPipelineWindow` use `TemplateLibraryService`?
+2. **Calibrate defaults** — `camera_basler_defaults.json` for acA4600-7gc on real bench
 
 ## Files to read first for common tasks
 
 | Task | Start here |
 |------|------------|
-| Camera / capture | `ViewModels/MainViewModel.cs`, `Processing/CameraService.cs` |
-| Segmentation tuning | `Processing/PcbSegmentationService.cs` |
-| Comparison / threshold | `Processing/RegionComparisonService.cs`, `Models/RegionComparisonResult.cs` |
-| Template CRUD | `Processing/TemplateRegionService.cs`, `Processing/TemplateLibraryService.cs` |
-| Test UI flow | `ViewModels/TestPipelineViewModel.cs`, `Views/TestPipelineWindow.xaml.cs` |
-
-## Session maintenance
-
-After significant work, update this file (focus + decisions) and `progress.md` (what works / what’s next). Do not rewrite the whole Memory Bank each time.
+| Camera / capture | `ViewModels/MainViewModel.cs`, `Processing/BaslerCameraService.cs` |
+| Basler parameters | `Processing/ICameraParameterService.cs`, `camera_basler_defaults.json` |

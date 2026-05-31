@@ -43,6 +43,6 @@
 - Each file contains only one main class/interface/enum
 
 ## Tool & Library Preferences
-- AForge.NET for image and video processing
+- OpenCvSharp for image processing; Basler pylon for camera capture
 - Apply the `IDisposable` pattern correctly for all disposable objects
 - Do not add new libraries unless absolutely necessary

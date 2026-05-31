@@ -5,7 +5,7 @@
 | Layer | Technology |
 |-------|------------|
 | UI | WPF (.NET 10 Windows) |
-| Camera | AForge.Video.DirectShow 2.2.5 |
+| Camera | Basler pylon (`Basler.Pylon.dll`, x64) |
 | Vision | OpenCvSharp4 4.13 + WpfExtensions + runtime.win |
 
 ## Build and run
@@ -17,7 +17,7 @@ dotnet build Haui.PCB.slnx
 dotnet run --project Haui.PCB/Haui.PCB.csproj
 ```
 
-**Requirements:** Windows, .NET 10 SDK, USB camera (DirectShow).
+**Requirements:** Windows x64, .NET 10 SDK, Basler camera with pylon installed.
 
 Runtime **working directory** = process CWD (typically `bin/Debug/net10.0-windows/` when run from IDE). All data paths below are relative to CWD.
 
@@ -61,4 +61,4 @@ Pipeline: BGR→gray → GaussianBlur(5×5) → Canny → morphology close → l
 
 ## Adding dependencies
 
-Avoid new NuGet packages unless necessary — project standard is AForge + OpenCvSharp only.
+Avoid new NuGet packages unless necessary — project standard is OpenCvSharp + Basler pylon.

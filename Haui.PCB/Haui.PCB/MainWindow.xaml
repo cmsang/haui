@@ -203,37 +203,143 @@
             </WrapPanel>
         </Border>
 
-        <!-- ===== PANEL CAMERA ===== -->
-        <Border Grid.Row="1"
-                Background="#1E1E1E"
-                Margin="8">
-            <Grid>
-                <Image x:Name="CameraImage"
-                       Stretch="Uniform"
-                       RenderOptions.BitmapScalingMode="LowQuality" />
-                <TextBlock x:Name="CameraPlaceholder"
-                           Text="Camera chưa khởi động"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Foreground="#888888"
-                           FontSize="16" />
-                <!-- Canvas kéo thả chọn vùng -->
-                <Canvas x:Name="SelectionCanvas"
-                        Background="Transparent"
-                        MouseLeftButtonDown="SelectionCanvas_MouseLeftButtonDown"
-                        MouseMove="SelectionCanvas_MouseMove"
-                        MouseLeftButtonUp="SelectionCanvas_MouseLeftButtonUp"
-                        IsHitTestVisible="False">
-                    <!-- Hình chữ nhật kéo thả (chỉ hiện khi đang kéo) -->
-                    <Rectangle x:Name="DragRect"
-                               Stroke="Yellow"
-                               StrokeThickness="2"
-                               StrokeDashArray="4 2"
-                               Fill="Transparent"
-                               Visibility="Collapsed" />
-                </Canvas>
-            </Grid>
-        </Border>
+        <!-- ===== MAIN CONTENT ===== -->
+        <Grid Grid.Row="1" Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Preview camera -->
+            <Border Grid.Column="0"
+                    Background="#1E1E1E"
+                    Margin="0,0,8,0">
+                <Grid>
+                    <Image x:Name="CameraImage"
+                           Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="LowQuality" />
+                    <TextBlock x:Name="CameraPlaceholder"
+                               Text="Camera chưa khởi động"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="#888888"
+                               FontSize="16" />
+                    <Canvas x:Name="SelectionCanvas"
+                            Background="Transparent"
+                            MouseLeftButtonDown="SelectionCanvas_MouseLeftButtonDown"
+                            MouseMove="SelectionCanvas_MouseMove"
+                            MouseLeftButtonUp="SelectionCanvas_MouseLeftButtonUp"
+                            IsHitTestVisible="False">
+                        <Rectangle x:Name="DragRect"
+                                   Stroke="Yellow"
+                                   StrokeThickness="2"
+                                   StrokeDashArray="4 2"
+                                   Fill="Transparent"
+                                   Visibility="Collapsed" />
+                    </Canvas>
+                </Grid>
+            </Border>
+
+            <!-- Panel tham số Basler -->
+            <Border Grid.Column="1"
+                    x:Name="CameraParamsPanel"
+                    Width="260"
+                    Background="#FAFAFA"
+                    BorderBrush="#DDDDDD"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="12"
+                    Visibility="Visible">
+                <StackPanel>
+                    <TextBlock Text="Tham số camera Basler"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,10" />
+
+                    <TextBlock Text="Exposure (µs)" FontSize="12" Margin="0,0,0,4" />
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="64" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="ExposureSlider"
+                                Grid.Column="0"
+                                Minimum="100"
+                                Maximum="200000"
+                                TickFrequency="5000"
+                                IsSnapToTickEnabled="False"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0" />
+                        <TextBox x:Name="ExposureTextBox"
+                                 Grid.Column="1"
+                                 Height="26"
+                                 VerticalContentAlignment="Center"
+                                 FontSize="12" />
+                    </Grid>
+
+                    <TextBlock Text="Gain (dB)" FontSize="12" Margin="0,0,0,4" />
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="64" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="GainSlider"
+                                Grid.Column="0"
+                                Minimum="0"
+                                Maximum="24"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0" />
+                        <TextBox x:Name="GainTextBox"
+                                 Grid.Column="1"
+                                 Height="26"
+                                 VerticalContentAlignment="Center"
+                                 FontSize="12" />
+                    </Grid>
+
+                    <TextBlock Text="Gamma" FontSize="12" Margin="0,0,0,4" />
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="64" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="GammaSlider"
+                                Grid.Column="0"
+                                Minimum="0.4"
+                                Maximum="2.0"
+                                TickFrequency="0.1"
+                                IsSnapToTickEnabled="False"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0" />
+                        <TextBox x:Name="GammaTextBox"
+                                 Grid.Column="1"
+                                 Height="26"
+                                 VerticalContentAlignment="Center"
+                                 FontSize="12" />
+                    </Grid>
+
+                    <Button x:Name="BtnApplyParams"
+                            Content="Áp dụng"
+                            Height="32"
+                            Margin="0,0,0,8"
+                            Click="BtnApplyParams_Click"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+
+                    <Button x:Name="BtnResetParams"
+                            Content="Đặt lại"
+                            Height="32"
+                            Click="BtnResetParams_Click"
+                            Style="{StaticResource SecondaryButtonStyle}" />
+
+                    <TextBlock Text="Chỉnh exposure/gain rồi bấm Áp dụng. Đặt lại = tham số khuyến nghị."
+                               TextWrapping="Wrap"
+                               Foreground="#666666"
+                               FontSize="11"
+                               Margin="0,10,0,0" />
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- ===== STATUS BAR ===== -->
         <Border Grid.Row="2"
