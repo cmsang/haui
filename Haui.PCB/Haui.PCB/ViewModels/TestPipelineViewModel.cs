@@ -145,12 +145,15 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     /// <summary>
     /// Duyệt thư viện: gặp mẫu đạt đủ vùng thì dừng; không thì chọn mẫu có TB% cao nhất.
+    /// Nếu không mẫu nào đạt, xoay bo mạch 180° và so sánh lại toàn bộ thư viện.
     /// </summary>
     private async Task CompareWithTemplatesAsync(Mat newBoard)
     {
-        using var newBoardClone = newBoard.Clone();
-
-        var match = await Task.Run(() => FindTemplateMatch(newBoardClone));
+        var match = await Task.Run(() =>
+        {
+            using var clone = newBoard.Clone();
+            return FindTemplateMatch(clone);
+        });
 
         if (match is null)
         {
@@ -158,12 +161,48 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        ApplyRegionResultsToGrids(match.RegionResults);
-        PublishAnnotatedImage(newBoard, match.RegionResults);
+        Mat boardForDisplay = newBoard;
+        Mat? rotatedBoard = null;
+        var usedRotation = false;
 
+        if (!match.IsFullMatch)
+        {
+            rotatedBoard = new Mat();
+            Cv2.Rotate(newBoard, rotatedBoard, RotateFlags.Rotate180);
+
+            var rotatedMatch = await Task.Run(() => FindTemplateMatch(rotatedBoard));
+
+            if (rotatedMatch is not null
+                && (rotatedMatch.IsFullMatch
+                    || rotatedMatch.AverageSimilarity > match.AverageSimilarity))
+            {
+                match = rotatedMatch;
+                boardForDisplay = rotatedBoard;
+                usedRotation = true;
+            }
+            else
+            {
+                rotatedBoard.Dispose();
+                rotatedBoard = null;
+            }
+        }
+
+        if (usedRotation)
+        {
+            var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(boardForDisplay);
+            bitmap.Freeze();
+            ProcessedImageReady?.Invoke(bitmap);
+        }
+
+        ApplyRegionResultsToGrids(match.RegionResults);
+        PublishAnnotatedImage(boardForDisplay, match.RegionResults);
+
+        var rotationNote = usedRotation ? " (đã xoay ảnh 180°)" : "";
         StatusText = match.IsFullMatch
-            ? $"Đạt mẫu \"{match.TemplateName}\" — {match.MatchedCount}/{match.TotalCount} vùng giống."
-            : $"Không đạt mẫu nào. Gần nhất: \"{match.TemplateName}\" (TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} giống).";
+            ? $"Đạt mẫu \"{match.TemplateName}\" — {match.MatchedCount}/{match.TotalCount} vùng giống.{rotationNote}"
+            : $"Không đạt mẫu nào. Gần nhất: \"{match.TemplateName}\" (TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} giống).{rotationNote}";
+
+        rotatedBoard?.Dispose();
     }
 
     private TemplateMatchResult? FindTemplateMatch(Mat newBoard)

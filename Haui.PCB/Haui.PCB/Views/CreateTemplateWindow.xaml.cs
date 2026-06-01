@@ -277,6 +277,9 @@ public partial class CreateTemplateWindow : System.Windows.Window
             _viewModel.SetCustomDataFolder(dialog.FolderName);
     }
 
+    private void BtnRotate180_Click(object sender, RoutedEventArgs e)
+        => _viewModel.RotateBoard180();
+
     private void BtnClose_Click(object sender, RoutedEventArgs e)
     {
         Close();

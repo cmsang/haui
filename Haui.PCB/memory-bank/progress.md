@@ -15,6 +15,7 @@
 - [x] Multi-template library (`templates/index.json`) with viewer and edit/delete
 - [x] Library without index.json — scan `*.png` + `*_regions.json` (`TemplateRegionsDocument`)
 - [x] Test pipeline: segment + compare vs all library templates (chỉ thư viện, không `template_board`)
+- [x] Test pipeline: fallback xoay 180° khi không mẫu nào đạt, so lại toàn bộ thư viện
 - [x] Region overlay visualization (match green / mismatch red)
 - [x] Sharpest-frame selection in camera service (Laplacian variance)
 - [x] Region compare preprocessing: 128×128, LAB-L + CLAHE + bilateral before histogram

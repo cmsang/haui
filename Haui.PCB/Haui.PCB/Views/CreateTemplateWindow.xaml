@@ -35,6 +35,37 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="SecondaryBtn" TargetType="Button">
+            <Setter Property="Background" Value="#E8E8E8"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#D8D8D8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#F0F0F0"/>
+                                <Setter Property="Foreground" Value="#AAAAAA"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="DangerBtn" TargetType="Button">
             <Setter Property="Background" Value="#D13438"/>
             <Setter Property="Foreground" Value="White"/>
@@ -229,6 +260,13 @@
                             Click="BtnSave_Click"
                             IsEnabled="{Binding CanSave}"
                             Style="{StaticResource PrimaryBtn}"/>
+                    <Button x:Name="BtnRotate180"
+                            Content="↻ Xoay 180°"
+                            Height="32" Width="110"
+                            Margin="0,0,8,0"
+                            Click="BtnRotate180_Click"
+                            IsEnabled="{Binding CanRotateBoard}"
+                            Style="{StaticResource SecondaryBtn}"/>
                     <Button Content="✕ Đóng"
                             Height="32" Width="80"
                             Click="BtnClose_Click"
