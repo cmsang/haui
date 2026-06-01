@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -240,6 +241,22 @@ public partial class CreateTemplateWindow : System.Windows.Window
         {
             _viewModel.SaveRegions();
         }
+    }
+
+    private void BtnBrowseDataFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var initial = _viewModel.DataFolder;
+        if (!Directory.Exists(initial))
+            initial = Directory.GetCurrentDirectory();
+
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Chọn thư mục lưu mẫu linh kiện",
+            InitialDirectory = initial
+        };
+
+        if (dialog.ShowDialog() == true)
+            _viewModel.SetCustomDataFolder(dialog.FolderName);
     }
 
     private void BtnClose_Click(object sender, RoutedEventArgs e)

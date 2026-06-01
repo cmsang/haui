@@ -19,4 +19,7 @@ public interface ITemplateRegionService
 
     /// <summary>Tải ảnh bo mạch mẫu. Trả về null nếu chưa có.</summary>
     OpenCvSharp.Mat? LoadBoardImage();
+
+    /// <summary>Cấu hình thư mục <c>template_regions.json</c> / <c>template_board.png</c> (đồng bộ với thư viện).</summary>
+    void ConfigureStorage(bool useCustomFolder, string? customFolder);
 }
