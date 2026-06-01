@@ -268,20 +268,19 @@
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right">
-                    <Button x:Name="BtnSave"
-                            Content="💾 Lưu"
-                            Height="32" Width="90"
-                            Margin="0,0,8,0"
-                            Click="BtnSave_Click"
-                            IsEnabled="{Binding CanSave}"
-                            Style="{StaticResource PrimaryBtn}"/>
                     <Button x:Name="BtnRotate180"
                             Content="↻ Xoay 180°"
                             Height="32" Width="110"
-                            Margin="0,0,8,0"
                             Click="BtnRotate180_Click"
                             IsEnabled="{Binding CanRotateBoard}"
                             Style="{StaticResource SecondaryBtn}"/>
+                    <Button x:Name="BtnSave"
+                            Content="💾 Lưu"
+                            Height="32" Width="90"
+                            Margin="8,0,8,0"
+                            Click="BtnSave_Click"
+                            IsEnabled="{Binding CanSave}"
+                            Style="{StaticResource PrimaryBtn}"/>
                     <Button Content="✕ Đóng"
                             Height="32" Width="80"
                             Click="BtnClose_Click"
