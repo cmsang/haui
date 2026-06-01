@@ -6,14 +6,18 @@ namespace Haui.PCB.Processing;
 internal static class ComponentTemplateRegionNames
 {
     public static HashSet<string> LoadAllowedNames()
+        => LoadAllowedNamesInOrder().ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>Thứ tự như trong <c>component_template_settings.json</c>.</summary>
+    public static IReadOnlyList<string> LoadAllowedNamesInOrder()
     {
         var settings = ComponentTemplateSettingsStore.Load();
         var names = settings.AllowedRegionNames
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Select(n => n.Trim());
         if (!names.Any())
-            names = ComponentTemplateSettings.DefaultAllowedRegionNames;
-        return names.ToHashSet(StringComparer.Ordinal);
+            return ComponentTemplateSettings.DefaultAllowedRegionNames;
+        return names.Distinct(StringComparer.Ordinal).ToList();
     }
 
     public static bool IsAllowedName(string name, HashSet<string> allowedNames)

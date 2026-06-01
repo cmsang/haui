@@ -17,10 +17,11 @@ public partial class TestPipelineWindow : System.Windows.Window
     public TestPipelineWindow()
     {
         InitializeComponent();
+        var libraryService = new TemplateLibraryService();
+        var comparisonService = new RegionComparisonService();
         _viewModel = new TestPipelineViewModel(
             new PcbSegmentationService(),
-            new TemplateLibraryService(),
-            new RegionComparisonService());
+            new CompositeTemplateMatchService(libraryService, comparisonService));
         DataContext = _viewModel;
 
         // Lắng nghe ảnh bo mạch đã cắt sẵn sàng
