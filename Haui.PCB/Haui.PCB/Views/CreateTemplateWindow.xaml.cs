@@ -56,6 +56,9 @@ public partial class CreateTemplateWindow : System.Windows.Window
         {
             if (e.PropertyName == nameof(CreateTemplateViewModel.StatusText))
                 Dispatcher.InvokeAsync(() => StatusText.Text = _viewModel.StatusText);
+            if (e.PropertyName is nameof(CreateTemplateViewModel.CanSave)
+                or nameof(CreateTemplateViewModel.RegionProgressText))
+                Dispatcher.InvokeAsync(() => BtnSave.IsEnabled = _viewModel.CanSave);
         };
 
         // Vẽ lại khi danh sách vùng thay đổi
@@ -232,15 +235,31 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
     private void BtnSave_Click(object sender, RoutedEventArgs e)
     {
+        var regions = _viewModel.GetCurrentRegions();
+        if (!_viewModel.ValidateRegionCount(regions, out var error))
+        {
+            MessageBox.Show(error, "Chưa đủ vùng linh kiện",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         if (RegionsSaved is not null)
         {
-            // Chế độ chỉnh sửa mẫu có sẵn — chỉ trả về danh sách vùng
-            RegionsSaved.Invoke(_viewModel.GetCurrentRegions());
+            RegionsSaved.Invoke(regions);
+            return;
         }
-        else
+
+        if (!_viewModel.TrySaveRegions(out error))
         {
-            _viewModel.SaveRegions();
+            MessageBox.Show(error, "Không thể lưu", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
         }
+
+        MessageBox.Show(
+            $"Đã lưu ảnh mẫu với {_viewModel.RequiredRegionCount} vùng linh kiện vào thư viện.",
+            "Thành công",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 
     private void BtnBrowseDataFolder_Click(object sender, RoutedEventArgs e)

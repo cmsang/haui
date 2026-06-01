@@ -26,6 +26,9 @@
     <None Update="camera_basler_defaults.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="component_template_settings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="$(PylonRoot)\Development\Assemblies\Basler.Pylon\net8.0\x64\Basler.Pylon.dll">
       <Link>Basler.Pylon.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
