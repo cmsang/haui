@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
@@ -15,8 +16,14 @@ namespace Haui.PCB.ViewModels;
 /// </summary>
 public class TemplateRegionItem : INotifyPropertyChanged
 {
+    private static readonly SolidColorBrush ValidNameBrush = Brushes.Black;
+    private static readonly SolidColorBrush InvalidNameBrush = Brushes.Red;
+
     private string _name = string.Empty;
     private int _stt;
+
+    /// <summary>Gán từ <see cref="CreateTemplateViewModel"/> để tô màu tên hợp lệ / không hợp lệ.</summary>
+    public Func<string, bool>? NameValidator { get; set; }
 
     public int Stt
     {
@@ -27,8 +34,18 @@ public class TemplateRegionItem : INotifyPropertyChanged
     public string Name
     {
         get => _name;
-        set { _name = value; OnPropertyChanged(); }
+        set
+        {
+            _name = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsNameValid));
+            OnPropertyChanged(nameof(NameForeground));
+        }
     }
+
+    public bool IsNameValid => NameValidator?.Invoke(_name) ?? false;
+
+    public Brush NameForeground => IsNameValid ? ValidNameBrush : InvalidNameBrush;
 
     public double RelX { get; set; }
     public double RelY { get; set; }
@@ -42,6 +59,12 @@ public class TemplateRegionItem : INotifyPropertyChanged
     public SolidColorBrush RegionBrush => new(RegionColor);
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    public void RefreshNameValidation()
+    {
+        OnPropertyChanged(nameof(IsNameValid));
+        OnPropertyChanged(nameof(NameForeground));
+    }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
@@ -79,7 +102,8 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     private string _statusText = string.Empty;
     private bool _useCustomDataFolder;
     private string _dataFolder = ComponentTemplateSettings.DefaultLibraryFolder;
-    private readonly int _requiredRegionCount;
+    private readonly HashSet<string> _allowedRegionNames;
+    private readonly string _allowedNamesHint;
     private bool _disposed;
 
     // ──── Events ──────────────────────────────────────────────────────────────
@@ -125,20 +149,23 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     public int BoardWidth => _boardImage?.Width ?? 0;
     public int BoardHeight => _boardImage?.Height ?? 0;
 
-    /// <summary>Số vùng linh kiện bắt buộc (từ <c>component_template_settings.json</c>).</summary>
-    public int RequiredRegionCount => _requiredRegionCount;
-
     public int RegionCount => Regions.Count;
 
-    /// <summary>Chỉ cho lưu khi đã có ảnh bo mạch và đủ số vùng theo cấu hình.</summary>
-    public bool CanSave => _boardImage is not null && Regions.Count == _requiredRegionCount;
+    /// <summary>Chỉ cho lưu khi có ảnh bo mạch, ít nhất một vùng và mọi tên nằm trong danh sách cấu hình.</summary>
+    public bool CanSave =>
+        _boardImage is not null
+        && Regions.Count > 0
+        && ComponentTemplateRegionNames.TryGetInvalidNames(
+            Regions.Select(r => r.Name), _allowedRegionNames, out _);
 
     /// <summary>Cho phép xoay khi đã có ảnh bo mạch.</summary>
     public bool CanRotateBoard => _boardImage is not null && !_boardImage.Empty();
 
     /// <summary>Hiển thị tiến độ đánh dấu vùng trên UI.</summary>
     public string RegionProgressText =>
-        $"Vùng linh kiện: {Regions.Count}/{_requiredRegionCount}";
+        CanSave
+            ? $"Vùng linh kiện: {Regions.Count} — có thể lưu."
+            : $"Vùng linh kiện: {Regions.Count} — tên hợp lệ: {_allowedNamesHint}";
 
     // ──── Bảng 50 màu phân biệt ───────────────────────────────────────────────
 
@@ -218,15 +245,47 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     {
         _segmentationService = segmentationService;
         _libraryService = libraryService;
-        _requiredRegionCount = ComponentTemplateSettingsStore.Load().RequiredRegionCount;
-        if (_requiredRegionCount < 1)
-            _requiredRegionCount = ComponentTemplateSettings.DefaultRequiredRegionCount;
+        _allowedRegionNames = ComponentTemplateRegionNames.LoadAllowedNames();
+        _allowedNamesHint = ComponentTemplateRegionNames.FormatAllowedNamesHint(_allowedRegionNames);
 
-        Regions.CollectionChanged += (_, _) => NotifyRegionCountChanged();
+        Regions.CollectionChanged += OnRegionsCollectionChanged;
         LoadStorageConfiguration();
     }
 
-    private void NotifyRegionCountChanged()
+    private void OnRegionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null)
+        {
+            foreach (TemplateRegionItem item in e.OldItems)
+                item.PropertyChanged -= OnRegionItemPropertyChanged;
+        }
+
+        if (e.NewItems is not null)
+        {
+            foreach (TemplateRegionItem item in e.NewItems)
+            {
+                AttachRegionItem(item);
+                item.PropertyChanged += OnRegionItemPropertyChanged;
+            }
+        }
+
+        NotifyRegionValidationChanged();
+    }
+
+    private void AttachRegionItem(TemplateRegionItem item)
+    {
+        item.NameValidator = name =>
+            ComponentTemplateRegionNames.IsAllowedName(name, _allowedRegionNames);
+        item.RefreshNameValidation();
+    }
+
+    private void OnRegionItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(TemplateRegionItem.Name))
+            NotifyRegionValidationChanged();
+    }
+
+    private void NotifyRegionValidationChanged()
     {
         OnPropertyChanged(nameof(RegionCount));
         OnPropertyChanged(nameof(CanSave));
@@ -286,10 +345,10 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             idx++;
         }
 
-        StatusText = Regions.Count == _requiredRegionCount
-            ? $"Chế độ chỉnh sửa — đủ {_requiredRegionCount} vùng."
-            : $"Chế độ chỉnh sửa — {Regions.Count}/{_requiredRegionCount} vùng (cần đủ {_requiredRegionCount} để lưu).";
-        NotifyRegionCountChanged();
+        StatusText = CanSave
+            ? $"Chế độ chỉnh sửa — {Regions.Count} vùng, có thể lưu."
+            : $"Chế độ chỉnh sửa — {Regions.Count} vùng (đặt tên theo danh sách cấu hình để lưu).";
+        NotifyRegionValidationChanged();
         NotifyBoardChanged();
     }
 
@@ -318,8 +377,8 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         Regions.Clear();
 
         StatusText =
-            $"Kéo thả trên ảnh để đánh dấu {_requiredRegionCount} vùng linh kiện (0/{_requiredRegionCount}).";
-        NotifyRegionCountChanged();
+            $"Kéo thả trên ảnh để đánh dấu vùng linh kiện. Tên hợp lệ: {_allowedNamesHint}.";
+        NotifyRegionValidationChanged();
         NotifyBoardChanged();
     }
 
@@ -345,7 +404,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         _boardBitmap = bitmap;
         BoardImageReady?.Invoke(bitmap);
 
-        StatusText = RegionCountStatusSuffix("Đã xoay ảnh 180°.");
+        StatusText = RegionValidationStatusSuffix("Đã xoay ảnh 180°.");
     }
 
     /// <summary>
@@ -364,7 +423,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             RegionColor = GetNextColor()
         };
         Regions.Add(item);
-        StatusText = RegionCountStatusSuffix($"Đã thêm \"{item.Name}\".");
+        StatusText = RegionValidationStatusSuffix($"Đã thêm \"{item.Name}\".");
     }
 
     /// <summary>Xóa vùng được chọn.</summary>
@@ -374,17 +433,19 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         // Cập nhật lại số thứ tự
         for (int i = 0; i < Regions.Count; i++)
             Regions[i].Stt = i + 1;
-        StatusText = RegionCountStatusSuffix($"Đã xóa \"{item.Name}\".");
+        StatusText = RegionValidationStatusSuffix($"Đã xóa \"{item.Name}\".");
     }
 
-    private string RegionCountStatusSuffix(string action)
+    private string RegionValidationStatusSuffix(string action)
     {
-        if (Regions.Count == _requiredRegionCount)
-            return $"{action} Đủ {_requiredRegionCount} vùng — có thể lưu.";
-        return $"{action} ({Regions.Count}/{_requiredRegionCount} vùng).";
+        if (CanSave)
+            return $"{action} Có thể lưu ({Regions.Count} vùng).";
+        if (Regions.Count == 0)
+            return $"{action} Chưa có vùng nào.";
+        return $"{action} ({Regions.Count} vùng — kiểm tra tên theo cấu hình).";
     }
 
-    /// <summary>Kiểm tra đủ vùng trước khi lưu.</summary>
+    /// <summary>Kiểm tra tên vùng trước khi lưu.</summary>
     public bool TrySaveRegions(out string? errorMessage)
     {
         if (_boardImage is null)
@@ -393,12 +454,8 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             return false;
         }
 
-        if (Regions.Count != _requiredRegionCount)
-        {
-            errorMessage =
-                $"Cần đánh dấu đủ {_requiredRegionCount} vùng linh kiện trên ảnh mẫu (hiện có {Regions.Count}).";
+        if (!TryValidateRegionNames(Regions.Select(r => r.Name), out errorMessage))
             return false;
-        }
 
         SaveRegionsCore();
         errorMessage = null;
@@ -430,16 +487,31 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 
         var folder = _libraryService.GetLibraryFolder();
         StatusText =
-            $"Đã lưu ảnh mẫu ({_requiredRegionCount} vùng) vào thư viện \"{folder}\".";
+            $"Đã lưu ảnh mẫu ({Regions.Count} vùng) vào thư viện \"{folder}\".";
     }
 
-    /// <summary>Kiểm tra danh sách vùng đủ số lượng theo cấu hình (dùng khi sửa từ thư viện).</summary>
-    public bool ValidateRegionCount(IReadOnlyCollection<TemplateRegion> regions, out string? errorMessage)
+    /// <summary>Kiểm tra tên vùng theo cấu hình (dùng khi sửa từ thư viện).</summary>
+    public bool ValidateRegions(IReadOnlyCollection<TemplateRegion> regions, out string? errorMessage)
     {
-        if (regions.Count != _requiredRegionCount)
+        if (regions.Count == 0)
+        {
+            errorMessage = "Cần ít nhất một vùng linh kiện trên ảnh mẫu.";
+            return false;
+        }
+
+        return TryValidateRegionNames(regions.Select(r => r.Name), out errorMessage);
+    }
+
+    private bool TryValidateRegionNames(
+        IEnumerable<string> regionNames,
+        out string? errorMessage)
+    {
+        if (!ComponentTemplateRegionNames.TryGetInvalidNames(
+                regionNames, _allowedRegionNames, out var invalid))
         {
             errorMessage =
-                $"Cần đánh dấu đủ {_requiredRegionCount} vùng linh kiện (hiện có {regions.Count}).";
+                $"Tên vùng không hợp lệ: {string.Join(", ", invalid)}. " +
+                $"Chỉ dùng: {_allowedNamesHint}.";
             return false;
         }
 

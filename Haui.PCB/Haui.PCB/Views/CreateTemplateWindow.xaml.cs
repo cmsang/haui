@@ -235,9 +235,9 @@ public partial class CreateTemplateWindow : System.Windows.Window
     private void BtnSave_Click(object sender, RoutedEventArgs e)
     {
         var regions = _viewModel.GetCurrentRegions();
-        if (!_viewModel.ValidateRegionCount(regions, out var error))
+        if (!_viewModel.ValidateRegions(regions, out var error))
         {
-            MessageBox.Show(error, "Chưa đủ vùng linh kiện",
+            MessageBox.Show(error, "Tên vùng không hợp lệ",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -255,7 +255,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
         }
 
         MessageBox.Show(
-            $"Đã lưu ảnh mẫu với {_viewModel.RequiredRegionCount} vùng linh kiện vào thư viện.",
+            $"Đã lưu ảnh mẫu với {_viewModel.RegionCount} vùng linh kiện vào thư viện.",
             "Thành công",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
