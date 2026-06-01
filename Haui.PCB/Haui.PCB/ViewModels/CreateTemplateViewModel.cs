@@ -72,9 +72,8 @@ public class TemplateRegionItem : INotifyPropertyChanged
 /// </summary>
 public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 {
-    private readonly ITemplateRegionService _regionService;
     private readonly IPcbSegmentationService _segmentationService;
-    private readonly ITemplateLibraryService? _libraryService;
+    private readonly ITemplateLibraryService _libraryService;
     private Mat? _boardImage;
     private BitmapSource? _boardBitmap;
     private string _statusText = string.Empty;
@@ -211,11 +210,9 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
     public CreateTemplateViewModel(
-        ITemplateRegionService regionService,
         IPcbSegmentationService segmentationService,
-        ITemplateLibraryService? libraryService = null)
+        ITemplateLibraryService libraryService)
     {
-        _regionService = regionService;
         _segmentationService = segmentationService;
         _libraryService = libraryService;
         _requiredRegionCount = ComponentTemplateSettingsStore.Load().RequiredRegionCount;
@@ -243,27 +240,16 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 
     private void LoadStorageConfiguration()
     {
-        if (_libraryService is not null)
-        {
-            var (useCustom, folder) = _libraryService.GetStorageConfiguration();
-            _useCustomDataFolder = useCustom;
-            _dataFolder = folder;
-        }
-        else
-        {
-            _useCustomDataFolder = false;
-            _dataFolder = ComponentTemplateSettings.DefaultLibraryFolder;
-        }
+        var (useCustom, folder) = _libraryService.GetStorageConfiguration();
+        _useCustomDataFolder = useCustom;
+        _dataFolder = folder;
 
         OnPropertyChanged(nameof(UseCustomDataFolder));
         OnPropertyChanged(nameof(DataFolder));
     }
 
     private void PersistStorageConfiguration()
-    {
-        _regionService.ConfigureStorage(UseCustomDataFolder, DataFolder);
-        _libraryService?.ConfigureStorage(UseCustomDataFolder, DataFolder);
-    }
+        => _libraryService.ConfigureStorage(UseCustomDataFolder, DataFolder);
 
     // ──── Public API ──────────────────────────────────────────────────────────
 
@@ -386,30 +372,26 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     {
         PersistStorageConfiguration();
 
-        _regionService.Save(Regions.Select(r => r.ToModel()));
+        if (_boardImage is null)
+            return;
 
-        // Lưu ảnh bo mạch mẫu để dùng cho việc so sánh sau này
-        if (_boardImage is not null)
-            _regionService.SaveBoardImage(_boardImage);
+        var templateName = $"{DateTime.Now:dd/MM/yyyy HH:mm}";
+        var imagePath = _libraryService.SaveBoardImage(templateName, _boardImage);
+        var regionsPath = _libraryService.GetRegionsFilePathForBoardImage(imagePath);
+        var regionModels = Regions.Select(r => r.ToModel()).ToList();
+        _libraryService.SaveRegions(regionsPath, templateName, regionModels);
 
-        // Thêm vào thư viện mẫu nếu có service
-        if (_libraryService is not null && _boardImage is not null)
+        var existing = _libraryService.LoadAll().ToList();
+        existing.Add(new TemplateEntry
         {
-            var templateName = $"{DateTime.Now:dd/MM/yyyy HH:mm}";
-            var imagePath = _libraryService.SaveBoardImage(templateName, _boardImage);
+            Name = templateName,
+            BoardImagePath = imagePath,
+            RegionsFilePath = regionsPath,
+            Regions = regionModels
+        });
+        _libraryService.SaveAll(existing);
 
-            var existing = _libraryService.LoadAll().ToList();
-            existing.Add(new Models.TemplateEntry
-            {
-                Name = templateName,
-                BoardImagePath = imagePath,
-                Regions = Regions.Select(r => r.ToModel()).ToList()
-            });
-            _libraryService.SaveAll(existing);
-        }
-
-        var folder = _libraryService?.GetLibraryFolder()
-                     ?? (_useCustomDataFolder ? _dataFolder : ".");
+        var folder = _libraryService.GetLibraryFolder();
         StatusText =
             $"Đã lưu ảnh mẫu ({_requiredRegionCount} vùng) vào thư viện \"{folder}\".";
     }

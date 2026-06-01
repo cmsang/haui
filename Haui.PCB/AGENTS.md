@@ -42,9 +42,9 @@ dotnet run --project Haui.PCB/Haui.PCB.csproj
 2. Register in the window that needs it: `new MyViewModel(new MyService(), …)`
 3. UI strings and labels: Vietnamese
 
-## Template data warning
+## Template data
 
-- **Test** (`TestPipelineWindow`) → `template_board.png` + `template_regions.json`
-- **Library** → `templates/index.json` + PNGs under `templates/`
+- Thư mục thư viện (`templates/` hoặc tùy chỉnh): mỗi mẫu = `*.png` + `*_regions.json`
+- **Test / Create / Viewer** → `ITemplateLibraryService` (không dùng `template_board`)
 
 After tasks, update `memory-bank/activeContext.md` and `memory-bank/progress.md`.

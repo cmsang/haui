@@ -19,7 +19,7 @@ public partial class TestPipelineWindow : System.Windows.Window
         InitializeComponent();
         _viewModel = new TestPipelineViewModel(
             new PcbSegmentationService(),
-            new TemplateRegionService(),
+            new TemplateLibraryService(),
             new RegionComparisonService());
         DataContext = _viewModel;
 
@@ -53,7 +53,6 @@ public partial class TestPipelineWindow : System.Windows.Window
                 BtnTest.IsEnabled = _viewModel.HasSource && !_viewModel.IsBusy;
         };
 
-        // Bind 2 grid kết quả
         MatchedGrid.ItemsSource = _viewModel.MatchedRegions;
         DifferentGrid.ItemsSource = _viewModel.DifferentRegions;
 

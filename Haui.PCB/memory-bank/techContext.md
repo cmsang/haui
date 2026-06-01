@@ -26,10 +26,8 @@ Runtime **working directory** = process CWD (typically `bin/Debug/net10.0-window
 | Path | Written by | Purpose |
 |------|------------|---------|
 | `last_region.json` | `MainViewModel` | Last camera ROI (pixel rect) |
-| `template_regions.json` | `TemplateRegionService` | Active template region list |
-| `template_board.png` | `TemplateRegionService` | Active template board image |
-| `templates/index.json` | `TemplateLibraryService` | Library catalog (mặc định) |
-| `templates/*.png` | `TemplateLibraryService` | Per-template board images (mặc định) |
+| `templates/*.png` (hoặc thư mục tùy chỉnh) | `TemplateLibraryService` | Ảnh bo mẫu (quét thư mục) |
+| `templates/*_regions.json` | `TemplateLibraryService` | Tên hiển thị + vùng linh kiện (`TemplateRegionsDocument`) |
 | `component_template_settings.json` | `ComponentTemplateSettingsStore` | `UseCustomFolder`, `CustomFolder`, `RequiredRegionCount` (mặc định 18) — đồng bộ Create / Test / Viewer |
 | `fiducial_settings.json` | `FiducialHoleTemplateService` | Thư mục, `MinMatchScore`, `MaxMatchDimension` (1280) |
 | `fiducial_holes/hole_*.png` | `FiducialHoleTemplateService` | Thư viện mẫu lỗ (nhiều ảnh, cùng hình dạng) |
@@ -48,7 +46,9 @@ Pipeline: BGR→gray → GaussianBlur(5×5) → Canny → morphology close → l
 ## Comparison (`RegionComparisonService`)
 
 - Crop region on template and new board using relative coords
-- Resize to 64×64, grayscale histogram, `CompareHist` with `HistCompMethods.Correl`
+- Resize to **128×128** (`INTER_AREA` when downscaling, `INTER_LINEAR` when upscaling)
+- Preprocess: **LAB L** → **CLAHE** (clip 2.0, tile 8×8) → **bilateral** (d=5) → grayscale histogram
+- `CompareHist` with `HistCompMethods.Correl`; hist MinMax normalize
 - Match threshold **80%** enforced in `RegionComparisonResult.IsMatch`
 
 ## Models

@@ -183,7 +183,7 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
         StatusText = $"Đã xóa mẫu \"{item.Name}\". Nhấn Lưu để ghi file.";
     }
 
-    /// <summary>Lưu toàn bộ danh sách mẫu xuống file index.json.</summary>
+    /// <summary>Ghi từng file *_regions.json (không dùng index.json).</summary>
     public bool TrySaveLibrary(out string? errorMessage)
     {
         var invalid = Templates

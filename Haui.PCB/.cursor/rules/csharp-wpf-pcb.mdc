@@ -16,7 +16,7 @@ alwaysApply: false
 
 Add abstractions under `Haui.PCB/Processing/`:
 
-- `ICameraService`, `IPcbSegmentationService`, `ITemplateRegionService`
+- `ICameraService`, `IPcbSegmentationService`, `ITemplateLibraryService`
 - `ITemplateLibraryService`, `IRegionComparisonService`, `IPipelineDebugService`
 
 Wire implementations in the window constructor (see `MainWindow.xaml.cs`).

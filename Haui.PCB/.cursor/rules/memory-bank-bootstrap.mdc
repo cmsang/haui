@@ -23,7 +23,7 @@ Do not duplicate rules here — follow `.github/copilot-instructions.md` (SOLID,
 
 ## Critical gotcha
 
-**Test pipeline** uses single-template files (`template_board.png`, `template_regions.json`). **Create/Viewer** use `templates/` library. Changing one does not automatically update the other.
+**Test / Create / Viewer** share one template library folder (`*.png` + `*_regions.json` per sample). Configure via `component_template_settings.json`.
 
 ## After meaningful tasks
 
