@@ -13,26 +13,26 @@
 - [x] Multi-template: mỗi ảnh mẫu vùng linh kiện độc lập; thư viện lưu khi tất cả mẫu đủ N vùng
 - [x] Create template: tùy chọn thư mục lưu tùy chỉnh (thư viện + mẫu active)
 - [x] Multi-template library (`templates/index.json`) with viewer and edit/delete
-- [x] Test pipeline: segment + compare regions vs single active template
+- [x] Library without index.json — scan `*.png` + `*_regions.json` (`TemplateRegionsDocument`)
+- [x] Test pipeline: segment + compare vs all library templates (chỉ thư viện, không `template_board`)
 - [x] Region overlay visualization (match green / mismatch red)
 - [x] Sharpest-frame selection in camera service (Laplacian variance)
+- [x] Region compare preprocessing: 128×128, LAB-L + CLAHE + bilateral before histogram
 
 ## Known limitations
 
 - **Basler requires pylon x64** installed; build uses `PlatformTarget=x64`
 - **Parameter sliders** use fixed ranges; real camera min/max not yet bound to UI
-- **Dual template systems** — Test uses single-template files; library is separate
 - **Paths relative to CWD** — running from different folders breaks saved templates
 - **No unit/integration tests** in repository
 - **No persistence** of comparison history or export
 
 ## Suggested next improvements
 
-1. Let Test pipeline select a template from `TemplateLibraryService`
-2. Centralize data directory (e.g. `Environment.SpecialFolder.ApplicationData`)
-3. Add `App.xaml.cs` service registration for shared `ICameraService` lifetime
-4. Export comparison results (CSV/JSON) from `TestPipelineViewModel`
-5. Configurable match threshold (currently hardcoded 80% in `RegionComparisonResult`)
+1. Centralize data directory (e.g. `Environment.SpecialFolder.ApplicationData`)
+2. Add `App.xaml.cs` service registration for shared `ICameraService` lifetime
+3. Export comparison results (CSV/JSON) from `TestPipelineViewModel`
+4. Configurable match threshold (currently hardcoded 80% in `RegionComparisonResult`)
 
 ## Build status
 

@@ -2,12 +2,12 @@
 
 ## Current focus
 
-**Fiducial hole detection** — sau Morphology Close, pipeline ưu tiên template matching 4 lỗ tròn định vị (nếu đã có mẫu trong thư mục cấu hình); fallback contour như cũ.
+**Thư viện mẫu** — đã bỏ `template_board` / `TemplateRegionService`; Test + Create + Viewer chỉ dùng thư mục `*.png` + `*_regions.json`.
 
 ## Recent change
 
 - **Ảnh mẫu linh kiện:** mỗi ảnh trong thư viện có danh sách vùng riêng; lưu chỉ khi đủ `RequiredRegionCount` (mặc định 18) trong `component_template_settings.json`; tạo mẫu mới không copy vùng từ mẫu active
-- **Tạo mẫu linh kiện:** tùy chọn thư mục lưu (`component_template_settings.json`) — thư viện + `template_regions.json` / `template_board.png`; Test/Viewer dùng cùng cấu hình
+- **Tạo mẫu linh kiện:** chỉ thư viện PNG + `*_regions.json` (`component_template_settings.json`); Test/Viewer/Create dùng chung
 - **Tối ưu Segment (Test / Tạo mẫu):** `RunPipelineCore(includeDebugMats)` — fast path không clone 4 Mat trung gian, bỏ contour khi fiducial OK
 - **Fiducial matching:** cache RAM (`FiducialHoleServices.TemplateService`), downscale `MaxMatchDimension=1280`, in-place NMS trên bản đồ match
 - `CreateTemplateViewModel.LoadFrameAsync` — Segment chạy ngoài UI thread

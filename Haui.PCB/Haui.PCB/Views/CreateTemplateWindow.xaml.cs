@@ -35,7 +35,6 @@ public partial class CreateTemplateWindow : System.Windows.Window
     {
         InitializeComponent();
         _viewModel = new CreateTemplateViewModel(
-            new TemplateRegionService(),
             new PcbSegmentationService(),
             new TemplateLibraryService());
 

@@ -19,7 +19,7 @@ Operators need a Windows tool to **inspect PCB boards** against a visual templat
 1. **MainWindow** — select camera and resolution (default prefers 1280×720), live preview with FPS
 2. **Optional ROI** — drag a rectangle on the preview; saved to `last_region.json` for focused capture
 3. **Toolbar actions** (capture current frame and open child window):
-   - **Test** → `TestPipelineWindow` — segment board, compare all template regions, show matched vs different grids
+   - **Test** → `TestPipelineWindow` — segment board, compare against **all** library templates, pick best match for detail view
    - **Test 2** → `PipelineStepsWindow` — visualize intermediate OpenCV steps for debugging
    - **Tạo mẫu** → `CreateTemplateWindow` — segment board, draw regions, save template
    - **Xem mẫu** → `TemplateViewerWindow` — browse multi-template library, edit/delete
@@ -33,7 +33,4 @@ Operators need a Windows tool to **inspect PCB boards** against a visual templat
 
 ## Template storage (user-visible)
 
-Two systems coexist — see `systemPatterns.md`:
-
-- **Active single template** — used by Test pipeline (`template_board.png`, `template_regions.json`)
-- **Template library** — multiple named templates under `templates/` (Create + Viewer)
+Một thư viện trong thư mục cấu hình (`templates/` hoặc tùy chỉnh): mỗi mẫu = PNG + file `*_regions.json`. Create, Viewer và Test dùng chung thư viện.

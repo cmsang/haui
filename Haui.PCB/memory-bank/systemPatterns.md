@@ -25,19 +25,18 @@ Haui.PCB/                 # WPF app project
 | `ICameraService` | `BaslerCameraService` | Basler pylon; frames as `Mat` |
 | `ICameraParameterService` | `BaslerCameraService` | GenICam Apply / Reset (Basler only) |
 | `IPcbSegmentationService` | `PcbSegmentationService` | Canny + contour + perspective warp → straight board |
-| `ITemplateRegionService` | `TemplateRegionService` | Single active template JSON + PNG |
-| `ITemplateLibraryService` | `TemplateLibraryService` | Multi-template `templates/` catalog |
+| `ITemplateLibraryService` | `TemplateLibraryService` | Thư viện mẫu: quét `*.png` + `*_regions.json` |
 | `IRegionComparisonService` | `RegionComparisonService` | Per-region histogram compare |
 | `IPipelineDebugService` | `PipelineDebugService` | Wraps `RunPipeline()` → step images for PipelineStepsWindow (no duplicate CV logic) |
 
-## Dual template storage (critical)
+## Template storage
 
-| System | Files | Used by |
-|--------|-------|---------|
-| Single (legacy/active) | `template_board.png`, `template_regions.json` | `TestPipelineWindow` / `TestPipelineViewModel` |
-| Library | `templates/index.json`, `templates/{name}_{timestamp}.png` | `CreateTemplateWindow`, `TemplateViewerWindow` |
+Thư mục cấu hình (`templates/` hoặc tùy chỉnh qua `component_template_settings.json`):
 
-Creating a template in **Create** may write **both**. **Test** only reads the single-template files — not the library index.
+- `{name}_{timestamp}.png` — ảnh bo mẫu
+- `{name}_{timestamp}_regions.json` — `TemplateRegionsDocument` (tên + vùng)
+
+**Create**, **Viewer**, **Test** đều dùng `ITemplateLibraryService` (không còn `template_board` / `template_regions`).
 
 ## Window graph
 

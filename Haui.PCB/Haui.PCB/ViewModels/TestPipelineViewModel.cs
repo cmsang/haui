@@ -14,7 +14,7 @@ namespace Haui.PCB.ViewModels;
 public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IPcbSegmentationService _segmentation;
-    private readonly ITemplateRegionService _regionService;
+    private readonly ITemplateLibraryService _libraryService;
     private readonly IRegionComparisonService _comparisonService;
 
     private Mat? _sourceMat;
@@ -58,11 +58,11 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     public TestPipelineViewModel(
         IPcbSegmentationService segmentation,
-        ITemplateRegionService regionService,
+        ITemplateLibraryService libraryService,
         IRegionComparisonService comparisonService)
     {
         _segmentation = segmentation;
-        _regionService = regionService;
+        _libraryService = libraryService;
         _comparisonService = comparisonService;
     }
 
@@ -75,7 +75,6 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         _sourceMat = mat.Clone();
         OnPropertyChanged(nameof(HasSource));
 
-        // Tự động chạy pipeline ngay sau khi nhận ảnh
         _ = RunSegmentationAsync();
     }
 
@@ -97,7 +96,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>
-    /// Chạy pipeline: cắt bo mạch → hiển thị → so sánh vùng với mẫu.
+    /// Chạy pipeline: cắt bo mạch → hiển thị → so sánh vùng với thư viện mẫu.
     /// </summary>
     public async Task RunSegmentationAsync()
     {
@@ -126,13 +125,11 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            // Hiển thị ảnh bo mạch đã cắt
             var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(newBoard);
             bitmap.Freeze();
             ProcessedImageReady?.Invoke(bitmap);
 
-            // So sánh với ảnh mẫu nếu có
-            await CompareWithTemplateAsync(newBoard);
+            await CompareWithTemplatesAsync(newBoard);
         }
         catch (Exception ex)
         {
@@ -147,27 +144,88 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>
-    /// Tải ảnh mẫu và danh sách vùng, sau đó so sánh với bo mạch mới.
+    /// Duyệt thư viện: gặp mẫu đạt đủ vùng thì dừng; không thì chọn mẫu có TB% cao nhất.
     /// </summary>
-    private async Task CompareWithTemplateAsync(Mat newBoard)
+    private async Task CompareWithTemplatesAsync(Mat newBoard)
     {
-        var regions = _regionService.Load();
-        if (regions.Count == 0)
-        {
-            StatusText = $"Bo mạch đã cắt. Chưa có vùng mẫu để so sánh.";
-            return;
-        }
-
-        using var templateBoard = await Task.Run(() => _regionService.LoadBoardImage());
-        if (templateBoard is null)
-        {
-            StatusText = "Bo mạch đã cắt. Chưa có ảnh mẫu để so sánh.";
-            return;
-        }
-
         using var newBoardClone = newBoard.Clone();
-        var results = await Task.Run(() =>
-            _comparisonService.Compare(templateBoard, newBoardClone, regions));
+
+        var match = await Task.Run(() => FindTemplateMatch(newBoardClone));
+
+        if (match is null)
+        {
+            StatusText = "Bo mạch đã cắt. Chưa có mẫu nào trong thư viện (hoặc thiếu vùng/ảnh).";
+            return;
+        }
+
+        ApplyRegionResultsToGrids(match.RegionResults);
+        PublishAnnotatedImage(newBoard, match.RegionResults);
+
+        StatusText = match.IsFullMatch
+            ? $"Đạt mẫu \"{match.TemplateName}\" — {match.MatchedCount}/{match.TotalCount} vùng giống."
+            : $"Không đạt mẫu nào. Gần nhất: \"{match.TemplateName}\" (TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} giống).";
+    }
+
+    private TemplateMatchResult? FindTemplateMatch(Mat newBoard)
+    {
+        TemplateMatchResult? bestByAverage = null;
+        var libraryEntries = _libraryService.LoadAll();
+
+        foreach (var entry in libraryEntries)
+        {
+            if (entry.Regions.Count == 0)
+                continue;
+
+            using var templateBoard = _libraryService.LoadBoardImage(entry.BoardImagePath);
+            if (templateBoard is null)
+                continue;
+
+            var results = _comparisonService.Compare(templateBoard, newBoard, entry.Regions);
+            var match = BuildMatchResult(entry.Name, results);
+
+            if (match.IsFullMatch)
+                return match;
+
+            if (bestByAverage is null || match.AverageSimilarity > bestByAverage.AverageSimilarity)
+                bestByAverage = match;
+        }
+
+        return bestByAverage;
+    }
+
+    private static TemplateMatchResult BuildMatchResult(
+        string templateName,
+        IReadOnlyList<RegionComparisonResult> results)
+    {
+        var numbered = results
+            .Select((r, i) => new RegionComparisonResult
+            {
+                Stt = i + 1,
+                Name = r.Name,
+                Similarity = r.Similarity,
+                BoardRect = r.BoardRect
+            })
+            .ToList();
+
+        int matched = numbered.Count(r => r.IsMatch);
+        double avg = numbered.Count > 0
+            ? numbered.Average(r => r.Similarity)
+            : 0;
+
+        return new TemplateMatchResult
+        {
+            TemplateName = templateName,
+            MatchedCount = matched,
+            DifferentCount = numbered.Count - matched,
+            AverageSimilarity = avg,
+            RegionResults = numbered
+        };
+    }
+
+    private void ApplyRegionResultsToGrids(IReadOnlyList<RegionComparisonResult> results)
+    {
+        MatchedRegions.Clear();
+        DifferentRegions.Clear();
 
         foreach (var r in results)
         {
@@ -176,19 +234,18 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             else
                 DifferentRegions.Add(r);
         }
-
-        // Vẽ các vùng so sánh lên ảnh bo mạch (xanh = giống, đỏ = khác)
-        var annotated = DrawAnnotations(newBoard, results);
-        if (annotated is not null)
-            AnnotatedImageReady?.Invoke(annotated);
-
-        StatusText = $"Hoàn thành. Giống: {MatchedRegions.Count} | Khác: {DifferentRegions.Count} / {results.Count} vùng.";
     }
 
     /// <summary>
     /// Vẽ hình chữ nhật lên ảnh bo mạch: xanh lá = giống, đỏ = khác.
-    /// Trả về BitmapSource đã Freeze, hoặc null nếu lỗi.
     /// </summary>
+    public void PublishAnnotatedImage(Mat board, IReadOnlyList<RegionComparisonResult> results)
+    {
+        var annotated = DrawAnnotations(board, results);
+        if (annotated is not null)
+            AnnotatedImageReady?.Invoke(annotated);
+    }
+
     private static System.Windows.Media.Imaging.BitmapSource? DrawAnnotations(
         Mat board, IReadOnlyList<RegionComparisonResult> results)
     {
@@ -205,7 +262,6 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
                 var color = r.IsMatch ? green : red;
                 Cv2.Rectangle(canvas, r.BoardRect, color, thickness);
 
-                // Vẽ nhãn tên vùng phía trên hình chữ nhật
                 var labelPos = new Point(r.BoardRect.X + 2, r.BoardRect.Y - 4);
                 if (labelPos.Y < 10) labelPos.Y = r.BoardRect.Y + 12;
                 Cv2.PutText(canvas, r.Name, labelPos,
@@ -222,17 +278,24 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    // ──── INotifyPropertyChanged ──────────────────────────────────────────────
-
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-
-    // ──── IDisposable ─────────────────────────────────────────────────────────
 
     public void Dispose()
     {
         if (_disposed) return;
         _sourceMat?.Dispose();
         _disposed = true;
+    }
+
+    private sealed class TemplateMatchResult
+    {
+        public string TemplateName { get; init; } = string.Empty;
+        public int MatchedCount { get; init; }
+        public int DifferentCount { get; init; }
+        public int TotalCount => MatchedCount + DifferentCount;
+        public bool IsFullMatch => TotalCount > 0 && DifferentCount == 0;
+        public double AverageSimilarity { get; init; }
+        public IReadOnlyList<RegionComparisonResult> RegionResults { get; init; } = [];
     }
 }
