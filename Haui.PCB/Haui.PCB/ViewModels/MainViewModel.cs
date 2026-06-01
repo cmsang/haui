@@ -132,7 +132,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     public int LastFrameWidth => _lastFrameWidth;
     public int LastFrameHeight => _lastFrameHeight;
 
-    public string FiducialTemplateFolder => _fiducialTemplateService.GetTemplateFolder();
     public bool HasFiducialTemplates => _fiducialTemplateService.HasTemplates();
 
     public MainViewModel()
@@ -397,23 +396,8 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         FiducialTemplateFrameCaptured?.Invoke(closedImage);
     }
 
-    public void SetFiducialTemplateFolder(string folderPath)
-    {
-        if (string.IsNullOrWhiteSpace(folderPath))
-        {
-            StatusText = "Thư mục mẫu lỗ tròn không hợp lệ.";
-            return;
-        }
-
-        _fiducialTemplateService.SetTemplateFolder(folderPath);
-        OnPropertyChanged(nameof(FiducialTemplateFolder));
-        OnPropertyChanged(nameof(HasFiducialTemplates));
-        StatusText = $"Thư mục mẫu lỗ tròn: {FiducialTemplateFolder}";
-    }
-
     public void RefreshFiducialTemplateStatus()
     {
-        OnPropertyChanged(nameof(FiducialTemplateFolder));
         OnPropertyChanged(nameof(HasFiducialTemplates));
     }
 

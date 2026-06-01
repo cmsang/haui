@@ -33,7 +33,7 @@ public sealed class CompositeTemplateMatchService : ICompositeTemplateMatchServi
             return null;
 
         var allowedOrder = ComponentTemplateRegionNames.LoadAllowedNamesInOrder();
-        var matchThreshold = ComponentTemplateSettingsStore.LoadMatchThresholdPercent();
+        var matchThreshold = AppSettingsStore.LoadMatchThresholdPercent();
         var boardCache = new Dictionary<string, Mat>(StringComparer.OrdinalIgnoreCase);
 
         try

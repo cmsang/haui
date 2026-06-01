@@ -103,7 +103,7 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
     public TemplateViewerViewModel(ITemplateLibraryService libraryService)
     {
         _libraryService = libraryService;
-        _requiredRegionCount = ComponentTemplateSettingsStore.Load().RequiredRegionCount;
+        _requiredRegionCount = AppSettingsStore.LoadComponentTemplates().RequiredRegionCount;
         if (_requiredRegionCount < 1)
             _requiredRegionCount = ComponentTemplateSettings.DefaultRequiredRegionCount;
     }

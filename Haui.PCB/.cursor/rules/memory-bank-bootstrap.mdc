@@ -23,7 +23,7 @@ Do not duplicate rules here — follow `.github/copilot-instructions.md` (SOLID,
 
 ## Critical gotcha
 
-**Test / Create / Viewer** share one template library folder (`*.png` + `*_regions.json` per sample). Configure via `component_template_settings.json`.
+**Test / Create / Viewer** share one template library folder (`*.png` + `*_regions.json` per sample). Configure via `appsettings.json` → `ComponentTemplates`.
 
 ## After meaningful tasks
 

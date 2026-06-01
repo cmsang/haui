@@ -1,7 +1,7 @@
 namespace Haui.PCB.Models;
 
 /// <summary>
-/// Cấu hình thư mục và ngưỡng nhận diện 4 lỗ tròn định vị PCB.
+/// Cấu hình mẫu lỗ định vị — section <c>FiducialHoles</c> trong <c>appsettings.json</c>.
 /// </summary>
 public sealed class FiducialHoleSettings
 {
@@ -9,6 +9,7 @@ public sealed class FiducialHoleSettings
     public const double DefaultMinMatchScore = 0.55;
     public const int DefaultMaxMatchDimension = 1280;
 
+    /// <summary>Thư mục lưu <c>hole_*.png</c> — chỉnh trong <c>appsettings.json</c> → FiducialHoles.</summary>
     public string TemplateFolder { get; set; } = DefaultTemplateFolder;
     public double MinMatchScore { get; set; } = DefaultMinMatchScore;
 
