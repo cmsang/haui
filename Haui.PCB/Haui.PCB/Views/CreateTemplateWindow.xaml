@@ -145,7 +145,6 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <StackPanel Grid.Row="0" Margin="0,0,0,6">
@@ -217,33 +216,6 @@
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
-
-                    <StackPanel Grid.Row="2" Margin="0,10,0,0">
-                        <TextBlock Text="Thư mục lưu dữ liệu"
-                                   FontWeight="SemiBold"
-                                   FontSize="12"
-                                   Margin="0,0,0,6"/>
-                        <CheckBox Content="Dùng thư mục tùy chỉnh"
-                                  IsChecked="{Binding UseCustomDataFolder, Mode=TwoWay}"
-                                  FontSize="12"
-                                  Margin="0,0,0,6"/>
-                        <TextBox Text="{Binding DataFolder, Mode=OneWay}"
-                                 IsReadOnly="True"
-                                 Height="26"
-                                 VerticalContentAlignment="Center"
-                                 FontSize="11"
-                                 TextWrapping="Wrap"
-                                 Margin="0,0,0,6"/>
-                        <Button Content="Chọn thư mục..."
-                                Height="28"
-                                FontSize="12"
-                                Click="BtnBrowseDataFolder_Click"/>
-                        <TextBlock Text="Mặc định: templates/ cạnh app. Khi bật tùy chỉnh, lưu thư viện và mẫu Test vào thư mục đã chọn."
-                                   TextWrapping="Wrap"
-                                   Foreground="#666666"
-                                   FontSize="10"
-                                   Margin="0,6,0,0"/>
-                    </StackPanel>
                 </Grid>
             </Border>
         </Grid>

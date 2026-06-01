@@ -17,32 +17,12 @@ public class TemplateLibraryService : ITemplateLibraryService
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public string GetLibraryFolder()
-    {
-        var settings = AppSettingsStore.LoadComponentTemplates();
-        return ResolveLibraryFolder(settings);
-    }
-
-    public void ConfigureStorage(bool useCustomFolder, string? customFolder)
-    {
-        var settings = AppSettingsStore.LoadComponentTemplates();
-        settings.UseCustomFolder = useCustomFolder;
-        settings.CustomFolder = customFolder?.Trim() ?? string.Empty;
-        AppSettingsStore.SaveComponentTemplates(settings);
-    }
-
-    public (bool UseCustom, string Folder) GetStorageConfiguration()
-    {
-        var settings = AppSettingsStore.LoadComponentTemplates();
-        var folder = settings.UseCustomFolder && !string.IsNullOrWhiteSpace(settings.CustomFolder)
-            ? settings.CustomFolder
-            : ComponentTemplateSettings.DefaultLibraryFolder;
-        return (settings.UseCustomFolder, folder);
-    }
+        => ResolveLibraryFolder(AppSettingsStore.LoadComponentTemplates());
 
     private static string ResolveLibraryFolder(ComponentTemplateSettings settings)
     {
-        if (settings.UseCustomFolder && !string.IsNullOrWhiteSpace(settings.CustomFolder))
-            return settings.CustomFolder;
+        if (!string.IsNullOrWhiteSpace(settings.CustomFolder))
+            return settings.CustomFolder.Trim();
         return ComponentTemplateSettings.DefaultLibraryFolder;
     }
 

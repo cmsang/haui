@@ -26,8 +26,7 @@ Runtime **working directory** = process CWD (typically `bin/Debug/net10.0-window
 | Path | Written by | Purpose |
 |------|------------|---------|
 | `last_region.json` | `MainViewModel` | Last camera ROI (pixel rect) |
-| `templates/*.png` (hoặc thư mục tùy chỉnh) | `TemplateLibraryService` | Ảnh bo mẫu (quét thư mục) |
-| `templates/*_regions.json` | `TemplateLibraryService` | Tên hiển thị + vùng linh kiện (`TemplateRegionsDocument`) |
+| `ComponentTemplates.CustomFolder` (`appsettings.json`) | `TemplateLibraryService` | Thư mục thư viện mẫu (`*.png` + `*_regions.json`; rỗng → `templates/`) |
 | `appsettings.json` | `AppSettingsStore` | `ComponentTemplates`, `FiducialHoles`, `CameraBasler` (thay 3 file cũ) |
 | `fiducial_holes/hole_*.png` | `FiducialHoleTemplateService` | Thư viện mẫu lỗ (nhiều ảnh, cùng hình dạng) |
 

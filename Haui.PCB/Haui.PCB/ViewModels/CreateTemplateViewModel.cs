@@ -100,8 +100,6 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     private Mat? _boardImage;
     private BitmapSource? _boardBitmap;
     private string _statusText = string.Empty;
-    private bool _useCustomDataFolder;
-    private string _dataFolder = ComponentTemplateSettings.DefaultLibraryFolder;
     private readonly HashSet<string> _allowedRegionNames;
     private readonly string _allowedNamesHint;
     private bool _disposed;
@@ -121,28 +119,6 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _statusText;
         private set { _statusText = value; OnPropertyChanged(); }
-    }
-
-    /// <summary>Bật lưu vào <see cref="DataFolder"/> thay vì mặc định.</summary>
-    public bool UseCustomDataFolder
-    {
-        get => _useCustomDataFolder;
-        set
-        {
-            if (_useCustomDataFolder == value) return;
-            _useCustomDataFolder = value;
-            if (!value)
-                DataFolder = ComponentTemplateSettings.DefaultLibraryFolder;
-            OnPropertyChanged();
-            PersistStorageConfiguration();
-        }
-    }
-
-    /// <summary>Thư mục hiển thị (mặc định <c>templates</c> hoặc đường dẫn tùy chọn).</summary>
-    public string DataFolder
-    {
-        get => _dataFolder;
-        private set { _dataFolder = value; OnPropertyChanged(); }
     }
 
     /// <summary>Kích thước ảnh bo mạch (để View tính tỉ lệ vùng chọn).</summary>
@@ -249,7 +225,6 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         _allowedNamesHint = ComponentTemplateRegionNames.FormatAllowedNamesHint(_allowedRegionNames);
 
         Regions.CollectionChanged += OnRegionsCollectionChanged;
-        LoadStorageConfiguration();
     }
 
     private void OnRegionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -298,27 +273,6 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(BoardHeight));
         OnPropertyChanged(nameof(CanRotateBoard));
     }
-
-    /// <summary>Chọn thư mục lưu tùy chỉnh (gọi từ View sau hộp thoại chọn thư mục).</summary>
-    public void SetCustomDataFolder(string folderPath)
-    {
-        if (string.IsNullOrWhiteSpace(folderPath)) return;
-        DataFolder = folderPath.Trim();
-        UseCustomDataFolder = true;
-    }
-
-    private void LoadStorageConfiguration()
-    {
-        var (useCustom, folder) = _libraryService.GetStorageConfiguration();
-        _useCustomDataFolder = useCustom;
-        _dataFolder = folder;
-
-        OnPropertyChanged(nameof(UseCustomDataFolder));
-        OnPropertyChanged(nameof(DataFolder));
-    }
-
-    private void PersistStorageConfiguration()
-        => _libraryService.ConfigureStorage(UseCustomDataFolder, DataFolder);
 
     // ──── Public API ──────────────────────────────────────────────────────────
 
@@ -464,8 +418,6 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 
     private void SaveRegionsCore()
     {
-        PersistStorageConfiguration();
-
         if (_boardImage is null)
             return;
 

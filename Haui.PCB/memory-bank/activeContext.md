@@ -6,6 +6,7 @@
 
 ## Recent change
 
+- **Thư viện mẫu:** bỏ `UseCustomFolder` và UI chọn thư mục trên Create; luôn dùng `ComponentTemplates.CustomFolder` trong `appsettings.json` (rỗng → `templates/`)
 - **Cấu hình:** gộp `appsettings.json` (ComponentTemplates, FiducialHoles, CameraBasler); migrate tự động từ 3 file cũ nếu còn
 - **Mẫu lỗ định vị:** thư mục qua `appsettings.json` → FiducialHoles; đã bỏ chọn thư mục trên MainWindow
 - **Test pipeline:** ngưỡng so khớp `MinMatchSimilarityPercent` trong `component_template_settings.json` (mặc định 80); so khớp tổng hợp theo `AllowedRegionNames`

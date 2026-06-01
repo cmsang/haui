@@ -20,10 +20,7 @@ public sealed class ComponentTemplateSettings
         "C3", "C6", "C5", "D2", "D1", "C1", "LM1", "C4"
     ];
 
-    /// <summary>Bật lưu vào <see cref="CustomFolder"/> thay vì mặc định.</summary>
-    public bool UseCustomFolder { get; set; }
-
-    /// <summary>Thư mục tùy chỉnh (đường dẫn tuyệt đối hoặc tương đối CWD).</summary>
+    /// <summary>Thư mục thư viện mẫu (đường dẫn tuyệt đối hoặc tương đối CWD). Rỗng → <see cref="DefaultLibraryFolder"/>.</summary>
     public string CustomFolder { get; set; } = string.Empty;
 
     /// <summary>Số vùng linh kiện tối thiểu để lưu từ Viewer thư viện.</summary>
