@@ -18,13 +18,26 @@ internal static class ComponentTemplateSettingsStore
             if (!File.Exists(SettingsFileName))
                 return new ComponentTemplateSettings();
             var json = File.ReadAllText(SettingsFileName);
-            return JsonSerializer.Deserialize<ComponentTemplateSettings>(json)
-                   ?? new ComponentTemplateSettings();
+            var settings = JsonSerializer.Deserialize<ComponentTemplateSettings>(json)
+                           ?? new ComponentTemplateSettings();
+            settings.MinMatchSimilarityPercent = NormalizeMatchThreshold(settings.MinMatchSimilarityPercent);
+            return settings;
         }
         catch
         {
             return new ComponentTemplateSettings();
         }
+    }
+
+    /// <summary>Ngưỡng % so khớp vùng (0..100) từ cấu hình.</summary>
+    public static double LoadMatchThresholdPercent()
+        => NormalizeMatchThreshold(Load().MinMatchSimilarityPercent);
+
+    private static double NormalizeMatchThreshold(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+            return ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
+        return Math.Clamp(value, 0, 100);
     }
 
     public static void Save(ComponentTemplateSettings settings)

@@ -25,6 +25,7 @@ public class RegionComparisonService : IRegionComparisonService
         IReadOnlyList<TemplateRegion> regions)
     {
         var results = new List<RegionComparisonResult>(regions.Count);
+        var matchThreshold = ComponentTemplateSettingsStore.LoadMatchThresholdPercent();
 
         foreach (var region in regions)
         {
@@ -40,7 +41,8 @@ public class RegionComparisonService : IRegionComparisonService
             {
                 Name = region.Name,
                 Similarity = Math.Round(similarity * 100.0, 1),
-                BoardRect = new Rect(bx, by, bw, bh)
+                BoardRect = new Rect(bx, by, bw, bh),
+                MatchThresholdPercent = matchThreshold
             });
         }
 

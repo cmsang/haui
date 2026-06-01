@@ -5,7 +5,7 @@ namespace Haui.PCB.Processing;
 
 /// <summary>
 /// So khớp bo mạch test: đọc thư viện, nhóm vùng theo tên, với mỗi tên trong
-/// <c>AllowedRegionNames</c> lấy ứng viên đầu tiên đạt ngưỡng 80%.
+/// <c>AllowedRegionNames</c> lấy ứng viên đầu tiên đạt <c>MinMatchSimilarityPercent</c>.
 /// </summary>
 public interface ICompositeTemplateMatchService
 {
@@ -16,9 +16,11 @@ public interface ICompositeTemplateMatchService
     CompositeTemplateMatchResult? Match(Mat newBoard);
 }
 
-/// <summary>Kết quả so khớp tổng hợp (mỗi tên = ứng viên đầu tiên đạt ngưỡng 80% trong thư viện).</summary>
+/// <summary>Kết quả so khớp tổng hợp (mỗi tên = ứng viên đầu tiên đạt ngưỡng cấu hình trong thư viện).</summary>
 public sealed class CompositeTemplateMatchResult
 {
+    public double MatchThresholdPercent { get; init; } = ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
+
     public IReadOnlyList<RegionComparisonResult> RegionResults { get; init; } = [];
 
     public int MatchedCount => RegionResults.Count(r => r.IsMatch);

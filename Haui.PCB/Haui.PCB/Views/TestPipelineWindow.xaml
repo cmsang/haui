@@ -132,7 +132,7 @@
                             Background="#FFEDED"
                             CornerRadius="4,4,0,0"
                             Padding="8,4">
-                        <TextBlock Text="⚠ Vùng khác nhau (&lt; 80%)"
+                        <TextBlock Text="{Binding DifferentRegionsHeader}"
                                    FontWeight="SemiBold"
                                    Foreground="#D13438" />
                     </Border>
@@ -180,7 +180,7 @@
                             Background="#E8F5E9"
                             CornerRadius="4,4,0,0"
                             Padding="8,4">
-                        <TextBlock Text="✔ Vùng giống nhau (≥ 80%)"
+                        <TextBlock Text="{Binding MatchedRegionsHeader}"
                                    FontWeight="SemiBold"
                                    Foreground="#00752A" />
                     </Border>

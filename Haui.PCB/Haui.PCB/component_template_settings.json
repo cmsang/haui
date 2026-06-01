@@ -1,7 +1,8 @@
 {
-  "UseCustomFolder": false,
-  "CustomFolder": "",
+  "UseCustomFolder": true,
+  "CustomFolder": "../../../../pcb_templates",
   "RequiredRegionCount": 18,
+  "MinMatchSimilarityPercent": 80,
   "AllowedRegionNames": [
     "KF1",
     "KF2",

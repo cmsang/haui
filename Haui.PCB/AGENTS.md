@@ -1,6 +1,6 @@
 # Haui.PCB — Agent Guide
 
-WPF desktop app for **PCB inspection**: camera capture → OpenCV board segmentation → template regions → histogram-based region comparison (80% match threshold).
+WPF desktop app for **PCB inspection**: camera capture → OpenCV board segmentation → template regions → histogram-based region comparison (`MinMatchSimilarityPercent` in config, default 80%).
 
 ## Context files (read first)
 
