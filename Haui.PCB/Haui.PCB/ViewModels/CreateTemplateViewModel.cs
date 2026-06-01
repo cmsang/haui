@@ -133,6 +133,9 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Chỉ cho lưu khi đã có ảnh bo mạch và đủ số vùng theo cấu hình.</summary>
     public bool CanSave => _boardImage is not null && Regions.Count == _requiredRegionCount;
 
+    /// <summary>Cho phép xoay khi đã có ảnh bo mạch.</summary>
+    public bool CanRotateBoard => _boardImage is not null && !_boardImage.Empty();
+
     /// <summary>Hiển thị tiến độ đánh dấu vùng trên UI.</summary>
     public string RegionProgressText =>
         $"Vùng linh kiện: {Regions.Count}/{_requiredRegionCount}";
@@ -230,6 +233,13 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(RegionProgressText));
     }
 
+    private void NotifyBoardChanged()
+    {
+        OnPropertyChanged(nameof(BoardWidth));
+        OnPropertyChanged(nameof(BoardHeight));
+        OnPropertyChanged(nameof(CanRotateBoard));
+    }
+
     /// <summary>Chọn thư mục lưu tùy chỉnh (gọi từ View sau hộp thoại chọn thư mục).</summary>
     public void SetCustomDataFolder(string folderPath)
     {
@@ -280,6 +290,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             ? $"Chế độ chỉnh sửa — đủ {_requiredRegionCount} vùng."
             : $"Chế độ chỉnh sửa — {Regions.Count}/{_requiredRegionCount} vùng (cần đủ {_requiredRegionCount} để lưu).";
         NotifyRegionCountChanged();
+        NotifyBoardChanged();
     }
 
     /// <summary>
@@ -309,6 +320,32 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         StatusText =
             $"Kéo thả trên ảnh để đánh dấu {_requiredRegionCount} vùng linh kiện (0/{_requiredRegionCount}).";
         NotifyRegionCountChanged();
+        NotifyBoardChanged();
+    }
+
+    /// <summary>Xoay ảnh bo mạch 180° và cập nhật tọa độ vùng tương ứng.</summary>
+    public void RotateBoard180()
+    {
+        if (_boardImage is null || _boardImage.Empty())
+            return;
+
+        var rotated = new Mat();
+        Cv2.Rotate(_boardImage, rotated, RotateFlags.Rotate180);
+        _boardImage.Dispose();
+        _boardImage = rotated;
+
+        foreach (var region in Regions)
+        {
+            region.RelX = 1.0 - region.RelX - region.RelWidth;
+            region.RelY = 1.0 - region.RelY - region.RelHeight;
+        }
+
+        var bitmap = BitmapSourceConverter.ToBitmapSource(_boardImage);
+        bitmap.Freeze();
+        _boardBitmap = bitmap;
+        BoardImageReady?.Invoke(bitmap);
+
+        StatusText = RegionCountStatusSuffix("Đã xoay ảnh 180°.");
     }
 
     /// <summary>
