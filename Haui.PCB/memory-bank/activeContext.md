@@ -6,8 +6,9 @@
 
 ## Recent change
 
+- **Test pipeline:** so khớp tổng hợp — nhóm vùng theo tên; mỗi tên trong `AllowedRegionNames` lấy ứng viên đầu tiên > 80% (`CompositeTemplateMatchService`)
 - **Tạo mẫu:** nút «Xoay 180°» cạnh Lưu/Đóng — xoay ảnh bo mạch và cập nhật tọa độ vùng tương đối
-- **Test pipeline:** nếu không mẫu nào đạt đủ vùng → xoay bo mạch 180° → so lại toàn bộ thư viện; hiển thị ảnh xoay + ghi chú trạng thái
+- **Test pipeline:** nếu chưa đạt đủ vùng → xoay bo mạch 180° → so lại; hiển thị ảnh xoay + ghi chú trạng thái
 - **Tạo mẫu:** lưu khi mọi tên vùng thuộc `AllowedRegionNames` trong `component_template_settings.json` (không bắt đủ 18 vùng); Viewer thư viện vẫn dùng `RequiredRegionCount`
 - **Ảnh mẫu linh kiện:** mỗi ảnh trong thư viện có danh sách vùng riêng; tạo mẫu mới không copy vùng từ mẫu active
 - **Tạo mẫu linh kiện:** chỉ thư viện PNG + `*_regions.json` (`component_template_settings.json`); Test/Viewer/Create dùng chung

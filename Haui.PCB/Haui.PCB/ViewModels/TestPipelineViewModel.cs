@@ -14,8 +14,7 @@ namespace Haui.PCB.ViewModels;
 public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IPcbSegmentationService _segmentation;
-    private readonly ITemplateLibraryService _libraryService;
-    private readonly IRegionComparisonService _comparisonService;
+    private readonly ICompositeTemplateMatchService _compositeMatchService;
 
     private Mat? _sourceMat;
     private string _statusText = string.Empty;
@@ -58,12 +57,10 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     public TestPipelineViewModel(
         IPcbSegmentationService segmentation,
-        ITemplateLibraryService libraryService,
-        IRegionComparisonService comparisonService)
+        ICompositeTemplateMatchService compositeMatchService)
     {
         _segmentation = segmentation;
-        _libraryService = libraryService;
-        _comparisonService = comparisonService;
+        _compositeMatchService = compositeMatchService;
     }
 
     // ──── Actions ─────────────────────────────────────────────────────────────
@@ -144,15 +141,15 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>
-    /// Duyệt thư viện: gặp mẫu đạt đủ vùng thì dừng; không thì chọn mẫu có TB% cao nhất.
-    /// Nếu không mẫu nào đạt, xoay bo mạch 180° và so sánh lại toàn bộ thư viện.
+    /// So từng tên trong AllowedRegionNames: lấy ứng viên đầu tiên trên 80% trong nhóm đã phân theo tên.
+    /// Nếu chưa đạt đủ, xoay bo mạch 180° và so lại.
     /// </summary>
     private async Task CompareWithTemplatesAsync(Mat newBoard)
     {
         var match = await Task.Run(() =>
         {
             using var clone = newBoard.Clone();
-            return FindTemplateMatch(clone);
+            return _compositeMatchService.Match(clone);
         });
 
         if (match is null)
@@ -170,7 +167,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             rotatedBoard = new Mat();
             Cv2.Rotate(newBoard, rotatedBoard, RotateFlags.Rotate180);
 
-            var rotatedMatch = await Task.Run(() => FindTemplateMatch(rotatedBoard));
+            var rotatedMatch = await Task.Run(() => _compositeMatchService.Match(rotatedBoard));
 
             if (rotatedMatch is not null
                 && (rotatedMatch.IsFullMatch
@@ -199,66 +196,10 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
         var rotationNote = usedRotation ? " (đã xoay ảnh 180°)" : "";
         StatusText = match.IsFullMatch
-            ? $"Đạt mẫu \"{match.TemplateName}\" — {match.MatchedCount}/{match.TotalCount} vùng giống.{rotationNote}"
-            : $"Không đạt mẫu nào. Gần nhất: \"{match.TemplateName}\" (TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} giống).{rotationNote}";
+            ? $"Đạt — {match.MatchedCount}/{match.TotalCount} vùng giống (ứng viên đầu tiên > 80% mỗi tên).{rotationNote}"
+            : $"Chưa đạt — TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} vùng giống (ứng viên đầu tiên > 80% mỗi tên).{rotationNote}";
 
         rotatedBoard?.Dispose();
-    }
-
-    private TemplateMatchResult? FindTemplateMatch(Mat newBoard)
-    {
-        TemplateMatchResult? bestByAverage = null;
-        var libraryEntries = _libraryService.LoadAll();
-
-        foreach (var entry in libraryEntries)
-        {
-            if (entry.Regions.Count == 0)
-                continue;
-
-            using var templateBoard = _libraryService.LoadBoardImage(entry.BoardImagePath);
-            if (templateBoard is null)
-                continue;
-
-            var results = _comparisonService.Compare(templateBoard, newBoard, entry.Regions);
-            var match = BuildMatchResult(entry.Name, results);
-
-            if (match.IsFullMatch)
-                return match;
-
-            if (bestByAverage is null || match.AverageSimilarity > bestByAverage.AverageSimilarity)
-                bestByAverage = match;
-        }
-
-        return bestByAverage;
-    }
-
-    private static TemplateMatchResult BuildMatchResult(
-        string templateName,
-        IReadOnlyList<RegionComparisonResult> results)
-    {
-        var numbered = results
-            .Select((r, i) => new RegionComparisonResult
-            {
-                Stt = i + 1,
-                Name = r.Name,
-                Similarity = r.Similarity,
-                BoardRect = r.BoardRect
-            })
-            .ToList();
-
-        int matched = numbered.Count(r => r.IsMatch);
-        double avg = numbered.Count > 0
-            ? numbered.Average(r => r.Similarity)
-            : 0;
-
-        return new TemplateMatchResult
-        {
-            TemplateName = templateName,
-            MatchedCount = matched,
-            DifferentCount = numbered.Count - matched,
-            AverageSimilarity = avg,
-            RegionResults = numbered
-        };
     }
 
     private void ApplyRegionResultsToGrids(IReadOnlyList<RegionComparisonResult> results)
@@ -327,14 +268,4 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         _disposed = true;
     }
 
-    private sealed class TemplateMatchResult
-    {
-        public string TemplateName { get; init; } = string.Empty;
-        public int MatchedCount { get; init; }
-        public int DifferentCount { get; init; }
-        public int TotalCount => MatchedCount + DifferentCount;
-        public bool IsFullMatch => TotalCount > 0 && DifferentCount == 0;
-        public double AverageSimilarity { get; init; }
-        public IReadOnlyList<RegionComparisonResult> RegionResults { get; init; } = [];
-    }
 }
