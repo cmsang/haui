@@ -20,6 +20,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     private string _statusText = string.Empty;
     private bool _isBusy;
     private bool _disposed;
+    private double _matchThresholdPercent = ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
 
     // ──── Sự kiện ────────────────────────────────────────────────────────────
 
@@ -47,10 +48,19 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasSource => _sourceMat is not null && !_sourceMat.Empty();
 
-    /// <summary>Các vùng đạt ngưỡng tương đồng >= 80% (giống nhau).</summary>
+    /// <summary>Ngưỡng % từ <c>component_template_settings.json</c> (cập nhật mỗi lần so).</summary>
+    public double MatchThresholdPercent => _matchThresholdPercent;
+
+    public string DifferentRegionsHeader =>
+        $"⚠ Vùng khác nhau (< {FormatThresholdPercent(_matchThresholdPercent)})";
+
+    public string MatchedRegionsHeader =>
+        $"✔ Vùng giống nhau (≥ {FormatThresholdPercent(_matchThresholdPercent)})";
+
+    /// <summary>Các vùng đạt ngưỡng cấu hình (giống nhau).</summary>
     public ObservableCollection<RegionComparisonResult> MatchedRegions { get; } = [];
 
-    /// <summary>Các vùng có độ tương đồng dưới 80% (khác nhau).</summary>
+    /// <summary>Các vùng dưới ngưỡng cấu hình (khác nhau).</summary>
     public ObservableCollection<RegionComparisonResult> DifferentRegions { get; } = [];
 
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
@@ -61,6 +71,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     {
         _segmentation = segmentation;
         _compositeMatchService = compositeMatchService;
+        RefreshMatchThresholdFromConfig();
     }
 
     // ──── Actions ─────────────────────────────────────────────────────────────
@@ -141,7 +152,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>
-    /// So từng tên trong AllowedRegionNames: lấy ứng viên đầu tiên trên 80% trong nhóm đã phân theo tên.
+    /// So từng tên trong AllowedRegionNames: lấy ứng viên đầu tiên đạt MinMatchSimilarityPercent trong nhóm.
     /// Nếu chưa đạt đủ, xoay bo mạch 180° và so lại.
     /// </summary>
     private async Task CompareWithTemplatesAsync(Mat newBoard)
@@ -154,9 +165,12 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
         if (match is null)
         {
+            RefreshMatchThresholdFromConfig();
             StatusText = "Bo mạch đã cắt. Chưa có mẫu nào trong thư viện (hoặc thiếu vùng/ảnh).";
             return;
         }
+
+        RefreshMatchThreshold(match.MatchThresholdPercent);
 
         Mat boardForDisplay = newBoard;
         Mat? rotatedBoard = null;
@@ -194,13 +208,31 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         ApplyRegionResultsToGrids(match.RegionResults);
         PublishAnnotatedImage(boardForDisplay, match.RegionResults);
 
+        var thresholdText = FormatThresholdPercent(match.MatchThresholdPercent);
         var rotationNote = usedRotation ? " (đã xoay ảnh 180°)" : "";
         StatusText = match.IsFullMatch
-            ? $"Đạt — {match.MatchedCount}/{match.TotalCount} vùng giống (ứng viên đầu tiên > 80% mỗi tên).{rotationNote}"
-            : $"Chưa đạt — TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} vùng giống (ứng viên đầu tiên > 80% mỗi tên).{rotationNote}";
+            ? $"Đạt — {match.MatchedCount}/{match.TotalCount} vùng giống (≥ {thresholdText} mỗi tên).{rotationNote}"
+            : $"Chưa đạt — TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} vùng giống (ngưỡng {thresholdText}).{rotationNote}";
 
         rotatedBoard?.Dispose();
     }
+
+    private void RefreshMatchThresholdFromConfig()
+        => RefreshMatchThreshold(ComponentTemplateSettingsStore.LoadMatchThresholdPercent());
+
+    private void RefreshMatchThreshold(double percent)
+    {
+        if (Math.Abs(_matchThresholdPercent - percent) < 0.001)
+            return;
+
+        _matchThresholdPercent = percent;
+        OnPropertyChanged(nameof(MatchThresholdPercent));
+        OnPropertyChanged(nameof(DifferentRegionsHeader));
+        OnPropertyChanged(nameof(MatchedRegionsHeader));
+    }
+
+    private static string FormatThresholdPercent(double percent)
+        => percent % 1 == 0 ? $"{percent:F0}%" : $"{percent:F1}%";
 
     private void ApplyRegionResultsToGrids(IReadOnlyList<RegionComparisonResult> results)
     {

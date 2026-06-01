@@ -6,7 +6,7 @@
 
 ## Recent change
 
-- **Test pipeline:** so khớp tổng hợp — nhóm vùng theo tên; mỗi tên trong `AllowedRegionNames` lấy ứng viên đầu tiên > 80% (`CompositeTemplateMatchService`)
+- **Test pipeline:** ngưỡng so khớp `MinMatchSimilarityPercent` trong `component_template_settings.json` (mặc định 80); so khớp tổng hợp theo `AllowedRegionNames`
 - **Tạo mẫu:** nút «Xoay 180°» cạnh Lưu/Đóng — xoay ảnh bo mạch và cập nhật tọa độ vùng tương đối
 - **Test pipeline:** nếu chưa đạt đủ vùng → xoay bo mạch 180° → so lại; hiển thị ảnh xoay + ghi chú trạng thái
 - **Tạo mẫu:** lưu khi mọi tên vùng thuộc `AllowedRegionNames` trong `component_template_settings.json` (không bắt đủ 18 vùng); Viewer thư viện vẫn dùng `RequiredRegionCount`

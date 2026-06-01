@@ -5,7 +5,8 @@ namespace Haui.PCB.Processing;
 
 /// <summary>
 /// Đọc toàn bộ thư viện mẫu, phân nhóm vùng theo tên, rồi với mỗi tên trong
-/// <see cref="ComponentTemplateSettings.AllowedRegionNames"/> lấy ứng viên đầu tiên đạt ngưỡng 80%.
+/// <see cref="ComponentTemplateSettings.AllowedRegionNames"/> lấy ứng viên đầu tiên đạt
+/// <see cref="ComponentTemplateSettings.MinMatchSimilarityPercent"/>.
 /// </summary>
 public sealed class CompositeTemplateMatchService : ICompositeTemplateMatchService
 {
@@ -32,6 +33,7 @@ public sealed class CompositeTemplateMatchService : ICompositeTemplateMatchServi
             return null;
 
         var allowedOrder = ComponentTemplateRegionNames.LoadAllowedNamesInOrder();
+        var matchThreshold = ComponentTemplateSettingsStore.LoadMatchThresholdPercent();
         var boardCache = new Dictionary<string, Mat>(StringComparer.OrdinalIgnoreCase);
 
         try
@@ -77,14 +79,19 @@ public sealed class CompositeTemplateMatchService : ICompositeTemplateMatchServi
                     Stt = stt++,
                     Name = name,
                     Similarity = picked.Similarity,
-                    BoardRect = picked.BoardRect
+                    BoardRect = picked.BoardRect,
+                    MatchThresholdPercent = picked.MatchThresholdPercent
                 });
             }
 
             if (results.Count == 0)
                 return null;
 
-            return new CompositeTemplateMatchResult { RegionResults = results };
+            return new CompositeTemplateMatchResult
+            {
+                RegionResults = results,
+                MatchThresholdPercent = matchThreshold
+            };
         }
         finally
         {

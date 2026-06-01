@@ -19,8 +19,11 @@ public class RegionComparisonResult
     /// <summary>Hiển thị phần trăm.</summary>
     public string SimilarityText => $"{Similarity:F1}%";
 
-    /// <summary>True nếu độ tương đồng >= 80%.</summary>
-    public bool IsMatch => Similarity >= 80.0;
+    /// <summary>Ngưỡng % từ <c>component_template_settings.json</c> khi tạo kết quả.</summary>
+    public double MatchThresholdPercent { get; init; } = ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
+
+    /// <summary>True nếu độ tương đồng đạt ngưỡng cấu hình.</summary>
+    public bool IsMatch => Similarity >= MatchThresholdPercent;
 
     /// <summary>Tọa độ tuyệt đối (pixel) của vùng trên ảnh bo mạch mới.</summary>
     public Rect BoardRect { get; init; }
