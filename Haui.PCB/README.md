@@ -22,7 +22,7 @@ Windows WPF application for **PCB board inspection** using a Basler industrial c
 
 - Default SDK path: `C:\Program Files\Basler\pylon`
 - Build targets **x64** and references `Basler.Pylon.dll` from pylon Development folder
-- Recommended parameters: `Haui.PCB/camera_basler_defaults.json`
+- Recommended parameters: `Haui.PCB/appsettings.json` → `CameraBasler`
 
 ## Build and run
 

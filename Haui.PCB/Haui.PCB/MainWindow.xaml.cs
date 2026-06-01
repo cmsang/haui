@@ -433,25 +433,9 @@ public partial class MainWindow : System.Windows.Window
         }
     }
 
-    private void BtnBrowseFiducialFolder_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFolderDialog
-        {
-            Title = "Chọn thư mục lưu mẫu 4 lỗ tròn",
-            InitialDirectory = _viewModel.FiducialTemplateFolder
-        };
-
-        if (dialog.ShowDialog() != true)
-            return;
-
-        _viewModel.SetFiducialTemplateFolder(dialog.FolderName);
-        UpdateFiducialTemplateUi();
-    }
-
     private void UpdateFiducialTemplateUi()
     {
         _viewModel.RefreshFiducialTemplateStatus();
-        FiducialFolderTextBox.Text = _viewModel.FiducialTemplateFolder;
         FiducialStatusText.Text = _viewModel.HasFiducialTemplates
             ? $"Đã có {_fiducialTemplateService.ListTemplateFileNames().Count} mẫu lỗ — pipeline so khớp tất cả trên ảnh Close."
             : "Chưa có mẫu lỗ — pipeline dùng contour như trước.";

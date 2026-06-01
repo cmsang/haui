@@ -48,7 +48,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasSource => _sourceMat is not null && !_sourceMat.Empty();
 
-    /// <summary>Ngưỡng % từ <c>component_template_settings.json</c> (cập nhật mỗi lần so).</summary>
+    /// <summary>Ngưỡng % từ <c>appsettings.json</c> (cập nhật mỗi lần so).</summary>
     public double MatchThresholdPercent => _matchThresholdPercent;
 
     public string DifferentRegionsHeader =>
@@ -218,7 +218,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private void RefreshMatchThresholdFromConfig()
-        => RefreshMatchThreshold(ComponentTemplateSettingsStore.LoadMatchThresholdPercent());
+        => RefreshMatchThreshold(AppSettingsStore.LoadMatchThresholdPercent());
 
     private void RefreshMatchThreshold(double percent)
     {

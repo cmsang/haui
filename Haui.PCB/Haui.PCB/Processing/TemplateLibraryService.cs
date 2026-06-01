@@ -18,21 +18,21 @@ public class TemplateLibraryService : ITemplateLibraryService
 
     public string GetLibraryFolder()
     {
-        var settings = ComponentTemplateSettingsStore.Load();
+        var settings = AppSettingsStore.LoadComponentTemplates();
         return ResolveLibraryFolder(settings);
     }
 
     public void ConfigureStorage(bool useCustomFolder, string? customFolder)
     {
-        var settings = ComponentTemplateSettingsStore.Load();
+        var settings = AppSettingsStore.LoadComponentTemplates();
         settings.UseCustomFolder = useCustomFolder;
         settings.CustomFolder = customFolder?.Trim() ?? string.Empty;
-        ComponentTemplateSettingsStore.Save(settings);
+        AppSettingsStore.SaveComponentTemplates(settings);
     }
 
     public (bool UseCustom, string Folder) GetStorageConfiguration()
     {
-        var settings = ComponentTemplateSettingsStore.Load();
+        var settings = AppSettingsStore.LoadComponentTemplates();
         var folder = settings.UseCustomFolder && !string.IsNullOrWhiteSpace(settings.CustomFolder)
             ? settings.CustomFolder
             : ComponentTemplateSettings.DefaultLibraryFolder;

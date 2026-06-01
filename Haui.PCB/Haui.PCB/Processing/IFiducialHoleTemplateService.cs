@@ -11,7 +11,6 @@ public interface IFiducialHoleTemplateService
     FiducialHoleSettings LoadSettings();
     void SaveSettings(FiducialHoleSettings settings);
     string GetTemplateFolder();
-    void SetTemplateFolder(string folderPath);
 
     /// <summary>Đã có ít nhất một file mẫu trong thư mục.</summary>
     bool HasTemplates();

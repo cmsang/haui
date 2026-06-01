@@ -25,7 +25,7 @@ public class RegionComparisonService : IRegionComparisonService
         IReadOnlyList<TemplateRegion> regions)
     {
         var results = new List<RegionComparisonResult>(regions.Count);
-        var matchThreshold = ComponentTemplateSettingsStore.LoadMatchThresholdPercent();
+        var matchThreshold = AppSettingsStore.LoadMatchThresholdPercent();
 
         foreach (var region in regions)
         {

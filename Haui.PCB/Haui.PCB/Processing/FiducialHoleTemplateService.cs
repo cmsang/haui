@@ -1,5 +1,4 @@
 using System.IO;
-using System.Text.Json;
 using Haui.PCB.Models;
 using OpenCvSharp;
 
@@ -10,7 +9,6 @@ namespace Haui.PCB.Processing;
 /// </summary>
 public class FiducialHoleTemplateService : IFiducialHoleTemplateService
 {
-    private const string SettingsFileName = "fiducial_settings.json";
     private const string TemplateSearchPattern = "hole_*.png";
 
     /// <summary>Số lỗ định vị cần tìm trên bo mạch (không phụ thuộc số file mẫu).</summary>
@@ -20,29 +18,9 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
     private string? _cachedFolder;
     private bool _cacheValid;
 
-    public FiducialHoleSettings LoadSettings()
-    {
-        try
-        {
-            if (!File.Exists(SettingsFileName)) return new FiducialHoleSettings();
-            var json = File.ReadAllText(SettingsFileName);
-            return JsonSerializer.Deserialize<FiducialHoleSettings>(json) ?? new FiducialHoleSettings();
-        }
-        catch
-        {
-            return new FiducialHoleSettings();
-        }
-    }
+    public FiducialHoleSettings LoadSettings() => AppSettingsStore.LoadFiducialHoles();
 
-    public void SaveSettings(FiducialHoleSettings settings)
-    {
-        try
-        {
-            var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(SettingsFileName, json);
-        }
-        catch { /* bỏ qua lỗi ghi file */ }
-    }
+    public void SaveSettings(FiducialHoleSettings settings) => AppSettingsStore.SaveFiducialHoles(settings);
 
     public string GetTemplateFolder()
     {
@@ -50,14 +28,6 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
         return string.IsNullOrWhiteSpace(settings.TemplateFolder)
             ? FiducialHoleSettings.DefaultTemplateFolder
             : settings.TemplateFolder;
-    }
-
-    public void SetTemplateFolder(string folderPath)
-    {
-        var settings = LoadSettings();
-        settings.TemplateFolder = folderPath;
-        SaveSettings(settings);
-        InvalidateCache();
     }
 
     public bool HasTemplates()

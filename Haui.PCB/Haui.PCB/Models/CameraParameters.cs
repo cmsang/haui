@@ -1,7 +1,7 @@
 namespace Haui.PCB.Models;
 
 /// <summary>
-/// Tham số camera Basler hiển thị và chỉnh trên UI chính.
+/// Tham số camera Basler — section <c>CameraBasler</c> trong <c>appsettings.json</c>; UI chính có thể chỉnh tạm thời.
 /// </summary>
 public class CameraParameters
 {

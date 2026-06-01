@@ -29,7 +29,7 @@ public interface ITemplateLibraryService
     /// <summary>Thư mục thư viện đang dùng (mặc định <c>templates/</c> hoặc thư mục tùy chỉnh).</summary>
     string GetLibraryFolder();
 
-    /// <summary>Cấu hình lưu thư viện — ghi <c>component_template_settings.json</c>.</summary>
+    /// <summary>Cấu hình lưu thư viện — ghi <c>appsettings.json</c> → ComponentTemplates.</summary>
     void ConfigureStorage(bool useCustomFolder, string? customFolder);
 
     /// <summary>Đọc cấu hình lưu hiện tại.</summary>

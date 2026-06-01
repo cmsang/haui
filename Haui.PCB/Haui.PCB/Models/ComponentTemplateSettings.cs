@@ -1,7 +1,7 @@
 namespace Haui.PCB.Models;
 
 /// <summary>
-/// Cấu hình thư mục lưu mẫu linh kiện (thư viện + mẫu active cho Test).
+/// Cấu hình thư viện mẫu linh kiện — section <c>ComponentTemplates</c> trong <c>appsettings.json</c>.
 /// </summary>
 public sealed class ComponentTemplateSettings
 {

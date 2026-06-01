@@ -2,16 +2,16 @@ using Haui.PCB.Models;
 
 namespace Haui.PCB.Processing;
 
-/// <summary>Kiểm tra tên vùng mẫu theo <c>component_template_settings.json</c>.</summary>
+/// <summary>Kiểm tra tên vùng mẫu theo <c>appsettings.json</c> → ComponentTemplates.</summary>
 internal static class ComponentTemplateRegionNames
 {
     public static HashSet<string> LoadAllowedNames()
         => LoadAllowedNamesInOrder().ToHashSet(StringComparer.Ordinal);
 
-    /// <summary>Thứ tự như trong <c>component_template_settings.json</c>.</summary>
+    /// <summary>Thứ tự như trong <c>appsettings.json</c> → AllowedRegionNames.</summary>
     public static IReadOnlyList<string> LoadAllowedNamesInOrder()
     {
-        var settings = ComponentTemplateSettingsStore.Load();
+        var settings = AppSettingsStore.LoadComponentTemplates();
         var names = settings.AllowedRegionNames
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Select(n => n.Trim());
