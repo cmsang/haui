@@ -9,7 +9,8 @@
 - [x] **Canny thresholds** on MainWindow (slider 0–255; shared by Test / Test 2 / Tạo mẫu)
 - [x] **4 lỗ tròn định vị** — thư viện `hole_*.png`; matching downscale + cache RAM; fast path Segment
 - [x] Pipeline step debugger window (Test 2)
-- [x] Create template: draw regions on segmented board, save PNG + JSON
+- [x] Create template: draw regions on segmented board, save PNG + JSON; bắt buộc đủ N vùng (`RequiredRegionCount`, mặc định 18) trước khi lưu
+- [x] Multi-template: mỗi ảnh mẫu vùng linh kiện độc lập; thư viện lưu khi tất cả mẫu đủ N vùng
 - [x] Create template: tùy chọn thư mục lưu tùy chỉnh (thư viện + mẫu active)
 - [x] Multi-template library (`templates/index.json`) with viewer and edit/delete
 - [x] Test pipeline: segment + compare regions vs single active template

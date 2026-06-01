@@ -174,7 +174,13 @@ public partial class TemplateViewerWindow : System.Windows.Window
 
     private void BtnSaveLibrary_Click(object sender, RoutedEventArgs e)
     {
-        _viewModel.SaveLibrary();
+        if (!_viewModel.TrySaveLibrary(out var error))
+        {
+            MessageBox.Show(error, "Không thể lưu thư viện",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         MessageBox.Show("Đã lưu thư viện ảnh mẫu thành công.", "Thành công",
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
@@ -188,7 +194,14 @@ public partial class TemplateViewerWindow : System.Windows.Window
                 "Lưu thay đổi?", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)
-                _viewModel.SaveLibrary();
+            {
+                if (!_viewModel.TrySaveLibrary(out var error))
+                {
+                    MessageBox.Show(error, "Không thể lưu thư viện",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+            }
             else if (result == MessageBoxResult.Cancel)
                 return;
         }

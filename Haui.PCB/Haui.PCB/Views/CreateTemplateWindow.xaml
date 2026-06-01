@@ -117,11 +117,15 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0"
-                               Text="Danh sách vùng"
-                               FontWeight="SemiBold"
-                               FontSize="13"
-                               Margin="0,0,0,6"/>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,6">
+                        <TextBlock Text="Danh sách vùng"
+                                   FontWeight="SemiBold"
+                                   FontSize="13"/>
+                        <TextBlock Text="{Binding RegionProgressText}"
+                                   FontSize="11"
+                                   Foreground="#666666"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
 
                     <DataGrid Grid.Row="1"
                               x:Name="RegionsGrid"
@@ -218,10 +222,12 @@
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             HorizontalAlignment="Right">
-                    <Button Content="💾 Lưu"
+                    <Button x:Name="BtnSave"
+                            Content="💾 Lưu"
                             Height="32" Width="90"
                             Margin="0,0,8,0"
                             Click="BtnSave_Click"
+                            IsEnabled="{Binding CanSave}"
                             Style="{StaticResource PrimaryBtn}"/>
                     <Button Content="✕ Đóng"
                             Height="32" Width="80"
