@@ -1,5 +1,25 @@
 {
   "UseCustomFolder": false,
   "CustomFolder": "",
-  "RequiredRegionCount": 18
+  "RequiredRegionCount": 18,
+  "AllowedRegionNames": [
+    "KF1",
+    "KF2",
+    "KF3",
+    "C2",
+    "AMS1",
+    "L3",
+    "L2",
+    "L1",
+    "R1",
+    "R2",
+    "C3",
+    "C6",
+    "C5",
+    "D2",
+    "D1",
+    "C1",
+    "LM1",
+    "C4"
+  ]
 }

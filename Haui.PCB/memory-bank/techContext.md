@@ -28,7 +28,7 @@ Runtime **working directory** = process CWD (typically `bin/Debug/net10.0-window
 | `last_region.json` | `MainViewModel` | Last camera ROI (pixel rect) |
 | `templates/*.png` (hoặc thư mục tùy chỉnh) | `TemplateLibraryService` | Ảnh bo mẫu (quét thư mục) |
 | `templates/*_regions.json` | `TemplateLibraryService` | Tên hiển thị + vùng linh kiện (`TemplateRegionsDocument`) |
-| `component_template_settings.json` | `ComponentTemplateSettingsStore` | `UseCustomFolder`, `CustomFolder`, `RequiredRegionCount` (mặc định 18) — đồng bộ Create / Test / Viewer |
+| `component_template_settings.json` | `ComponentTemplateSettingsStore` | `UseCustomFolder`, `CustomFolder`, `AllowedRegionNames` (Create), `RequiredRegionCount` (Viewer, mặc định 18) |
 | `fiducial_settings.json` | `FiducialHoleTemplateService` | Thư mục, `MinMatchScore`, `MaxMatchDimension` (1280) |
 | `fiducial_holes/hole_*.png` | `FiducialHoleTemplateService` | Thư viện mẫu lỗ (nhiều ảnh, cùng hình dạng) |
 

@@ -8,7 +8,8 @@
 
 - **Tạo mẫu:** nút «Xoay 180°» cạnh Lưu/Đóng — xoay ảnh bo mạch và cập nhật tọa độ vùng tương đối
 - **Test pipeline:** nếu không mẫu nào đạt đủ vùng → xoay bo mạch 180° → so lại toàn bộ thư viện; hiển thị ảnh xoay + ghi chú trạng thái
-- **Ảnh mẫu linh kiện:** mỗi ảnh trong thư viện có danh sách vùng riêng; lưu chỉ khi đủ `RequiredRegionCount` (mặc định 18) trong `component_template_settings.json`; tạo mẫu mới không copy vùng từ mẫu active
+- **Tạo mẫu:** lưu khi mọi tên vùng thuộc `AllowedRegionNames` trong `component_template_settings.json` (không bắt đủ 18 vùng); Viewer thư viện vẫn dùng `RequiredRegionCount`
+- **Ảnh mẫu linh kiện:** mỗi ảnh trong thư viện có danh sách vùng riêng; tạo mẫu mới không copy vùng từ mẫu active
 - **Tạo mẫu linh kiện:** chỉ thư viện PNG + `*_regions.json` (`component_template_settings.json`); Test/Viewer/Create dùng chung
 - **Tối ưu Segment (Test / Tạo mẫu):** `RunPipelineCore(includeDebugMats)` — fast path không clone 4 Mat trung gian, bỏ contour khi fiducial OK
 - **Fiducial matching:** cache RAM (`FiducialHoleServices.TemplateService`), downscale `MaxMatchDimension=1280`, in-place NMS trên bản đồ match
