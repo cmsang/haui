@@ -5,9 +5,20 @@ namespace Haui.PCB.Processing;
 
 /// <summary>
 /// So sánh từng vùng giữa ảnh mẫu và ảnh bo mạch mới bằng histogram correlation.
+/// Tiền xử lý: resize → LAB-L → CLAHE → bilateral (cùng tham số cho mẫu và ảnh mới).
 /// </summary>
 public class RegionComparisonService : IRegionComparisonService
 {
+    private const int ComparisonPatchSize = 128;
+    private const double ClaheClipLimit = 2.0;
+    private static readonly Size ClaheTileGridSize = new(8, 8);
+    private const int BilateralDiameter = 5;
+    private const double BilateralSigmaColor = 50;
+    private const double BilateralSigmaSpace = 50;
+
+    private static readonly Size ComparisonPatchDimensions = new(ComparisonPatchSize, ComparisonPatchSize);
+    private static readonly CLAHE SharedClahe = Cv2.CreateCLAHE(ClaheClipLimit, ClaheTileGridSize);
+
     public IReadOnlyList<RegionComparisonResult> Compare(
         Mat templateBoard,
         Mat newBoard,
@@ -48,17 +59,8 @@ public class RegionComparisonService : IRegionComparisonService
 
             if (tCrop is null || nCrop is null) return 0;
 
-            // Chuẩn hóa kích thước về giống nhau
-            using var tResized = new Mat();
-            using var nResized = new Mat();
-            Cv2.Resize(tCrop, tResized, new OpenCvSharp.Size(64, 64));
-            Cv2.Resize(nCrop, nResized, new OpenCvSharp.Size(64, 64));
-
-            // Chuyển về grayscale trước khi so sánh để loại bỏ ảnh hưởng ánh sáng màu
-            using var tGray = new Mat();
-            using var nGray = new Mat();
-            Cv2.CvtColor(tResized, tGray, ColorConversionCodes.BGR2GRAY);
-            Cv2.CvtColor(nResized, nGray, ColorConversionCodes.BGR2GRAY);
+            using var tPrepared = PreparePatchForHistogram(tCrop);
+            using var nPrepared = PreparePatchForHistogram(nCrop);
 
             using var tHist = new Mat();
             using var nHist = new Mat();
@@ -67,8 +69,8 @@ public class RegionComparisonService : IRegionComparisonService
             int[] histSize = [256];
             Rangef[] ranges = [new Rangef(0, 256)];
 
-            Cv2.CalcHist([tGray], channels, null, tHist, 1, histSize, ranges);
-            Cv2.CalcHist([nGray], channels, null, nHist, 1, histSize, ranges);
+            Cv2.CalcHist([tPrepared], channels, null, tHist, 1, histSize, ranges);
+            Cv2.CalcHist([nPrepared], channels, null, nHist, 1, histSize, ranges);
 
             Cv2.Normalize(tHist, tHist, 0, 1, NormTypes.MinMax);
             Cv2.Normalize(nHist, nHist, 0, 1, NormTypes.MinMax);
@@ -82,6 +84,59 @@ public class RegionComparisonService : IRegionComparisonService
         {
             return 0;
         }
+    }
+
+    /// <summary>
+    /// Resize (Area khi thu nhỏ), kênh L của LAB, CLAHE, bilateral nhẹ — dùng chung cho mẫu và ảnh test.
+    /// </summary>
+    private static Mat PreparePatchForHistogram(Mat crop)
+    {
+        using var resized = new Mat();
+        var interpolation = SelectResizeInterpolation(crop.Width, crop.Height);
+        Cv2.Resize(crop, resized, ComparisonPatchDimensions, 0, 0, interpolation);
+
+        using var lChannel = ExtractLabLChannel(resized);
+        using var claheOut = new Mat();
+        SharedClahe.Apply(lChannel, claheOut);
+
+        var filtered = new Mat();
+        Cv2.BilateralFilter(
+            claheOut,
+            filtered,
+            BilateralDiameter,
+            BilateralSigmaColor,
+            BilateralSigmaSpace);
+
+        return filtered;
+    }
+
+    private static Mat ExtractLabLChannel(Mat image)
+    {
+        using var bgr = EnsureBgr(image);
+        using var lab = new Mat();
+        Cv2.CvtColor(bgr, lab, ColorConversionCodes.BGR2Lab);
+
+        var lChannel = new Mat();
+        Cv2.ExtractChannel(lab, lChannel, 0);
+        return lChannel;
+    }
+
+    private static Mat EnsureBgr(Mat image)
+    {
+        if (image.Channels() == 3)
+            return image.Clone();
+
+        var bgr = new Mat();
+        Cv2.CvtColor(image, bgr, ColorConversionCodes.GRAY2BGR);
+        return bgr;
+    }
+
+    private static InterpolationFlags SelectResizeInterpolation(int srcWidth, int srcHeight)
+    {
+        if (srcWidth > ComparisonPatchSize || srcHeight > ComparisonPatchSize)
+            return InterpolationFlags.Area;
+
+        return InterpolationFlags.Linear;
     }
 
     /// <summary>
