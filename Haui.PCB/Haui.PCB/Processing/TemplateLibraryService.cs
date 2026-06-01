@@ -6,21 +6,51 @@ using OpenCvSharp;
 namespace Haui.PCB.Processing;
 
 /// <summary>
-/// Quản lý thư viện nhiều ảnh mẫu — lưu trữ dưới thư mục "templates/".
-/// File index: templates/index.json
-/// Ảnh bo mạch: templates/{templateName}_{timestamp}.png
+/// Quản lý thư viện nhiều ảnh mẫu — mặc định <c>templates/</c>, có thể đổi thư mục qua cấu hình.
+/// File index: {thư mục}/index.json
+/// Ảnh bo mạch: {thư mục}/{templateName}_{timestamp}.png
 /// </summary>
 public class TemplateLibraryService : ITemplateLibraryService
 {
-    private const string TemplateDir = "templates";
-    private const string IndexFile = "templates/index.json";
+    public string GetLibraryFolder()
+    {
+        var settings = ComponentTemplateSettingsStore.Load();
+        return ResolveLibraryFolder(settings);
+    }
+
+    public void ConfigureStorage(bool useCustomFolder, string? customFolder)
+    {
+        var settings = ComponentTemplateSettingsStore.Load();
+        settings.UseCustomFolder = useCustomFolder;
+        settings.CustomFolder = customFolder?.Trim() ?? string.Empty;
+        ComponentTemplateSettingsStore.Save(settings);
+    }
+
+    public (bool UseCustom, string Folder) GetStorageConfiguration()
+    {
+        var settings = ComponentTemplateSettingsStore.Load();
+        var folder = settings.UseCustomFolder && !string.IsNullOrWhiteSpace(settings.CustomFolder)
+            ? settings.CustomFolder
+            : ComponentTemplateSettings.DefaultLibraryFolder;
+        return (settings.UseCustomFolder, folder);
+    }
+
+    private static string ResolveLibraryFolder(ComponentTemplateSettings settings)
+    {
+        if (settings.UseCustomFolder && !string.IsNullOrWhiteSpace(settings.CustomFolder))
+            return settings.CustomFolder;
+        return ComponentTemplateSettings.DefaultLibraryFolder;
+    }
+
+    private string IndexFilePath => Path.Combine(GetLibraryFolder(), "index.json");
 
     public IReadOnlyList<TemplateEntry> LoadAll()
     {
         try
         {
-            if (!File.Exists(IndexFile)) return [];
-            var json = File.ReadAllText(IndexFile);
+            var indexFile = IndexFilePath;
+            if (!File.Exists(indexFile)) return [];
+            var json = File.ReadAllText(indexFile);
             return JsonSerializer.Deserialize<List<TemplateEntry>>(json) ?? [];
         }
         catch
@@ -33,22 +63,23 @@ public class TemplateLibraryService : ITemplateLibraryService
     {
         try
         {
-            Directory.CreateDirectory(TemplateDir);
+            var folder = GetLibraryFolder();
+            Directory.CreateDirectory(folder);
             var json = JsonSerializer.Serialize(entries.ToList(),
                 new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(IndexFile, json);
+            File.WriteAllText(IndexFilePath, json);
         }
         catch { /* bỏ qua lỗi ghi file */ }
     }
 
     public string SaveBoardImage(string templateName, Mat boardImage)
     {
-        Directory.CreateDirectory(TemplateDir);
-        // Tạo tên file an toàn từ tên mẫu
+        var folder = GetLibraryFolder();
+        Directory.CreateDirectory(folder);
         var safeName = string.Concat(templateName.Select(c =>
             Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var filePath = Path.Combine(TemplateDir, $"{safeName}_{timestamp}.png");
+        var filePath = Path.Combine(folder, $"{safeName}_{timestamp}.png");
         Cv2.ImWrite(filePath, boardImage);
         return filePath;
     }

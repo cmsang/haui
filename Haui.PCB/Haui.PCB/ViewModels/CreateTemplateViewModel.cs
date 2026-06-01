@@ -78,6 +78,8 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     private Mat? _boardImage;
     private BitmapSource? _boardBitmap;
     private string _statusText = string.Empty;
+    private bool _useCustomDataFolder;
+    private string _dataFolder = ComponentTemplateSettings.DefaultLibraryFolder;
     private bool _disposed;
 
     // ──── Events ──────────────────────────────────────────────────────────────
@@ -95,6 +97,28 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _statusText;
         private set { _statusText = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>Bật lưu vào <see cref="DataFolder"/> thay vì mặc định.</summary>
+    public bool UseCustomDataFolder
+    {
+        get => _useCustomDataFolder;
+        set
+        {
+            if (_useCustomDataFolder == value) return;
+            _useCustomDataFolder = value;
+            if (!value)
+                DataFolder = ComponentTemplateSettings.DefaultLibraryFolder;
+            OnPropertyChanged();
+            PersistStorageConfiguration();
+        }
+    }
+
+    /// <summary>Thư mục hiển thị (mặc định <c>templates</c> hoặc đường dẫn tùy chọn).</summary>
+    public string DataFolder
+    {
+        get => _dataFolder;
+        private set { _dataFolder = value; OnPropertyChanged(); }
     }
 
     /// <summary>Kích thước ảnh bo mạch (để View tính tỉ lệ vùng chọn).</summary>
@@ -181,6 +205,39 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         _regionService = regionService;
         _segmentationService = segmentationService;
         _libraryService = libraryService;
+        LoadStorageConfiguration();
+    }
+
+    /// <summary>Chọn thư mục lưu tùy chỉnh (gọi từ View sau hộp thoại chọn thư mục).</summary>
+    public void SetCustomDataFolder(string folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath)) return;
+        DataFolder = folderPath.Trim();
+        UseCustomDataFolder = true;
+    }
+
+    private void LoadStorageConfiguration()
+    {
+        if (_libraryService is not null)
+        {
+            var (useCustom, folder) = _libraryService.GetStorageConfiguration();
+            _useCustomDataFolder = useCustom;
+            _dataFolder = folder;
+        }
+        else
+        {
+            _useCustomDataFolder = false;
+            _dataFolder = ComponentTemplateSettings.DefaultLibraryFolder;
+        }
+
+        OnPropertyChanged(nameof(UseCustomDataFolder));
+        OnPropertyChanged(nameof(DataFolder));
+    }
+
+    private void PersistStorageConfiguration()
+    {
+        _regionService.ConfigureStorage(UseCustomDataFolder, DataFolder);
+        _libraryService?.ConfigureStorage(UseCustomDataFolder, DataFolder);
     }
 
     // ──── Public API ──────────────────────────────────────────────────────────
@@ -280,6 +337,8 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Lưu tất cả vùng và ảnh bo mạch mẫu xuống file.</summary>
     public void SaveRegions()
     {
+        PersistStorageConfiguration();
+
         _regionService.Save(Regions.Select(r => r.ToModel()));
 
         // Lưu ảnh bo mạch mẫu để dùng cho việc so sánh sau này
@@ -302,7 +361,9 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             _libraryService.SaveAll(existing);
         }
 
-        StatusText = $"Đã lưu {Regions.Count} vùng mẫu.";
+        var folder = _libraryService?.GetLibraryFolder()
+                     ?? (_useCustomDataFolder ? _dataFolder : ".");
+        StatusText = $"Đã lưu {Regions.Count} vùng mẫu vào \"{folder}\".";
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
