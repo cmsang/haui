@@ -197,6 +197,7 @@ public partial class MainWindow : System.Windows.Window
             BtnSelectRegion.IsEnabled = true;
             BtnCreateTemplate.IsEnabled = true;
             BtnCreateFiducialTemplates.IsEnabled = true;
+            BtnCapture.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
             UpdateCameraParametersUi();
         }
@@ -218,6 +219,7 @@ public partial class MainWindow : System.Windows.Window
         BtnSelectRegion.IsEnabled = false;
         BtnCreateTemplate.IsEnabled = false;
         BtnCreateFiducialTemplates.IsEnabled = false;
+        BtnCapture.IsEnabled = false;
         ExitSelectMode();
         CameraImage.Source = null;
         CameraPlaceholder.Visibility = Visibility.Visible;
@@ -445,6 +447,19 @@ public partial class MainWindow : System.Windows.Window
     {
         var viewerWindow = new TemplateViewerWindow { Owner = this };
         viewerWindow.Show();
+    }
+
+    private async void BtnCapture_Click(object sender, RoutedEventArgs e)
+    {
+        BtnCapture.IsEnabled = false;
+        try
+        {
+            await _viewModel.CaptureAndSaveFrameAsync();
+        }
+        finally
+        {
+            BtnCapture.IsEnabled = _viewModel.IsRunning;
+        }
     }
 
     private void SetToolbarEnabled(bool enabled)

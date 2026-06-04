@@ -105,6 +105,8 @@ internal static class AppSettingsStore
         return cam.Clone();
     }
 
+    public static CameraCaptureSettings LoadCameraCapture() => Load().CameraCapture;
+
     private static void Normalize(AppSettings settings)
     {
         settings.ComponentTemplates.MinMatchSimilarityPercent =

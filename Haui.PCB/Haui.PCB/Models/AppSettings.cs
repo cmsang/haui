@@ -8,4 +8,5 @@ public sealed class AppSettings
     public ComponentTemplateSettings ComponentTemplates { get; set; } = new();
     public FiducialHoleSettings FiducialHoles { get; set; } = new();
     public CameraParameters CameraBasler { get; set; } = new();
+    public CameraCaptureSettings CameraCapture { get; set; } = new();
 }

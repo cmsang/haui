@@ -32,6 +32,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private readonly SegmentationParameters _pipelineParameters = SegmentationSettings.Current;
     private readonly IFiducialHoleTemplateService _fiducialTemplateService = FiducialHoleServices.TemplateService;
+    private readonly CameraCaptureService _cameraCaptureService = new();
 
     private OpenCvSharp.Rect? _selectedRegion;
     private const string RegionSettingsPath = "last_region.json";
@@ -183,18 +184,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public int GetDefaultResolutionIndex()
-    {
-        var defaults = CameraDefaultsLoader.LoadRecommended();
-        int idx = Resolutions
-            .Select((r, i) => (r, i))
-            .FirstOrDefault(t => t.r.Width == defaults.Width && t.r.Height == defaults.Height, (null!, -1)).i;
-        if (idx >= 0) return idx;
-
-        idx = Resolutions
-            .Select((r, i) => (r, i))
-            .FirstOrDefault(t => t.r.Width == 2304 && t.r.Height == 1536, (null!, -1)).i;
-        return idx >= 0 ? idx : Math.Max(0, Resolutions.Count - 1);
-    }
+        => Resolutions.Count > 0 ? Resolutions.Count - 1 : 0;
 
     public void StartCamera(CameraInfo camera, int width, int height)
     {
@@ -394,6 +384,35 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
         StatusText = "Đã mở form tạo mẫu 4 lỗ tròn (Morphology Close).";
         FiducialTemplateFrameCaptured?.Invoke(closedImage);
+    }
+
+    public async Task CaptureAndSaveFrameAsync()
+    {
+        StatusText = "Đang chụp và lưu ảnh...";
+
+        if (_cameraService is null)
+        {
+            StatusText = "Camera chưa khởi động.";
+            return;
+        }
+
+        using var frame = await Task.Run(() => _cameraService.GrabFrame());
+
+        if (frame is null || frame.Empty())
+        {
+            StatusText = "Không thể chụp ảnh từ camera.";
+            return;
+        }
+
+        try
+        {
+            var filePath = await Task.Run(() => _cameraCaptureService.SaveFrame(frame));
+            StatusText = $"Đã lưu ảnh: {filePath}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Lỗi lưu ảnh: {ex.Message}";
+        }
     }
 
     public void RefreshFiducialTemplateStatus()

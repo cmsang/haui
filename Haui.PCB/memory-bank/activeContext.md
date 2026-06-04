@@ -7,6 +7,7 @@
 ## Recent change
 
 - **Thư viện mẫu:** bỏ `UseCustomFolder` và UI chọn thư mục trên Create; luôn dùng `ComponentTemplates.CustomFolder` trong `appsettings.json` (rỗng → `templates/`)
+- **Chụp ảnh nhanh:** nút «📷 Chụp» cạnh «Xem mẫu»; lưu PNG vào `CameraCapture.SaveFolder` trong `appsettings.json`; mặc định chọn độ phân giải lớn nhất khi chọn camera
 - **Cấu hình:** gộp `appsettings.json` (ComponentTemplates, FiducialHoles, CameraBasler); migrate tự động từ 3 file cũ nếu còn
 - **Mẫu lỗ định vị:** thư mục qua `appsettings.json` → FiducialHoles; đã bỏ chọn thư mục trên MainWindow
 - **Test pipeline:** ngưỡng so khớp `MinMatchSimilarityPercent` trong `component_template_settings.json` (mặc định 80); so khớp tổng hợp theo `AllowedRegionNames`

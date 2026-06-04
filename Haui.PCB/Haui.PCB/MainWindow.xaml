@@ -587,14 +587,24 @@
                             Margin="0,0,8,0"
                             Click="BtnCreateTemplate_Click"/>
 
-                            <!-- Nút xem mẫu -->
-                            <Button x:Name="BtnViewTemplates"
-                            Content="🖼 Xem mẫu"
-                            Height="30" Width="120"
-                            Click="BtnViewTemplates_Click"/>
+                <!-- Nút xem mẫu -->
+                <Button x:Name="BtnViewTemplates"
+                        Content="🖼 Xem mẫu"
+                        Height="30" Width="110"
+                        Margin="0,0,8,0"
+                        Click="BtnViewTemplates_Click"
+                        Style="{StaticResource SecondaryButtonStyle}" />
 
-                        </WrapPanel>
-                    </Border>
+                <!-- Nút chụp ảnh -->
+                <Button x:Name="BtnCapture"
+                        Content="📷 Chụp"
+                        Height="30" Width="90"
+                        IsEnabled="False"
+                        Click="BtnCapture_Click"
+                        Style="{StaticResource SecondaryButtonStyle}" />
+
+            </WrapPanel>
+        </Border>
 
         <!-- ===== MAIN CONTENT ===== -->
         <Grid Grid.Row="1" Margin="8">
