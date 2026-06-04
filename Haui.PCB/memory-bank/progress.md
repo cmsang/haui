@@ -4,6 +4,7 @@
 
 - [x] Basler GigE/USB camera via pylon SDK (`BaslerCameraService`) — **only** camera backend
 - [x] **Basler parameter UI** on MainWindow (Exposure, Gain, Gamma; Apply / Reset from `camera_basler_defaults.json`)
+- [x] **Chụp ảnh nhanh** — nút «Chụp» lưu PNG vào `CameraCapture.SaveFolder`; độ phân giải mặc định = lớn nhất
 - [x] Optional ROI selection on main preview (`last_region.json`)
 - [x] PCB segmentation (rotated rect → perspective-corrected board image)
 - [x] **Canny thresholds** on MainWindow (slider 0–255; shared by Test / Test 2 / Tạo mẫu)
