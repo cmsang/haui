@@ -362,4 +362,56 @@ public partial class MainWindow : System.Windows.Window
     {
         _viewModel.Dispose();
     }
+
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+
+    }
+
+    private void btnDashboard_Click(object sender, RoutedEventArgs e)
+    {
+
+    }
+
+    private void btnDetail_Click(object sender, RoutedEventArgs e)
+    {
+
+    }
+
+    private void btnReport_Click(object sender, RoutedEventArgs e)
+    {
+
+    }
+
+    private void btnManualControl_Click(object sender, RoutedEventArgs e)
+    {
+        var win = new wdManualControl { Owner = this };
+        win.ShowDialog();
+    }
+
+    private void btnSetting_Click(object sender, RoutedEventArgs e)
+    {
+        
+    }
+
+    private void btnHelp_Click(object sender, RoutedEventArgs e)
+    {
+
+    }
+
+    private void btnExit_Click(object sender, RoutedEventArgs e)
+    {
+
+    }
+
+    private void btnCommandHistory_Click(object sender, RoutedEventArgs e)
+    {
+
+    }
+
+    private void btnTeaching_Click(object sender, RoutedEventArgs e)
+    {
+        var win = new wdTeaching { Owner = this };
+        win.ShowDialog();
+    }
 }

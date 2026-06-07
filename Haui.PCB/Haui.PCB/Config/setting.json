@@ -1,0 +1,5 @@
+{
+  "com": "COM20",
+  "baudRate": 115200,
+  "stepsPerDeg": 100
+}
