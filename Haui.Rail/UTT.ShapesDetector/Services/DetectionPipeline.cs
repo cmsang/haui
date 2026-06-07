@@ -1,8 +1,8 @@
-using Haui.ShapesDetector.Models;
+using UTT.ShapesDetector.Models;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 
-namespace Haui.ShapesDetector.Services;
+namespace UTT.ShapesDetector.Services;
 
 /// <summary>Raised on the camera thread for every new frame — no detection latency.</summary>
 public sealed record FrameReadyEventArgs(Bitmap Frame, List<DetectionResult> CachedDetections);

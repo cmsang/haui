@@ -1,8 +1,8 @@
-using Haui.ShapesDetector.Models;
+using UTT.ShapesDetector.Models;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 
-namespace Haui.ShapesDetector.Controls;
+namespace UTT.ShapesDetector.Controls;
 
 public class DetectionPanel : Panel
 {

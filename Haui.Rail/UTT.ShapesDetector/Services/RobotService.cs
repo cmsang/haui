@@ -1,9 +1,9 @@
-﻿using Haui.ShapesDetector.Common;
+﻿using UTT.ShapesDetector.Common;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Haui.ShapesDetector.Services
+namespace UTT.ShapesDetector.Services
 {
     public class RobotService
     {

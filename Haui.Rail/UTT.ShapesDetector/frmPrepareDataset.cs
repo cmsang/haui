@@ -3,7 +3,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLaborsImage = SixLabors.ImageSharp.Image;
 using Color = System.Drawing.Color;
 
-namespace Haui.ShapesDetector;
+namespace UTT.ShapesDetector;
 
 public partial class frmPrepareDataset : Form
 {

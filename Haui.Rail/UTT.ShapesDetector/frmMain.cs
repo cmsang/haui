@@ -1,10 +1,11 @@
-using Haui.ShapesDetector.Common;
-using Haui.ShapesDetector.Models;
-using Haui.ShapesDetector.Services;
 using System.IO.Ports;
 using System.Text;
+using UTT.ShapesDetector.Common;
+using UTT.ShapesDetector.Models;
+using UTT.ShapesDetector.Services;
+using ZedGraph;
 
-namespace Haui.ShapesDetector
+namespace UTT.ShapesDetector
 {
     public partial class frmMain : Form
     {
@@ -23,6 +24,10 @@ namespace Haui.ShapesDetector
         private string _material = string.Empty;
         private string _oldMaterial = string.Empty;
 
+        RollingPointPairList lst = new RollingPointPairList(12000);
+        RollingPointPairList lst1 = new RollingPointPairList(12000);
+        bool bStopTest = false;
+        int val2=2;
         public frmMain()
         {
             InitializeComponent();
@@ -31,25 +36,85 @@ namespace Haui.ShapesDetector
             _robotService = new RobotService();
 
             SetupEventHandlers();
+
+            InitChart();
+            CheckForIllegalCrossThreadCalls = false;
         }
 
         private void SetupEventHandlers()
         {
-            _pipeline.FrameReady += OnFrameReady;
-            _pipeline.DetectionCompleted += OnDetectionCompleted;
             _pipeline.ErrorOccurred += (_, msg) =>
             {
                 if (IsHandleCreated) BeginInvoke(() => UpdateStatus(msg, Color.Red));
             };
+        }
 
-            // Setup DataGridView
-            dgvResults.DefaultCellStyle.BackColor = Color.FromArgb(30, 30, 30);
-            dgvResults.DefaultCellStyle.ForeColor = Color.White;
-            dgvResults.DefaultCellStyle.SelectionBackColor = Color.FromArgb(0, 122, 204);
-            dgvResults.DefaultCellStyle.SelectionForeColor = Color.White;
-            dgvResults.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(45, 45, 48);
-            dgvResults.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
-            dgvResults.EnableHeadersVisualStyles = false;
+
+        private void InitChart()
+        {
+            GraphPane mypane = zg.GraphPane;
+            mypane.Title.Text = "Đồ thị giám sát độ rung theo thời gian";
+            mypane.XAxis.Title.Text = "Thời gian, s";
+            mypane.YAxis.Title.Text = "Độ rung";
+            mypane.XAxis.MajorGrid.IsVisible = true;
+            mypane.YAxis.MajorGrid.IsVisible = true;
+
+            LineItem myCurve = mypane.AddCurve("Độ rung", lst, Color.Red, SymbolType.Default);
+            myCurve.Line.Width = 5;
+            myCurve.Line.IsVisible = false;
+            myCurve.Symbol.Border.IsVisible = false;
+            myCurve.Symbol.Fill = new Fill(Color.Red);
+            myCurve.Symbol.Size = 2;
+
+        }
+
+        private void UpdateChart()
+        {
+            zg.AxisChange();
+            zg.Invalidate();
+            zg.Update();
+            zg.Refresh();
+        }
+
+        private void CaculateData()
+        {
+            try
+            {
+                double time = 0;
+                float fStartDegree = 0;
+                while (true)
+                {
+                    float fscale = Convert.ToSingle(2);
+                    lst.Add(time, fscale * Math.Sin(Math.PI * fStartDegree / 180));
+                    lst1.Add(time, val2);
+                    fStartDegree++;
+                    time++;
+                    UpdateChart();
+
+                    if (bStopTest)
+                        break;
+                }
+
+            }
+            catch (Exception)
+            {
+
+            }
+
+        }
+
+        private void btnStart_Click(object sender, EventArgs e)
+        {
+            bStopTest = false;
+            //CaculateData();
+            lst.Clear();
+            Thread drawChartThred = new Thread(new ThreadStart(CaculateData));
+            drawChartThred.Start();
+        }
+
+        private void btnStop_Click(object sender, EventArgs e)
+        {
+            bStopTest = true;
         }
 
         private async void frmMain_Load(object sender, EventArgs e)
@@ -85,46 +150,12 @@ namespace Haui.ShapesDetector
                     Robot.DataReceived += Robot_DataReceived;
                 }
 
-                // Load danh sách cameras
-                LoadAvailableCameras();
-
                 UpdateStatus("Ready", Color.LimeGreen);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to initialize: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 UpdateStatus("Initialization failed", Color.Red);
-            }
-        }
-
-        private void LoadAvailableCameras()
-        {
-            cmbCameras.Items.Clear();
-
-            var cameras = DetectionPipeline.GetAvailableCameras();
-
-            if (cameras.Count == 0)
-            {
-                cmbCameras.Items.Add("No cameras found");
-                cmbCameras.Enabled = false;
-                return;
-            }
-
-            foreach (var camera in cameras)
-            {
-                cmbCameras.Items.Add(camera);
-            }
-
-            cmbCameras.SelectedIndex = 0;
-            cmbCameras.Enabled = true;
-        }
-
-        private void cmbCameras_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (cmbCameras.SelectedItem is CameraInfo camera)
-            {
-                _pipeline.SwitchCamera(camera.Index);
-                UpdateStatus($"Switched to {camera.Name}", Color.LimeGreen);
             }
         }
 
@@ -309,104 +340,10 @@ namespace Haui.ShapesDetector
             Robot.Write("m" + dest);
         }
 
-        // ─── Pipeline event handlers ────────────────────────────────────────────────
-
-        /// <summary>Fired on the camera thread — pushes the raw frame to the UI immediately.</summary>
-        private void OnFrameReady(object? sender, FrameReadyEventArgs e)
-        {
-            if (IsHandleCreated)
-                BeginInvoke(() => detectionPanel.UpdateFrame(e.Frame, e.CachedDetections));
-        }
-
-        /// <summary>Fired after YOLO finishes — updates the panel with detection boxes.</summary>
-        private void OnDetectionCompleted(object? sender, DetectionCompletedEventArgs e)
-        {
-            if (IsHandleCreated)
-                BeginInvoke(() =>
-                {
-                    detectionPanel.UpdateFrame(e.Frame, e.Detections);
-                    UpdateResultsGrid(e.Detections);
-                    if (e.Detections.Count > 0)
-                    {
-                        _material = e.Detections[0].ClassName.ToLower().Trim();
-                        RobotarmControl(1);
-                    }
-                });
-        }
-
-        private void UpdateResultsGrid(List<DetectionResult> detections)
-        {
-            // Keep only last 50 detections
-            _allDetections.AddRange(detections);
-            if (_allDetections.Count > 50)
-            {
-                _allDetections.RemoveRange(0, _allDetections.Count - 50);
-            }
-
-            dgvResults.Rows.Clear();
-
-            foreach (var detection in _allDetections.OrderByDescending(d => d.DetectedAt))
-            {
-                dgvResults.Rows.Add(
-                    detection.ClassName,
-                    $"{detection.Confidence:P0}",
-                    detection.DetectedAt.ToString("HH:mm:ss")
-                );             
-            }
-        }
-
         private void UpdateStatus(string message, Color color)
         {
             lblStatus.Text = $"● {message}";
             lblStatus.ForeColor = color;
-        }
-
-        private void btnStartCamera_Click(object sender, EventArgs e)
-        {
-            if (!_pipeline.IsInitialized)
-            {
-                MessageBox.Show("YOLO model not initialized", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            _pipeline.Start();
-            btnStartCamera.Enabled = false;
-            btnStop.Enabled = true;
-            UpdateStatus("Camera running", Color.LimeGreen);
-        }
-
-        private void btnStop_Click(object sender, EventArgs e)
-        {
-            _pipeline.Stop();
-            btnStartCamera.Enabled = true;
-            btnStop.Enabled = false;
-            UpdateStatus("Camera stopped", Color.Orange);
-        }
-
-        private async void btnCapture_Click(object sender, EventArgs e)
-        {
-            if (!_pipeline.IsInitialized)
-            {
-                MessageBox.Show("YOLO model not initialized", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var snapshot = _pipeline.CaptureSnapshot();
-            if (snapshot != null)
-            {
-                // Show frame immediately with last cached detections
-                detectionPanel.UpdateFrame((Bitmap)snapshot.Clone(), _pipeline.CachedDetections);
-                UpdateStatus("Detecting...", Color.Orange);
-
-                var detections = await _pipeline.DetectSnapshotAsync(snapshot);
-                detectionPanel.UpdateFrame(snapshot, detections);
-                UpdateResultsGrid(detections);
-                UpdateStatus($"Captured - {detections.Count} objects detected", Color.LimeGreen);
-                if (detections.Count > 0)
-                {
-                    _material = detections[0].ClassName.ToLower().Trim();
-                    RobotarmControl(1);
-                }
-            }
         }
 
         private void btnSaveResults_Click(object sender, EventArgs e)
@@ -446,16 +383,6 @@ namespace Haui.ShapesDetector
         {
             _pipeline.Dispose();
             base.OnFormClosing(e);
-        }
-
-        private void btnSettings_Click(object sender, EventArgs e)
-        {
-            frmRobotTurning frm = new frmRobotTurning();
-            Robot.Close();
-            if (frm.ShowDialog() == DialogResult.OK)
-            {
-                Robot.Open();
-            }
         }
 
         private void btnTest_Click(object sender, EventArgs e)

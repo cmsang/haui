@@ -1,4 +1,4 @@
-namespace Haui.ShapesDetector;
+namespace UTT.ShapesDetector;
 
 partial class frmPrepareDataset
 {
@@ -212,7 +212,7 @@ partial class frmPrepareDataset
         MinimizeBox = false;
         Name = "frmPrepareDataset";
         StartPosition = FormStartPosition.CenterParent;
-        Text = "Chuẩn Bị Dataset — Haui.ShapesDetector";
+        Text = "Chuẩn Bị Dataset — UTT.ShapesDetector";
         pnlMain.ResumeLayout(false);
         pnlCenter.ResumeLayout(false);
         pnlFolderSelect.ResumeLayout(false);

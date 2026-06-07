@@ -1,4 +1,4 @@
-namespace Haui.ShapesDetector
+namespace UTT.ShapesDetector
 {
     internal static class Program
     {

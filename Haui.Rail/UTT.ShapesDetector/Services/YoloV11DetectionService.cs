@@ -1,4 +1,4 @@
-using Haui.ShapesDetector.Models;
+using UTT.ShapesDetector.Models;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using SixLabors.ImageSharp.PixelFormats;
@@ -6,7 +6,7 @@ using SixLabors.ImageSharp.Processing;
 using SixLaborsImage = SixLabors.ImageSharp.Image;
 using SixLaborsSize = SixLabors.ImageSharp.Size;
 
-namespace Haui.ShapesDetector.Services;
+namespace UTT.ShapesDetector.Services;
 
 /// <summary>
 /// Optimized YOLOv11 Detection Service with:

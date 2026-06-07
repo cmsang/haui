@@ -1,6 +1,6 @@
-using Haui.ShapesDetector.Models;
+using UTT.ShapesDetector.Models;
 
-namespace Haui.ShapesDetector.Services;
+namespace UTT.ShapesDetector.Services;
 
 public interface IDetectionService
 {

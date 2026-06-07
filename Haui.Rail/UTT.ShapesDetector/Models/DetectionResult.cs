@@ -1,4 +1,4 @@
-namespace Haui.ShapesDetector.Models;
+namespace UTT.ShapesDetector.Models;
 
 public class DetectionResult
 {

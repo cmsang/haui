@@ -2,7 +2,7 @@ using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System.Drawing;
 
-namespace Haui.ShapesDetector.Services;
+namespace UTT.ShapesDetector.Services;
 
 public class CameraService : IDisposable
 {
@@ -16,7 +16,7 @@ public class CameraService : IDisposable
     public bool IsRunning { get; private set; }
 
     /// <summary>
-    /// L?y danh sách các camera có s?n
+    /// L?y danh sï¿½ch cï¿½c camera cï¿½ s?n
     /// </summary>
     public static List<CameraInfo> GetAvailableCameras()
     {
@@ -39,7 +39,7 @@ public class CameraService : IDisposable
             }
             catch
             {
-                // Camera không kh? d?ng
+                // Camera khï¿½ng kh? d?ng
             }
         }
 
@@ -111,7 +111,7 @@ public class CameraService : IDisposable
     }
 
     /// <summary>
-    /// Chuy?n ??i sang camera khác
+    /// Chuy?n ??i sang camera khï¿½c
     /// </summary>
     public void SwitchCamera(int deviceIndex)
     {
@@ -156,7 +156,7 @@ public class CameraService : IDisposable
 }
 
 /// <summary>
-/// Thông tin camera
+/// Thï¿½ng tin camera
 /// </summary>
 public class CameraInfo
 {

@@ -1,7 +1,7 @@
-using Haui.ShapesDetector.Models;
-using Haui.ShapesDetector.Services;
+using UTT.ShapesDetector.Models;
+using UTT.ShapesDetector.Services;
 
-namespace Haui.ShapesDetector;
+namespace UTT.ShapesDetector;
 
 public partial class frmTestDetection : Form
 {
