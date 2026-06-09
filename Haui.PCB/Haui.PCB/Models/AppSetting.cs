@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Haui.PCB.Models;
 
 /// <summary>
@@ -12,4 +14,15 @@ public class AppSetting
 
     /// <summary>Số bước motor trên 1 độ — STEPS_PER_DEG.</summary>
     public int StepsPerDeg { get; set; } = 100;
+
+    /// <summary>Bước jog mỗi lần nhấn +/- (độ).</summary>
+    public double JogStepDegrees { get; set; } = 10;
+
+    /// <summary>Tốc độ di chuyển khi Go To (0–100%).</summary>
+    public int SpeedPercent { get; set; } = 50;
+
+    /// <summary>Chuỗi kết nối SQL Server — AGVControlSystem.</summary>
+    [JsonPropertyName("DatabaseConnection")]
+    public string DatabaseConnection { get; set; } =
+        @"Data Source=.\SQLExpress;Initial Catalog=AGVControlSystem;Integrated Security=True;TrustServerCertificate=True";
 }

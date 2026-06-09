@@ -1,5 +1,8 @@
 {
   "com": "COM20",
   "baudRate": 115200,
-  "stepsPerDeg": 100
+  "stepsPerDeg": 100,
+  "jogStepDegrees": 15,
+  "speedPercent": 31,
+  "DatabaseConnection": "Data Source=.\\SQLExpress;Initial Catalog=SmartWarehouse;Integrated Security=True;TrustServerCertificate=True"
 }

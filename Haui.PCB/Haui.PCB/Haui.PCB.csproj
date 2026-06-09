@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BL.PCBDetect\BL.PCBDetect.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="Microsoft.Expression.Drawing">
       <HintPath>$(NuGetPackageRoot)expression.blend.sdk.wpf\1.0.1\lib\net45\Microsoft.Expression.Drawing.dll</HintPath>
     </Reference>

@@ -30,10 +30,11 @@ public partial class wdManualControl : Window
             _ownsSerialService = true;
         }
 
+        var appSettingService = new AppSettingService();
         _viewModel = new ManualControlViewModel(
-            new RobotTeachService(),
+            new RobotConfigService(appSettingService),
             _serialService,
-            new AppSettingService(),
+            appSettingService,
             disposeSerialService: _ownsSerialService);
         DataContext = _viewModel;
 

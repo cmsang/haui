@@ -31,10 +31,11 @@ public partial class wdTeaching : Window
             _ownsSerialService = true;
         }
 
+        var appSettingService = new AppSettingService();
         _viewModel = new RobotTeachViewModel(
-            new RobotTeachService(),
+            new RobotConfigService(appSettingService),
             _serialService,
-            new AppSettingService(),
+            appSettingService,
             disposeSerialService: _ownsSerialService);
         DataContext = _viewModel;
 
@@ -240,8 +241,14 @@ public partial class wdTeaching : Window
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         _viewModel.ReloadAppSettings();
+        _viewModel.ReloadTeachPoints();
+        TeachPointsGrid.Items.Refresh();
+
         CboComPort.Text = _viewModel.SerialPortName;
         CboBaudRate.SelectedItem = _viewModel.BaudRate;
+
+        if (_viewModel.SelectedPoint != null)
+            TeachPointsGrid.SelectedItem = _viewModel.SelectedPoint;
 
         if (_ownsSerialService)
             _viewModel.EnsureSerialConnected();

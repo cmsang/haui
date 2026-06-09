@@ -16,11 +16,11 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     private const int GripperCloseAngle = 0;
     private static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(120);
 
-    private readonly IRobotTeachService _teachService;
+    private readonly IRobotConfigService _robotConfigService;
     private readonly IRobotSerialService _serialService;
     private readonly IAppSettingService _appSettingService;
+    private IReadOnlyList<RobotTeachPoint> _allTeachPoints = [];
     private readonly bool _disposeSerialService;
-    private RobotTeachConfig _config;
     private AppSetting _appSetting;
     private RobotTeachPoint? _selectedDestination;
     private string _statusText = "Kết nối SerialPort, chọn vị trí OK/NG và chạy test.";
@@ -35,22 +35,21 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     private CancellationTokenSource? _testCts;
 
     public ManualControlViewModel(
-        IRobotTeachService teachService,
+        IRobotConfigService robotConfigService,
         IRobotSerialService serialService,
         IAppSettingService appSettingService,
         bool disposeSerialService = true)
     {
-        _teachService = teachService;
+        _robotConfigService = robotConfigService;
         _serialService = serialService;
         _appSettingService = appSettingService;
         _disposeSerialService = disposeSerialService;
-        _config = teachService.Load();
         _appSetting = appSettingService.Load();
 
         _serialPort = _appSetting.Com;
         _baudRate = _appSetting.BaudRate;
         _stepsPerDeg = _appSetting.StepsPerDeg;
-        _speedPercent = _config.SpeedPercent;
+        _speedPercent = _appSetting.SpeedPercent;
 
         DestinationPoints = [];
         ReloadDestinationPoints();
@@ -142,14 +141,16 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
     public void ReloadDestinationPoints()
     {
-        _config = _teachService.Load();
-        _speedPercent = _config.SpeedPercent;
+        _appSetting = _appSettingService.Load();
+        _speedPercent = _appSetting.SpeedPercent;
         OnPropertyChanged(nameof(SpeedPercent));
+
+        _allTeachPoints = LoadAllTeachPoints();
 
         var selectedName = SelectedDestination?.Name;
         DestinationPoints.Clear();
 
-        foreach (var point in RobotTeachPositions.Normalize(_config.TeachPoints))
+        foreach (var point in RobotTeachPositions.Normalize(_allTeachPoints))
         {
             if (point.Group is not ("OK" or "NG")) continue;
             DestinationPoints.Add(point);
@@ -160,7 +161,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             : DestinationPoints.FirstOrDefault(p =>
                 p.Name.Equals(selectedName, StringComparison.OrdinalIgnoreCase));
 
-        StatusText = $"Đã tải {DestinationPoints.Count} vị trí OK/NG từ cấu hình teach.";
+        StatusText = $"Đã tải {DestinationPoints.Count} vị trí OK/NG từ Database.";
     }
 
     public void RefreshAvailablePorts()
@@ -387,8 +388,21 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private RobotTeachPoint? GetTeachPoint(string name)
-        => RobotTeachPositions.Normalize(_config.TeachPoints)
+        => RobotTeachPositions.Normalize(_allTeachPoints)
             .FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+    private IReadOnlyList<RobotTeachPoint> LoadAllTeachPoints()
+    {
+        if (!_robotConfigService.TryLoadTeachPoints(out var dbPoints, out var error))
+        {
+            StatusText = $"Không tải được Database: {error}";
+            return RobotTeachPositions.CreateDefault();
+        }
+
+        return dbPoints.Count > 0
+            ? dbPoints
+            : RobotTeachPositions.CreateDefault();
+    }
 
     private async Task RunStepAsync(string label, Action send, CancellationToken ct)
     {

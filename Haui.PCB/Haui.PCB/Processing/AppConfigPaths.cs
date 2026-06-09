@@ -13,8 +13,6 @@ public static class AppConfigPaths
 
     public static string SettingFile => Path.Combine(ConfigDirectory, "setting.json");
 
-    public static string RobotTeachFile => Path.Combine(ConfigDirectory, "robot_teach_config.json");
-
     private static string ResolveConfigDirectory()
     {
         var env = Environment.GetEnvironmentVariable("HAUI_PCB_CONFIG");

@@ -32,10 +32,11 @@ public partial class MainWindow : System.Windows.Window
     {
         InitializeComponent();
         _viewModel = new MainViewModel(new CameraService());
+        var appSettingService = new AppSettingService();
         _robotViewModel = new RobotTeachViewModel(
-            new RobotTeachService(),
+            new RobotConfigService(appSettingService),
             _serialService,
-            new AppSettingService(),
+            appSettingService,
             disposeSerialService: false,
             enableSerialEvents: false);
         DataContext = _viewModel;
