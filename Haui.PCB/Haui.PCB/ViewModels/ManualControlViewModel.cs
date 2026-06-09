@@ -8,13 +8,18 @@ using Haui.PCB.Processing;
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// ViewModel màn Manual Control — test PickUp → vị trí OK/NG.
+/// ViewModel màn Manual Control — test PickUp → vị trí OK/NG theo chu trình có chờ Dx.
 /// </summary>
 public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 {
+    private const int GripperOpenAngle = 90;
+    private const int GripperCloseAngle = 0;
+    private static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(120);
+
     private readonly IRobotTeachService _teachService;
     private readonly IRobotSerialService _serialService;
     private readonly IAppSettingService _appSettingService;
+    private readonly bool _disposeSerialService;
     private RobotTeachConfig _config;
     private AppSetting _appSetting;
     private RobotTeachPoint? _selectedDestination;
@@ -24,16 +29,21 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     private int _stepsPerDeg = 100;
     private int _speedPercent = 50;
     private bool _isSerialConnected;
+    private bool _isTestRunning;
     private bool _disposed;
+    private bool _closing;
+    private CancellationTokenSource? _testCts;
 
     public ManualControlViewModel(
         IRobotTeachService teachService,
         IRobotSerialService serialService,
-        IAppSettingService appSettingService)
+        IAppSettingService appSettingService,
+        bool disposeSerialService = true)
     {
         _teachService = teachService;
         _serialService = serialService;
         _appSettingService = appSettingService;
+        _disposeSerialService = disposeSerialService;
         _config = teachService.Load();
         _appSetting = appSettingService.Load();
 
@@ -47,10 +57,24 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
         RefreshAvailablePorts();
         _serialService.LineReceived += OnSerialLineReceived;
+        SyncConnectionState();
     }
 
     public ObservableCollection<RobotTeachPoint> DestinationPoints { get; }
     public ObservableCollection<string> AvailablePorts { get; } = [];
+
+    public bool IsTestRunning
+    {
+        get => _isTestRunning;
+        private set
+        {
+            _isTestRunning = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanRunTest));
+        }
+    }
+
+    public bool CanRunTest => !IsTestRunning && HasSelectedDestination;
 
     public RobotTeachPoint? SelectedDestination
     {
@@ -61,6 +85,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasSelectedDestination));
             OnPropertyChanged(nameof(SelectedDestinationSummary));
+            OnPropertyChanged(nameof(CanRunTest));
         }
     }
 
@@ -148,70 +173,186 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             SerialPortName = AvailablePorts[0];
     }
 
-    public void ToggleSerialConnection()
+    public void SyncConnectionState()
+        => IsSerialConnected = _serialService.IsConnected;
+
+    public bool EnsureSerialConnected()
     {
+        SyncConnectionState();
         if (IsSerialConnected)
         {
-            _serialService.Disconnect();
-            IsSerialConnected = false;
-            StatusText = "Đã ngắt kết nối SerialPort.";
-            return;
+            StatusText = $"Serial online — {SerialPortName} @ {BaudRate}.";
+            return true;
         }
 
         try
         {
             if (string.IsNullOrWhiteSpace(SerialPortName))
             {
-                StatusText = "Chọn cổng COM.";
-                return;
+                StatusText = "Chưa cấu hình cổng COM trong setting.json.";
+                return false;
             }
 
             _serialService.Connect(SerialPortName, BaudRate);
             IsSerialConnected = true;
             StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
+            return true;
         }
         catch (Exception ex)
         {
             IsSerialConnected = false;
-            StatusText = $"Kết nối thất bại: {ex.Message}";
+            StatusText = $"Kết nối Serial thất bại: {ex.Message}";
+            return false;
         }
     }
 
-    /// <summary>PickUp → vị trí OK/NG đã chọn.</summary>
-    public void RunPickUpToDestinationTest()
+    public void DisconnectSerial()
     {
+        if (!IsSerialConnected) return;
+        _serialService.Disconnect();
+        IsSerialConnected = false;
+    }
+
+    public void ToggleSerialConnection()
+    {
+        if (IsSerialConnected)
+        {
+            DisconnectSerial();
+            StatusText = "Đã ngắt kết nối SerialPort.";
+            return;
+        }
+
+        EnsureSerialConnected();
+    }
+
+    public void CancelTest()
+    {
+        if (!IsTestRunning) return;
+        CancelPendingOperations();
+        StatusText = "Đang hủy chu trình test...";
+    }
+
+    /// <summary>Hủy chu trình test và các thao tác đang chờ Dx trên màn hình này.</summary>
+    public void CancelPendingOperations()
+    {
+        _closing = true;
+
+        if (_testCts != null)
+        {
+            try { _testCts.Cancel(); }
+            catch (ObjectDisposedException) { }
+
+            _testCts.Dispose();
+            _testCts = null;
+        }
+
+        IsTestRunning = false;
+    }
+
+    /// <summary>
+    /// Chu trình: G180x → PickUp → G0x → Wait → Destination → G180x → Wait → G0x.
+    /// Mỗi bước chờ phản hồi Dx từ robot.
+    /// </summary>
+    public async Task RunPickUpToDestinationTestAsync()
+    {
+        if (_closing || _disposed)
+            return;
+
+        if (IsTestRunning)
+        {
+            StatusText = "Chu trình test đang chạy.";
+            return;
+        }
+
         if (SelectedDestination == null)
         {
             StatusText = "Chọn vị trí đích (OK hoặc NG) trong bảng.";
             return;
         }
 
-        var pickUp = GetPickUpPoint();
+        var pickUp = GetTeachPoint(RobotTeachPositions.PickUp);
+        var wait = GetTeachPoint(RobotTeachPositions.Wait);
+        var destination = SelectedDestination;
+
         if (pickUp == null)
         {
             StatusText = "Không tìm thấy vị trí PickUp trong cấu hình teach.";
             return;
         }
 
-        if (!SendMoveToPoint(pickUp, "PickUp"))
+        if (wait == null)
+        {
+            StatusText = "Không tìm thấy vị trí Wait trong cấu hình teach.";
+            return;
+        }
+
+        if (!EnsureSerialConnected())
             return;
 
-        if (!SendMoveToPoint(SelectedDestination, SelectedDestination.Name))
-            return;
+        _closing = false;
+        _testCts = new CancellationTokenSource();
+        IsTestRunning = true;
 
-        StatusText = $"Test hoàn tất: PickUp → {SelectedDestination.Group} {SelectedDestination.Name}.";
+        try
+        {
+            var ct = _testCts.Token;
+
+            await RunStepAsync("1/8 — Mở gripper 90° (G90x)",
+                () => SendGripper(GripperOpenAngle), ct);
+
+            await RunStepAsync("2/8 — Move → PickUp",
+                () => SendMove(pickUp), ct);
+
+            await RunStepAsync("3/8 — Đóng gripper 0° (G0x)",
+                () => SendGripper(GripperCloseAngle), ct);
+
+            await RunStepAsync("4/8 — Move → Wait",
+                () => SendMove(wait), ct);
+
+            await RunStepAsync($"5/8 — Move → {destination.Name}",
+                () => SendMove(destination), ct);
+
+            await RunStepAsync("6/8 — Mở gripper 90° (G90x)",
+                () => SendGripper(GripperOpenAngle), ct);
+
+            await RunStepAsync("7/8 — Move → Wait",
+                () => SendMove(wait), ct);
+
+            await RunStepAsync("8/8 — Đóng gripper 0° (G0x)",
+                () => SendGripper(GripperCloseAngle), ct);
+
+            StatusText = $"Test hoàn tất: PickUp → {destination.Group} {destination.Name} → Wait.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Đã hủy chu trình test.";
+        }
+        catch (TimeoutException ex)
+        {
+            StatusText = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Lỗi chu trình test: {ex.Message}";
+        }
+        finally
+        {
+            IsTestRunning = false;
+            _testCts?.Dispose();
+            _testCts = null;
+        }
     }
 
     public void GoToPickUp()
     {
-        var pickUp = GetPickUpPoint();
+        var pickUp = GetTeachPoint(RobotTeachPositions.PickUp);
         if (pickUp == null)
         {
             StatusText = "Không tìm thấy vị trí PickUp.";
             return;
         }
 
-        SendMoveToPoint(pickUp, "PickUp");
+        SendMoveOnly(pickUp, "PickUp");
     }
 
     public void GoToSelectedDestination()
@@ -222,44 +363,133 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        SendMoveToPoint(SelectedDestination, SelectedDestination.Name);
+        SendMoveOnly(SelectedDestination, SelectedDestination.Name);
+    }
+
+    public void Release()
+    {
+        if (_disposed) return;
+        CancelPendingOperations();
+        _serialService.LineReceived -= OnSerialLineReceived;
+        DisconnectSerial();
     }
 
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+        CancelPendingOperations();
         _serialService.LineReceived -= OnSerialLineReceived;
-        _serialService.Disconnect();
-        _serialService.Dispose();
+        DisconnectSerial();
+
+        if (_disposeSerialService)
+            _serialService.Dispose();
     }
 
-    private RobotTeachPoint? GetPickUpPoint()
+    private RobotTeachPoint? GetTeachPoint(string name)
         => RobotTeachPositions.Normalize(_config.TeachPoints)
-            .FirstOrDefault(p =>
-                p.Name.Equals(RobotTeachPositions.PickUp, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
-    private bool SendMoveToPoint(RobotTeachPoint point, string label)
+    private async Task RunStepAsync(string label, Action send, CancellationToken ct)
     {
-        var moveCmd = RobotSerialProtocol.MoveCommand(
-            point.J1, point.J2, point.J3, point.J4, point.J5);
+        StatusText = $"{label} — gửi lệnh...";
+        send();
+        StatusText = $"{label} — chờ Dx...";
+        await WaitForDoneAsync(StepTimeout, ct);
+        StatusText = $"{label} — nhận Dx, chuyển bước tiếp.";
+    }
 
-        if (!TrySend(() =>
-        {
-            _serialService.SendAscii(moveCmd);
-            _serialService.SendGripperAngle(point.GripperAngle);
-        }, out var err))
-        {
+    private void SendGripper(int angleDegrees)
+    {
+        var cmd = RobotSerialProtocol.GripperCommand(angleDegrees);
+        _serialService.SendAscii(cmd);
+        StatusText = $"TX {cmd}x";
+    }
+
+    private void SendMove(RobotTeachPoint point)
+    {
+        var cmd = RobotSerialProtocol.MoveCommand(
+            point.J1, point.J2, point.J3, point.J4, point.J5);
+        _serialService.SendAscii(cmd);
+        StatusText = $"TX {cmd}x → {point.Name}";
+    }
+
+    private void SendMoveOnly(RobotTeachPoint point, string label)
+    {
+        if (!TrySend(() => SendMove(point), out var err))
             StatusText = err;
-            return false;
+        else
+            StatusText = $"TX move → {label} (không chờ Dx)";
+    }
+
+    private async Task WaitForDoneAsync(TimeSpan timeout, CancellationToken ct)
+    {
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        void OnLine(string line)
+        {
+            if (IsDoneSignal(line))
+                tcs.TrySetResult();
         }
 
-        StatusText = $"TX {moveCmd} + G → {label}";
-        return true;
+        void OnData(string chunk)
+        {
+            if (IsDoneSignal(chunk))
+                tcs.TrySetResult();
+        }
+
+        _serialService.LineReceived += OnLine;
+        _serialService.DataReceived += OnData;
+
+        try
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            linked.CancelAfter(timeout);
+
+            var completed = await Task.WhenAny(
+                tcs.Task,
+                Task.Delay(Timeout.InfiniteTimeSpan, linked.Token));
+
+            if (completed != tcs.Task)
+            {
+                if (ct.IsCancellationRequested)
+                    throw new OperationCanceledException(ct);
+
+                throw new TimeoutException("Timeout — không nhận được Dx từ robot.");
+            }
+
+            await tcs.Task;
+        }
+        finally
+        {
+            _serialService.LineReceived -= OnLine;
+            _serialService.DataReceived -= OnData;
+        }
+    }
+
+    private static bool IsDoneSignal(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+
+        foreach (var segment in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var s = segment.Trim();
+            if (s.Length >= 2 && s[0] == 'D')
+                return true;
+        }
+
+        var trimmed = text.Trim();
+        return trimmed.Length >= 2 && trimmed[0] == 'D';
     }
 
     private bool TrySend(Action send, out string error)
     {
+        if (_closing || _disposed)
+        {
+            error = "Đang đóng màn hình — thao tác bị hủy.";
+            return false;
+        }
+
         if (!IsSerialConnected)
         {
             error = "Chưa kết nối SerialPort.";
@@ -281,10 +511,12 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
     private void OnSerialLineReceived(string line)
     {
+        if (IsTestRunning) return;
+
         var msg = line switch
         {
             _ when line.StartsWith('A') => $"Robot bắt đầu homing trục {line[1..]}...",
-            _ when line.StartsWith('D') => $"Robot hoàn thành homing trục {line[1..]}.",
+            _ when line.StartsWith('D') => $"Robot hoàn thành trục {line[1..]}.",
             _ => $"RX: {line}"
         };
 
@@ -294,3 +526,4 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
+

@@ -27,7 +27,7 @@ namespace UTT.ShapesDetector
         RollingPointPairList lst = new RollingPointPairList(12000);
         RollingPointPairList lst1 = new RollingPointPairList(12000);
         bool bStopTest = false;
-        int val2=2;
+        int val2 = 2;
         public frmMain()
         {
             InitializeComponent();
@@ -403,5 +403,9 @@ namespace UTT.ShapesDetector
             frm.ShowDialog(this);
         }
 
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

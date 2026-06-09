@@ -65,6 +65,8 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private readonly IRobotTeachService _teachService;
     private readonly IRobotSerialService _serialService;
     private readonly IAppSettingService _appSettingService;
+    private readonly bool _disposeSerialService;
+    private readonly bool _enableSerialEvents;
     private RobotTeachConfig _config;
     private AppSetting _appSetting;
     private RobotTeachPoint? _selectedPoint;
@@ -76,15 +78,20 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private int _speedPercent = 50;
     private bool _isSerialConnected;
     private bool _disposed;
+    private bool _closing;
 
     public RobotTeachViewModel(
         IRobotTeachService teachService,
         IRobotSerialService serialService,
-        IAppSettingService appSettingService)
+        IAppSettingService appSettingService,
+        bool disposeSerialService = true,
+        bool enableSerialEvents = true)
     {
         _teachService = teachService;
         _serialService = serialService;
         _appSettingService = appSettingService;
+        _disposeSerialService = disposeSerialService;
+        _enableSerialEvents = enableSerialEvents;
         _config = teachService.Load();
         _appSetting = appSettingService.Load();
 
@@ -104,7 +111,9 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             ?? TeachPoints.FirstOrDefault();
 
         RefreshAvailablePorts();
-        _serialService.LineReceived += OnSerialLineReceived;
+        if (_enableSerialEvents)
+            _serialService.LineReceived += OnSerialLineReceived;
+        SyncConnectionState();
     }
 
     public ObservableCollection<RobotJointItem> Joints { get; }
@@ -120,6 +129,9 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasSelectedPoint));
             OnPropertyChanged(nameof(IsSelectedPointStandard));
+
+            if (value != null)
+                ApplyPointToJoints(value);
         }
     }
 
@@ -200,37 +212,62 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             SerialPortName = AvailablePorts[0];
     }
 
-    public void ToggleSerialConnection()
+    public void SyncConnectionState()
+        => IsSerialConnected = _serialService.IsConnected;
+
+    public bool EnsureSerialConnected()
     {
+        SyncConnectionState();
         if (IsSerialConnected)
         {
-            _serialService.Disconnect();
-            IsSerialConnected = false;
-            StatusText = "Đã ngắt kết nối SerialPort.";
-            return;
+            StatusText = $"Serial online — {SerialPortName} @ {BaudRate}.";
+            return true;
         }
 
         try
         {
             if (string.IsNullOrWhiteSpace(SerialPortName))
             {
-                StatusText = "Chọn cổng COM.";
-                return;
+                StatusText = "Chưa cấu hình cổng COM trong setting.json.";
+                return false;
             }
 
             _serialService.Connect(SerialPortName, BaudRate);
             IsSerialConnected = true;
             StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
+            return true;
         }
         catch (Exception ex)
         {
             IsSerialConnected = false;
-            StatusText = $"Kết nối thất bại: {ex.Message}";
+            StatusText = $"Kết nối Serial thất bại: {ex.Message}";
+            return false;
         }
+    }
+
+    public void DisconnectSerial()
+    {
+        if (!IsSerialConnected) return;
+        _serialService.Disconnect();
+        IsSerialConnected = false;
+    }
+
+    public void ToggleSerialConnection()
+    {
+        if (IsSerialConnected)
+        {
+            DisconnectSerial();
+            StatusText = "Đã ngắt kết nối SerialPort.";
+            return;
+        }
+
+        EnsureSerialConnected();
     }
 
     public void JogJoint(RobotJointItem joint, int direction)
     {
+        if (_closing || _disposed) return;
+
         joint.Angle += direction * JogStep;
 
         if (!IsSerialConnected)
@@ -392,13 +429,32 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         => TeachPoints.FirstOrDefault(p =>
             p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>Hủy các lệnh robot đang thực hiện trên màn hình này.</summary>
+    public void CancelPendingOperations()
+        => _closing = true;
+
+    public void Release()
+    {
+        if (_disposed) return;
+        CancelPendingOperations();
+        if (_enableSerialEvents)
+            _serialService.LineReceived -= OnSerialLineReceived;
+
+        DisconnectSerial();
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
-        _serialService.LineReceived -= OnSerialLineReceived;
-        _serialService.Disconnect();
-        _serialService.Dispose();
+        CancelPendingOperations();
+        if (_enableSerialEvents)
+            _serialService.LineReceived -= OnSerialLineReceived;
+
+        DisconnectSerial();
+
+        if (_disposeSerialService)
+            _serialService.Dispose();
     }
 
     private void SendMoveToPoint(RobotTeachPoint point)
@@ -421,6 +477,12 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
     private bool TrySend(Action send, out string error)
     {
+        if (_closing || _disposed)
+        {
+            error = "Đang đóng màn hình — thao tác bị hủy.";
+            return false;
+        }
+
         if (!IsSerialConnected)
         {
             error = "Chưa kết nối SerialPort — thao tác chỉ cập nhật UI.";

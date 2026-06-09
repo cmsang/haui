@@ -253,7 +253,7 @@ namespace UTT.ShapesDetector
             label3.AutoSize = true;
             label3.Font = new Font("Segoe UI", 13.75F, FontStyle.Bold);
             label3.ForeColor = SystemColors.ControlDark;
-            label3.Location = new Point(367, 69);
+            label3.Location = new Point(358, 69);
             label3.Name = "label3";
             label3.Size = new Size(458, 25);
             label3.TabIndex = 2;
@@ -264,22 +264,23 @@ namespace UTT.ShapesDetector
             label2.AutoSize = true;
             label2.Font = new Font("Segoe UI", 13.75F, FontStyle.Bold);
             label2.ForeColor = SystemColors.ControlDark;
-            label2.Location = new Point(499, 38);
+            label2.Location = new Point(470, 38);
             label2.Name = "label2";
-            label2.Size = new Size(210, 25);
+            label2.Size = new Size(228, 25);
             label2.TabIndex = 1;
-            label2.Text = "KHOA ĐIỆN - ĐIỆN TỬ";
+            label2.Text = "NGÀNH ĐIỆN - ĐIỆN TỬ";
             // 
             // label1
             // 
             label1.AutoSize = true;
             label1.Font = new Font("Segoe UI", 15.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
             label1.ForeColor = SystemColors.ControlDark;
-            label1.Location = new Point(320, 8);
+            label1.Location = new Point(315, 8);
             label1.Name = "label1";
             label1.Size = new Size(562, 30);
             label1.TabIndex = 0;
             label1.Text = "TRƯỜNG ĐẠI HỌC CÔNG NGHỆ GIAO THÔNG VẬN TẢI";
+            label1.Click += label1_Click;
             // 
             // timerCheckJob
             // 

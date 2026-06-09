@@ -39,6 +39,10 @@ public static class RobotSerialProtocol
         return $"M{A(j1)},{A(j2)},{A(j3)},{A(j4)},{A(j5)}";
     }
 
+    /// <summary>VD: G180 → gửi G180x (mở), G0 → G0x (đóng).</summary>
+    public static string GripperCommand(int angleDegrees)
+        => $"G{angleDegrees}";
+
     public static byte[] AsciiBytes(string command)
         => Encoding.ASCII.GetBytes(command);
 

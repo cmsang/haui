@@ -1,6 +1,8 @@
-﻿using System.Windows;
+﻿using System.Text;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Shapes;
 using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
@@ -15,6 +17,11 @@ namespace Haui.PCB;
 public partial class MainWindow : System.Windows.Window
 {
     private readonly MainViewModel _viewModel;
+    private readonly RobotTeachViewModel _robotViewModel;
+    private readonly RobotSerialService _serialService = new();
+
+    private readonly Queue<string> _robotRxLog = new();
+    private const int MaxRobotRxLines = 30;
 
     // Trạng thái kéo thả chọn vùng
     private bool _isSelectingRegion;
@@ -25,7 +32,25 @@ public partial class MainWindow : System.Windows.Window
     {
         InitializeComponent();
         _viewModel = new MainViewModel(new CameraService());
+        _robotViewModel = new RobotTeachViewModel(
+            new RobotTeachService(),
+            _serialService,
+            new AppSettingService(),
+            disposeSerialService: false,
+            enableSerialEvents: false);
         DataContext = _viewModel;
+
+        _serialService.DataReceived += Serial_DataReceived;
+
+        _robotViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(RobotTeachViewModel.StatusText)
+                or nameof(RobotTeachViewModel.IsSerialConnected)
+                or nameof(RobotTeachViewModel.SerialPortName))
+            {
+                Dispatcher.InvokeAsync(UpdateRobotSerialStatus);
+            }
+        };
 
         // Lắng nghe frame mới để hiển thị lên UI
         _viewModel.FrameReady += bitmap =>
@@ -360,12 +385,67 @@ public partial class MainWindow : System.Windows.Window
 
     private void Window_Closed(object sender, EventArgs e)
     {
+        _serialService.DataReceived -= Serial_DataReceived;
+        _robotViewModel.Dispose();
+        _serialService.Dispose();
         _viewModel.Dispose();
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        _robotViewModel.ReloadAppSettings();
+        _robotViewModel.RefreshAvailablePorts();
+        if (!_robotViewModel.EnsureSerialConnected())
+        {
+            RobotSerialDetail.Text = _robotViewModel.StatusText;
+            TxtRobotRxLog.Text = $"Chưa mở được COM — kiểm tra Config/setting.json ({Processing.AppConfigPaths.SettingFile})";
+        }
+        UpdateRobotSerialStatus();
+    }
 
+    /// <summary>
+    /// Gọi mỗi khi SerialPort.DataReceived có byte mới (RobotSerialService.Port_DataReceived).
+    /// </summary>
+    private void Serial_DataReceived(string chunk)
+    {
+        Dispatcher.InvokeAsync(() =>
+        {
+            var visible = chunk.Replace("\r", "\\r").Replace("\n", "\\n");
+            var hex = BitConverter.ToString(Encoding.ASCII.GetBytes(chunk));
+            var entry = $"{DateTime.Now:HH:mm:ss}  RX: {visible}  [{hex}]";
+            _robotRxLog.Enqueue(entry);
+            while (_robotRxLog.Count > MaxRobotRxLines)
+                _robotRxLog.Dequeue();
+
+            TxtRobotRxLog.Text = string.Join(Environment.NewLine, _robotRxLog);
+            RobotSerialDetail.Text = $"RX: {visible}";
+        });
+    }
+
+    private void UpdateRobotSerialStatus()
+    {
+        if (_robotViewModel.IsSerialConnected)
+        {
+            RobotSerialText.Text = $"● Robot {_robotViewModel.SerialPortName} Online";
+            RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0x27, 0xAE, 0x60));
+        }
+        else
+        {
+            RobotSerialText.Text = "● Robot Offline";
+            RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0xE7, 0x4C, 0x3C));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_robotViewModel.StatusText)
+            && _robotViewModel.StatusText.StartsWith("Serial", StringComparison.OrdinalIgnoreCase))
+            RobotSerialDetail.Text = _robotViewModel.StatusText;
+    }
+
+    private void EnsureMainSerialDataReceiver()
+    {
+        _serialService.DataReceived -= Serial_DataReceived;
+        _serialService.DataReceived += Serial_DataReceived;
     }
 
     private void btnDashboard_Click(object sender, RoutedEventArgs e)
@@ -373,35 +453,23 @@ public partial class MainWindow : System.Windows.Window
 
     }
 
-    private void btnDetail_Click(object sender, RoutedEventArgs e)
-    {
-
-    }
-
-    private void btnReport_Click(object sender, RoutedEventArgs e)
-    {
-
-    }
-
     private void btnManualControl_Click(object sender, RoutedEventArgs e)
     {
-        var win = new wdManualControl { Owner = this };
+        var win = new wdManualControl(_serialService) { Owner = this };
         win.ShowDialog();
+        EnsureMainSerialDataReceiver();
+        _robotViewModel.SyncConnectionState();
+        UpdateRobotSerialStatus();
     }
 
     private void btnSetting_Click(object sender, RoutedEventArgs e)
-    {
-        
-    }
-
-    private void btnHelp_Click(object sender, RoutedEventArgs e)
     {
 
     }
 
     private void btnExit_Click(object sender, RoutedEventArgs e)
     {
-
+        this.Close();
     }
 
     private void btnCommandHistory_Click(object sender, RoutedEventArgs e)
@@ -411,7 +479,10 @@ public partial class MainWindow : System.Windows.Window
 
     private void btnTeaching_Click(object sender, RoutedEventArgs e)
     {
-        var win = new wdTeaching { Owner = this };
+        var win = new wdTeaching(_serialService) { Owner = this };
         win.ShowDialog();
+        EnsureMainSerialDataReceiver();
+        _robotViewModel.SyncConnectionState();
+        UpdateRobotSerialStatus();
     }
 }

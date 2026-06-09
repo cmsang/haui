@@ -69,20 +69,20 @@
     {
       "name": "Wait",
       "group": "Chung",
-      "j1": 0,
-      "j2": 0,
+      "j1": 10,
+      "j2": 10,
       "j3": 0,
-      "j4": 0,
+      "j4": 10,
       "j5": 0,
       "gripperAngle": 0
     },
     {
       "name": "OK1",
       "group": "OK",
-      "j1": 0,
+      "j1": 10,
       "j2": 0,
       "j3": 0,
-      "j4": 0,
+      "j4": 10,
       "j5": 0,
       "gripperAngle": 0
     },

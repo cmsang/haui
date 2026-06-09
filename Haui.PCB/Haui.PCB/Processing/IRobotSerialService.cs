@@ -18,9 +18,15 @@ public interface IRobotSerialService : IDisposable
 
     void SendHome(byte axis = 0);
 
+    void SendGripperCommand(int angleDegrees);
+
     void SendGripperAngle(double angleDegrees);
 
     void SendTuningForAllAxes(int speedPercent, int stepsPerDeg, ushort acceleration = RobotSerialProtocol.DefaultAcceleration);
 
+    /// <summary>Byte/chuỗi thô vừa đọc từ COM (mọi lần có dữ liệu).</summary>
+    event Action<string>? DataReceived;
+
+    /// <summary>Một dòng hoàn chỉnh (CR/LF).</summary>
     event Action<string>? LineReceived;
 }

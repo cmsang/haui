@@ -4,15 +4,25 @@ using System.Text;
 namespace Haui.PCB.Processing;
 
 /// <summary>
-/// Gửi lệnh M/J/H/S/G tới firmware robot qua SerialPort.
+/// Gửi/nhận lệnh M/J/H/S/G tới firmware robot qua SerialPort.
 /// </summary>
 public class RobotSerialService : IRobotSerialService
 {
     private SerialPort? _port;
-    private readonly StringBuilder _rxBuffer = new();
+    private readonly StringBuilder _rxLineBuffer = new();
     private bool _disposed;
 
     public bool IsConnected => _port?.IsOpen == true;
+
+
+
+    /// <summary>Mỗi lần có byte vào COM — kể cả không có ký tự xuống dòng.</summary>
+
+    public event Action<string>? DataReceived;
+
+
+
+    /// <summary>Một dòng text hoàn chỉnh (kết thúc bằng CR/LF).</summary>
 
     public event Action<string>? LineReceived;
 
@@ -23,21 +33,30 @@ public class RobotSerialService : IRobotSerialService
     {
         Disconnect();
 
+        var ports = GetAvailablePorts();
+        if (!ports.Contains(portName, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Không tìm thấy cổng {portName}. Hiện có: {(ports.Count > 0 ? string.Join(", ", ports) : "(trống)")}");
+        }
         _port = new SerialPort(portName, baudRate)
         {
             ReadTimeout = 500,
             WriteTimeout = 500,
             NewLine = "\n",
-            Encoding = Encoding.ASCII
+            Encoding = Encoding.ASCII,
+            ReceivedBytesThreshold = 1,
+            DtrEnable = true,
+            RtsEnable = true
         };
         _port.DataReceived += Port_DataReceived;
         _port.Open();
+        _rxLineBuffer.Clear();
     }
 
     public void Disconnect()
     {
         if (_port == null) return;
-
         try
         {
             if (_port.IsOpen)
@@ -51,6 +70,7 @@ public class RobotSerialService : IRobotSerialService
         {
             _port.Dispose();
             _port = null;
+            _rxLineBuffer.Clear();
         }
     }
 
@@ -63,13 +83,16 @@ public class RobotSerialService : IRobotSerialService
     }
 
     public void SendAscii(string command)
-        => SendRaw(Encoding.ASCII.GetBytes(command));
+        => SendRaw(Encoding.ASCII.GetBytes(command + "x"));
 
     public void SendJog(string axisName, bool positive, double stepDegrees)
         => SendAscii(RobotSerialProtocol.JogCommand(axisName, positive, stepDegrees));
 
     public void SendHome(byte axis = 0)
         => SendAscii(RobotSerialProtocol.HomeCommand(axis));
+
+    public void SendGripperCommand(int angleDegrees)
+        => SendAscii(RobotSerialProtocol.GripperCommand(angleDegrees));
 
     public void SendGripperAngle(double angleDegrees)
         => SendRaw(RobotSerialProtocol.BuildGripper(RobotSerialProtocol.GripperAngleToVal(angleDegrees)));
@@ -88,20 +111,31 @@ public class RobotSerialService : IRobotSerialService
         {
             if (_port?.IsOpen != true) return;
 
-            var chunk = _port.ReadExisting();
-            if (string.IsNullOrEmpty(chunk)) return;
+            while (_port.BytesToRead > 0)
+            {
+                var count = _port.BytesToRead;
+                var buf = new byte[count];
+                var read = _port.Read(buf, 0, count);
+                if (read <= 0) break;
+                var chunk = Encoding.ASCII.GetString(buf, 0, read);
+                DataReceived?.Invoke(chunk);
+                _rxLineBuffer.Append(chunk);
 
-            _rxBuffer.Append(chunk);
-            FlushLines();
+                FlushLines();
+            }
         }
-        catch { /* bỏ qua lỗi đọc */ }
+        catch (Exception ex)
+        {
+            DataReceived?.Invoke($"[Lỗi đọc Serial] {ex.Message}");
+        }
     }
 
     private void FlushLines()
     {
         while (true)
         {
-            var text = _rxBuffer.ToString();
+            var text = _rxLineBuffer.ToString();
+
             var idx = text.IndexOfAny(['\r', '\n']);
             if (idx < 0) break;
 
@@ -110,8 +144,8 @@ public class RobotSerialService : IRobotSerialService
             if (skip < text.Length && text[idx] == '\r' && text[skip] == '\n')
                 skip++;
 
-            _rxBuffer.Clear();
-            _rxBuffer.Append(text[skip..]);
+            _rxLineBuffer.Clear();
+            _rxLineBuffer.Append(text[skip..]);
 
             if (line.Length > 0)
                 LineReceived?.Invoke(line);

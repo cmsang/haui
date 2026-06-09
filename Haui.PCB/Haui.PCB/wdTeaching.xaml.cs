@@ -13,16 +13,29 @@ namespace Haui.PCB;
 public partial class wdTeaching : Window
 {
     private readonly RobotTeachViewModel _viewModel;
-    private readonly RobotSerialService _serialService = new();
+    private readonly IRobotSerialService _serialService;
+    private readonly bool _ownsSerialService;
 
-    public wdTeaching()
+    public wdTeaching(IRobotSerialService? sharedSerialService = null)
     {
         InitializeComponent();
+
+        if (sharedSerialService != null)
+        {
+            _serialService = sharedSerialService;
+            _ownsSerialService = false;
+        }
+        else
+        {
+            _serialService = new RobotSerialService();
+            _ownsSerialService = true;
+        }
 
         _viewModel = new RobotTeachViewModel(
             new RobotTeachService(),
             _serialService,
-            new AppSettingService());
+            new AppSettingService(),
+            disposeSerialService: _ownsSerialService);
         DataContext = _viewModel;
 
         JointsPanel.ItemsSource = _viewModel.Joints;
@@ -178,7 +191,10 @@ public partial class wdTeaching : Window
     private void TeachPointsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (TeachPointsGrid.SelectedItem is Models.RobotTeachPoint point)
+        {
             _viewModel.SelectedPoint = point;
+            UpdateJointSummary();
+        }
     }
 
     private void BtnTeach_Click(object sender, RoutedEventArgs e)
@@ -210,7 +226,29 @@ public partial class wdTeaching : Window
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         _viewModel.SaveConfiguration();
-        _viewModel.Dispose();
+        _viewModel.CancelPendingOperations();
+        _viewModel.DisconnectSerial();
+
+        if (_ownsSerialService)
+            _viewModel.Dispose();
+        else
+            _viewModel.Release();
+
         base.OnClosing(e);
+    }
+
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ReloadAppSettings();
+        CboComPort.Text = _viewModel.SerialPortName;
+        CboBaudRate.SelectedItem = _viewModel.BaudRate;
+
+        if (_ownsSerialService)
+            _viewModel.EnsureSerialConnected();
+        else
+            _viewModel.SyncConnectionState();
+
+        UpdateSerialStateUi();
+        TxtStatus.Text = _viewModel.StatusText;
     }
 }
