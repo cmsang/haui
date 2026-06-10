@@ -19,6 +19,9 @@ public class RobotTeachPoint
     /// <summary>Góc xoay gripper (độ).</summary>
     public double GripperAngle { get; set; }
 
+    /// <summary>EMPTY hoặc FULL — slot OK/NG trong Database.</summary>
+    public string FullState { get; set; } = "EMPTY";
+
     public double[] ToJointArray() => [J1, J2, J3, J4, J5, GripperAngle];
 
     public static RobotTeachPoint FromJointArray(string name, IReadOnlyList<double> angles) => new()

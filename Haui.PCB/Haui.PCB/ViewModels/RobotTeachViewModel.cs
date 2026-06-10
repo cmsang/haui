@@ -62,10 +62,11 @@ public class RobotJointItem : INotifyPropertyChanged
 /// </summary>
 public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 {
-    private readonly IRobotTeachService _teachService;
+    private readonly IRobotConfigService _robotConfigService;
     private readonly IRobotSerialService _serialService;
     private readonly IAppSettingService _appSettingService;
-    private RobotTeachConfig _config;
+    private readonly bool _disposeSerialService;
+    private readonly bool _enableSerialEvents;
     private AppSetting _appSetting;
     private RobotTeachPoint? _selectedPoint;
     private string _statusText = "Kết nối SerialPort để bắt đầu teach.";
@@ -76,35 +77,38 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private int _speedPercent = 50;
     private bool _isSerialConnected;
     private bool _disposed;
+    private bool _closing;
 
     public RobotTeachViewModel(
-        IRobotTeachService teachService,
+        IRobotConfigService robotConfigService,
         IRobotSerialService serialService,
-        IAppSettingService appSettingService)
+        IAppSettingService appSettingService,
+        bool disposeSerialService = true,
+        bool enableSerialEvents = true)
     {
-        _teachService = teachService;
+        _robotConfigService = robotConfigService;
         _serialService = serialService;
         _appSettingService = appSettingService;
-        _config = teachService.Load();
+        _disposeSerialService = disposeSerialService;
+        _enableSerialEvents = enableSerialEvents;
         _appSetting = appSettingService.Load();
 
-        _jogStep = _config.JogStepDegrees;
-        _speedPercent = _config.SpeedPercent;
+        _jogStep = _appSetting.JogStepDegrees;
+        _speedPercent = _appSetting.SpeedPercent;
         _serialPort = _appSetting.Com;
         _baudRate = _appSetting.BaudRate;
         _stepsPerDeg = _appSetting.StepsPerDeg;
 
         Joints = new ObservableCollection<RobotJointItem>(
-            _config.JointLimits.Select((l, i) => RobotJointItem.FromLimits(l, i)));
+            RobotJointLimits.CreateDefault().Select((l, i) => RobotJointItem.FromLimits(l, i)));
 
-        TeachPoints = new ObservableCollection<RobotTeachPoint>(
-            RobotTeachPositions.Normalize(_config.TeachPoints));
-        SelectedPoint = TeachPoints.FirstOrDefault(p =>
-            p.Name.Equals(RobotTeachPositions.Home, StringComparison.OrdinalIgnoreCase))
-            ?? TeachPoints.FirstOrDefault();
+        TeachPoints = new ObservableCollection<RobotTeachPoint>();
+        ReloadTeachPoints();
 
         RefreshAvailablePorts();
-        _serialService.LineReceived += OnSerialLineReceived;
+        if (_enableSerialEvents)
+            _serialService.LineReceived += OnSerialLineReceived;
+        SyncConnectionState();
     }
 
     public ObservableCollection<RobotJointItem> Joints { get; }
@@ -120,6 +124,9 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasSelectedPoint));
             OnPropertyChanged(nameof(IsSelectedPointStandard));
+
+            if (value != null)
+                ApplyPointToJoints(value);
         }
     }
 
@@ -200,37 +207,62 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             SerialPortName = AvailablePorts[0];
     }
 
-    public void ToggleSerialConnection()
+    public void SyncConnectionState()
+        => IsSerialConnected = _serialService.IsConnected;
+
+    public bool EnsureSerialConnected()
     {
+        SyncConnectionState();
         if (IsSerialConnected)
         {
-            _serialService.Disconnect();
-            IsSerialConnected = false;
-            StatusText = "Đã ngắt kết nối SerialPort.";
-            return;
+            StatusText = $"Serial online — {SerialPortName} @ {BaudRate}.";
+            return true;
         }
 
         try
         {
             if (string.IsNullOrWhiteSpace(SerialPortName))
             {
-                StatusText = "Chọn cổng COM.";
-                return;
+                StatusText = "Chưa cấu hình cổng COM trong setting.json.";
+                return false;
             }
 
             _serialService.Connect(SerialPortName, BaudRate);
             IsSerialConnected = true;
             StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
+            return true;
         }
         catch (Exception ex)
         {
             IsSerialConnected = false;
-            StatusText = $"Kết nối thất bại: {ex.Message}";
+            StatusText = $"Kết nối Serial thất bại: {ex.Message}";
+            return false;
         }
+    }
+
+    public void DisconnectSerial()
+    {
+        if (!IsSerialConnected) return;
+        _serialService.Disconnect();
+        IsSerialConnected = false;
+    }
+
+    public void ToggleSerialConnection()
+    {
+        if (IsSerialConnected)
+        {
+            DisconnectSerial();
+            StatusText = "Đã ngắt kết nối SerialPort.";
+            return;
+        }
+
+        EnsureSerialConnected();
     }
 
     public void JogJoint(RobotJointItem joint, int direction)
     {
+        if (_closing || _disposed) return;
+
         joint.Angle += direction * JogStep;
 
         if (!IsSerialConnected)
@@ -329,7 +361,14 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
         ApplyCurrentJointsToPoint(SelectedPoint);
         RefreshTeachPointBinding();
-        StatusText = $"Đã teach \"{SelectedPoint.Name}\" → lưu vào cấu hình.";
+
+        if (!_robotConfigService.TrySaveTeachPoint(SelectedPoint, out var error))
+        {
+            StatusText = $"Teach \"{SelectedPoint.Name}\" thất bại — {error}";
+            return;
+        }
+
+        StatusText = $"Đã teach \"{SelectedPoint.Name}\" → lưu Database.";
     }
 
     public void GoToSelectedPoint()
@@ -345,28 +384,13 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
     public void SaveConfiguration()
     {
-        _config.JogStepDegrees = JogStep;
-        _config.SpeedPercent = SpeedPercent;
-        _config.JointLimits = Joints.Select(j => new RobotJointLimits
-        {
-            Key = j.Key,
-            Label = j.Label,
-            MinAngle = j.MinAngle,
-            MaxAngle = j.MaxAngle,
-            IsGripper = j.IsGripper
-        }).ToList();
-        _config.TeachPoints = RobotTeachPositions.Normalize(TeachPoints).ToList();
-        _teachService.Save(_config);
-        SaveAppSettings();
-        StatusText = "Đã lưu cấu hình (setting.json + robot_teach_config.json).";
-    }
-
-    public void SaveAppSettings()
-    {
         _appSetting.Com = SerialPortName;
         _appSetting.BaudRate = BaudRate;
         _appSetting.StepsPerDeg = StepsPerDeg;
+        _appSetting.JogStepDegrees = JogStep;
+        _appSetting.SpeedPercent = SpeedPercent;
         _appSettingService.Save(_appSetting);
+        StatusText = "Đã lưu cấu hình (setting.json).";
     }
 
     public void ReloadAppSettings()
@@ -375,7 +399,41 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         SerialPortName = _appSetting.Com;
         BaudRate = _appSetting.BaudRate;
         StepsPerDeg = _appSetting.StepsPerDeg;
+        JogStep = _appSetting.JogStepDegrees;
+        SpeedPercent = _appSetting.SpeedPercent;
         StatusText = $"Đã tải setting.json — COM={SerialPortName}, STEPS_PER_DEG={StepsPerDeg}.";
+    }
+
+    /// <summary>Tải lại danh sách vị trí teach từ Database (BL → DL).</summary>
+    public void ReloadTeachPoints()
+    {
+        var selectedName = SelectedPoint?.Name;
+
+        if (!_robotConfigService.TryLoadTeachPoints(out var dbPoints, out var error))
+        {
+            StatusText = $"Không tải được Database: {error}";
+            return;
+        }
+
+        var points = dbPoints.Count > 0
+            ? RobotTeachPositions.Normalize(dbPoints)
+            : RobotTeachPositions.CreateDefault();
+
+        TeachPoints.Clear();
+        foreach (var point in points)
+            TeachPoints.Add(point);
+
+        SelectedPoint = selectedName == null
+            ? TeachPoints.FirstOrDefault(p =>
+                p.Name.Equals(RobotTeachPositions.Home, StringComparison.OrdinalIgnoreCase))
+              ?? TeachPoints.FirstOrDefault()
+            : TeachPoints.FirstOrDefault(p =>
+                p.Name.Equals(selectedName, StringComparison.OrdinalIgnoreCase))
+              ?? TeachPoints.FirstOrDefault();
+
+        StatusText = dbPoints.Count > 0
+            ? $"Đã tải {dbPoints.Count} vị trí từ Database."
+            : "Database trống — hiển thị danh sách mặc định (chạy seed SQL).";
     }
 
     public void ZeroAllJoints()
@@ -392,13 +450,32 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         => TeachPoints.FirstOrDefault(p =>
             p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>Hủy các lệnh robot đang thực hiện trên màn hình này.</summary>
+    public void CancelPendingOperations()
+        => _closing = true;
+
+    public void Release()
+    {
+        if (_disposed) return;
+        CancelPendingOperations();
+        if (_enableSerialEvents)
+            _serialService.LineReceived -= OnSerialLineReceived;
+
+        DisconnectSerial();
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
-        _serialService.LineReceived -= OnSerialLineReceived;
-        _serialService.Disconnect();
-        _serialService.Dispose();
+        CancelPendingOperations();
+        if (_enableSerialEvents)
+            _serialService.LineReceived -= OnSerialLineReceived;
+
+        DisconnectSerial();
+
+        if (_disposeSerialService)
+            _serialService.Dispose();
     }
 
     private void SendMoveToPoint(RobotTeachPoint point)
@@ -421,6 +498,12 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
     private bool TrySend(Action send, out string error)
     {
+        if (_closing || _disposed)
+        {
+            error = "Đang đóng màn hình — thao tác bị hủy.";
+            return false;
+        }
+
         if (!IsSerialConnected)
         {
             error = "Chưa kết nối SerialPort — thao tác chỉ cập nhật UI.";

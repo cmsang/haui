@@ -15,6 +15,7 @@ namespace Haui.PCB.ViewModels;
 public class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly ICameraService _cameraService;
+    private readonly IMaterialTransferService? _materialTransfer;
 
     private IReadOnlyList<CameraInfo> _cameras = [];
     private IReadOnlyList<ResolutionInfo> _resolutions = [];
@@ -101,11 +102,52 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
-    public MainViewModel(ICameraService cameraService)
+    public MainViewModel(ICameraService cameraService, IMaterialTransferService? materialTransfer = null)
     {
         _cameraService = cameraService;
+        _materialTransfer = materialTransfer;
         _cameraService.FrameArrived += OnFrameArrived;
         LoadRegion();
+    }
+
+    public bool IsMaterialTransferRunning => _materialTransfer?.IsRunning ?? false;
+
+    public void CancelMaterialTransfer() => _materialTransfer?.Cancel();
+
+    /// <summary>Pass — PickUp → ô OK (xoay vòng OK1–OK6).</summary>
+    public async Task TransferPassMaterial()
+    {
+        if (_materialTransfer == null)
+        {
+            StatusText = "Chưa cấu hình dịch vụ chuyển material.";
+            return;
+        }
+
+        if (_materialTransfer.IsRunning)
+        {
+            StatusText = "Chu trình chuyển material đang chạy.";
+            return;
+        }
+
+        await _materialTransfer.TransferPassAsync(msg => StatusText = msg);
+    }
+
+    /// <summary>Fail — PickUp → ô NG (xoay vòng NG1–NG6).</summary>
+    public async Task TransferFailMaterial()
+    {
+        if (_materialTransfer == null)
+        {
+            StatusText = "Chưa cấu hình dịch vụ chuyển material.";
+            return;
+        }
+
+        if (_materialTransfer.IsRunning)
+        {
+            StatusText = "Chu trình chuyển material đang chạy.";
+            return;
+        }
+
+        await _materialTransfer.TransferFailAsync(msg => StatusText = msg);
     }
 
     // ──── Commands / Actions ──────────────────────────────────────────────────

@@ -136,7 +136,9 @@
         <Grid Grid.Column="0">
 
             <Grid.RowDefinitions>
-                <RowDefinition Height="3*"/>
+                <RowDefinition Height="3.5*"/>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="2*"/>
                 <RowDefinition Height="2*"/>
                 <RowDefinition Height="2*"/>
                 <RowDefinition Height="2*"/>
@@ -223,6 +225,20 @@
             </Grid>
 
             <Grid Grid.Row="7" Background="#2E4053">
+                <Button Height="69" x:Name="btnPass" Click="btnPass_Click" VerticalAlignment="Top"
+                        Background="#2E4053" BorderBrush="#2E4053"></Button>
+                <TextBlock Text="Pass" FontSize="16" Height="20" Margin="90,0,0,0" 
+               Foreground="White" MouseDown="btnPass_Click"/>
+                <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
+            </Grid>
+            <Grid Grid.Row="8" Background="#2E4053">
+                <Button Height="69" x:Name="btnFail" Click="btnFail_Click" VerticalAlignment="Top"
+                    Background="#2E4053" BorderBrush="#2E4053"></Button>
+                <TextBlock Text="Fail" FontSize="16" Height="20" Margin="90,0,0,0" 
+                    Foreground="White" MouseDown="btnFail_Click"/>
+                <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
+            </Grid>
+            <Grid Grid.Row="9" Background="#2E4053">
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
             </Grid>
 
@@ -611,21 +627,54 @@
                     <!-- ===== STATUS BAR ===== -->
                     <Border Grid.Row="2" Background="#F3F3F3" BorderBrush="#DDDDDD" BorderThickness="0,1,0,0" Padding="10,4">
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="StatusText"
-                           Grid.Column="0"
-                           Text="Sẵn sàng."
-                           VerticalAlignment="Center"
-                           Foreground="#555555"
-                           FontSize="12" />
-                            <TextBlock x:Name="FpsText"
-                           Grid.Column="1"
-                           VerticalAlignment="Center"
-                           Foreground="#555555"
-                           FontSize="12" />
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="StatusText"
+                                           Grid.Column="0"
+                                           Text="Sẵn sàng."
+                                           VerticalAlignment="Center"
+                                           Foreground="#555555"
+                                           FontSize="12" />
+                                <TextBlock x:Name="FpsText"
+                                           Grid.Column="1"
+                                           VerticalAlignment="Center"
+                                           Foreground="#555555"
+                                           FontSize="12" />
+                            </Grid>
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock x:Name="RobotSerialText"
+                                           Text="● Robot Offline"
+                                           VerticalAlignment="Top"
+                                           Foreground="#E74C3C"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,8,0"/>
+                                <TextBlock x:Name="RobotSerialDetail"
+                                           VerticalAlignment="Top"
+                                           Foreground="#666666"
+                                           FontSize="11"
+                                           TextTrimming="CharacterEllipsis"
+                                           Margin="0,0,12,0"/>
+                            </StackPanel>
+                            <TextBox Grid.Row="2" x:Name="TxtRobotRxLog"
+                                     Margin="0,4,0,0"
+                                     Height="54"
+                                     IsReadOnly="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     FontFamily="Consolas"
+                                     FontSize="10"
+                                     Background="#FAFAFA"
+                                     BorderBrush="#DDDDDD"
+                                     ToolTip="Nhật ký Serial RX (Serial_DataReceived)"/>
                         </Grid>
                     </Border>
                 </Grid>

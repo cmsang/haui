@@ -15,6 +15,14 @@ public static class RobotSerialProtocol
     public const byte CmdTuning = (byte)'S';   //  6 bytes: S + Axis ASCII + V + A (uint16 LE)
     public const byte CmdGripper = (byte)'G';  //  2 bytes: G + Val (0–255)
 
+    /// <summary>Warehouse: C1 = tất cả ô OK full, C2 = tất cả ô NG full.</summary>
+    public const string WarehouseOkBufferFull = "C1";
+    public const string WarehouseNgBufferFull = "C2";
+
+    /// <summary>Khởi động: gửi Rx, robot trả Yx → gửi H0x.</summary>
+    public const string StartupHandshake = "R";
+    public const char StartupReadyResponse = 'Y';
+
     public const ushort MaxVelocityStepsPerSec = 40_000;
     public const ushort DefaultAcceleration = 10_000;
 
@@ -38,6 +46,10 @@ public static class RobotSerialProtocol
 
         return $"M{A(j1)},{A(j2)},{A(j3)},{A(j4)},{A(j5)}";
     }
+
+    /// <summary>VD: G180 → gửi G180x (mở), G0 → G0x (đóng).</summary>
+    public static string GripperCommand(int angleDegrees)
+        => $"G{angleDegrees}";
 
     public static byte[] AsciiBytes(string command)
         => Encoding.ASCII.GetBytes(command);

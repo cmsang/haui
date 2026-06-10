@@ -12,16 +12,30 @@ namespace Haui.PCB;
 public partial class wdManualControl : Window
 {
     private readonly ManualControlViewModel _viewModel;
-    private readonly RobotSerialService _serialService = new();
+    private readonly IRobotSerialService _serialService;
+    private readonly bool _ownsSerialService;
 
-    public wdManualControl()
+    public wdManualControl(IRobotSerialService? sharedSerialService = null)
     {
         InitializeComponent();
 
+        if (sharedSerialService != null)
+        {
+            _serialService = sharedSerialService;
+            _ownsSerialService = false;
+        }
+        else
+        {
+            _serialService = new RobotSerialService();
+            _ownsSerialService = true;
+        }
+
+        var appSettingService = new AppSettingService();
         _viewModel = new ManualControlViewModel(
-            new RobotTeachService(),
+            new RobotConfigService(appSettingService),
             _serialService,
-            new AppSettingService());
+            appSettingService,
+            disposeSerialService: _ownsSerialService);
         DataContext = _viewModel;
 
         DestinationGrid.ItemsSource = _viewModel.DestinationPoints;
@@ -43,6 +57,8 @@ public partial class wdManualControl : Window
                 BtnSerialToggle.Content = _viewModel.SerialConnectButtonText;
             else if (e.PropertyName is nameof(ManualControlViewModel.SelectedDestinationSummary))
                 TxtSelectedSummary.Text = _viewModel.SelectedDestinationSummary;
+            else if (e.PropertyName is nameof(ManualControlViewModel.CanRunTest))
+                BtnRunTest.IsEnabled = _viewModel.CanRunTest;
         };
 
         UpdateSerialStateUi();
@@ -92,8 +108,18 @@ public partial class wdManualControl : Window
             _viewModel.SelectedDestination = point;
     }
 
-    private void BtnRunTest_Click(object sender, RoutedEventArgs e)
-        => _viewModel.RunPickUpToDestinationTest();
+    private async void BtnRunTest_Click(object sender, RoutedEventArgs e)
+    {
+        BtnRunTest.IsEnabled = false;
+        try
+        {
+            await _viewModel.RunPickUpToDestinationTestAsync();
+        }
+        finally
+        {
+            BtnRunTest.IsEnabled = _viewModel.CanRunTest;
+        }
+    }
 
     private void BtnGoPickUp_Click(object sender, RoutedEventArgs e)
         => _viewModel.GoToPickUp();
@@ -106,7 +132,29 @@ public partial class wdManualControl : Window
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        _viewModel.Dispose();
+        _viewModel.CancelPendingOperations();
+        _viewModel.DisconnectSerial();
+
+        if (_ownsSerialService)
+            _viewModel.Dispose();
+        else
+            _viewModel.Release();
+
         base.OnClosing(e);
+    }
+
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ReloadDestinationPoints();
+        CboComPort.Text = _viewModel.SerialPortName;
+        CboBaudRate.SelectedItem = _viewModel.BaudRate;
+
+        if (_ownsSerialService)
+            _viewModel.EnsureSerialConnected();
+        else
+            _viewModel.SyncConnectionState();
+
+        UpdateSerialStateUi();
+        TxtStatus.Text = _viewModel.StatusText;
     }
 }

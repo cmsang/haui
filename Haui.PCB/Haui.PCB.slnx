@@ -2,5 +2,7 @@
   <Folder Name="/AI/">
     <File Path=".github/copilot-instructions.md" />
   </Folder>
+  <Project Path="BL.PCBDetect/BL.PCBDetect.csproj" Id="e7e324fd-a5af-4e9a-8c31-ce644aa9e0b2" />
+  <Project Path="DL.PCBDetect/DL.PCBDetect.csproj" Id="f2f74f05-b2ea-442e-aef5-138dc38ee0fc" />
   <Project Path="Haui.PCB/Haui.PCB.csproj" />
 </Solution>

@@ -9,6 +9,8 @@
         Height="720" Width="1050"
         MinHeight="520" MinWidth="800"
         WindowStartupLocation="CenterOwner"
+        Loaded="Window_Loaded"
+        WindowStyle="None"
         Background="{DynamicResource MaterialDesignPaper}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         FontFamily="{DynamicResource MaterialDesignFont}">
@@ -173,8 +175,9 @@
 
         <!-- Actions -->
         <WrapPanel Grid.Row="4" Margin="0,12,0,0">
-            <Button x:Name="BtnRunTest" Style="{StaticResource OkBtn}" Margin="0,0,10,8"
-                    Click="BtnRunTest_Click">
+                        <Button x:Name="BtnRunTest" Style="{StaticResource OkBtn}" Margin="0,0,10,8"
+                                IsEnabled="{Binding CanRunTest}"
+                                Click="BtnRunTest_Click">
                 <StackPanel Orientation="Horizontal">
                     <md:PackIcon Kind="RobotIndustrial" Width="18" Height="18"
                                  Foreground="White" Margin="0,0,8,0" VerticalAlignment="Center"/>

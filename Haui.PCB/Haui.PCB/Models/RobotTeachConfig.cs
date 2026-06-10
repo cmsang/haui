@@ -1,21 +1,5 @@
 namespace Haui.PCB.Models;
 
-/// <summary>
-/// Cấu hình teach robot — giới hạn khớp, bước jog, danh sách vị trí.
-/// </summary>
-public class RobotTeachConfig
-{
-    /// <summary>Bước jog mỗi lần nhấn +/- (độ).</summary>
-    public double JogStepDegrees { get; set; } = 1.0;
-
-    /// <summary>Tốc độ di chuyển khi Go To (0–100%).</summary>
-    public int SpeedPercent { get; set; } = 50;
-
-    public List<RobotJointLimits> JointLimits { get; set; } = RobotJointLimits.CreateDefault();
-
-    public List<RobotTeachPoint> TeachPoints { get; set; } = RobotTeachPositions.CreateDefault();
-}
-
 public class RobotJointLimits
 {
     public string Key { get; set; } = string.Empty;
