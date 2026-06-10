@@ -19,6 +19,7 @@ public partial class MainWindow : System.Windows.Window
     private readonly MainViewModel _viewModel;
     private readonly RobotTeachViewModel _robotViewModel;
     private readonly RobotSerialService _serialService = new();
+    private readonly RobotStartupHandshakeService _startupHandshake;
 
     private readonly Queue<string> _robotRxLog = new();
     private const int MaxRobotRxLines = 30;
@@ -46,6 +47,7 @@ public partial class MainWindow : System.Windows.Window
         DataContext = _viewModel;
 
         _serialService.DataReceived += Serial_DataReceived;
+        _startupHandshake = new RobotStartupHandshakeService(_serialService);
 
         _robotViewModel.PropertyChanged += (_, e) =>
         {
@@ -391,6 +393,7 @@ public partial class MainWindow : System.Windows.Window
 
     private void Window_Closed(object sender, EventArgs e)
     {
+        _startupHandshake.Cancel();
         _serialService.DataReceived -= Serial_DataReceived;
         _robotViewModel.Dispose();
         _serialService.Dispose();
@@ -414,10 +417,11 @@ public partial class MainWindow : System.Windows.Window
             }
 
             _viewModel.CancelMaterialTransfer();
+            _startupHandshake.Cancel();
         }
     }
 
-    private void Window_Loaded(object sender, RoutedEventArgs e)
+    private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
         _robotViewModel.ReloadAppSettings();
         _robotViewModel.RefreshAvailablePorts();
@@ -426,6 +430,12 @@ public partial class MainWindow : System.Windows.Window
             RobotSerialDetail.Text = _robotViewModel.StatusText;
             TxtRobotRxLog.Text = $"Chưa mở được COM — kiểm tra Config/setting.json ({Processing.AppConfigPaths.SettingFile})";
         }
+        else
+        {
+            await _startupHandshake.RunAsync(msg =>
+                Dispatcher.InvokeAsync(() => RobotSerialDetail.Text = msg));
+        }
+
         UpdateRobotSerialStatus();
     }
 

@@ -19,6 +19,10 @@ public static class RobotSerialProtocol
     public const string WarehouseOkBufferFull = "C1";
     public const string WarehouseNgBufferFull = "C2";
 
+    /// <summary>Khởi động: gửi Rx, robot trả Yx → gửi H0x.</summary>
+    public const string StartupHandshake = "R";
+    public const char StartupReadyResponse = 'Y';
+
     public const ushort MaxVelocityStepsPerSec = 40_000;
     public const ushort DefaultAcceleration = 10_000;
 
