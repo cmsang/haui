@@ -7,4 +7,6 @@ public interface IRobotConfigBL
     bool TryLoadTeachPoints(out IReadOnlyList<RobotTeachPointInfo> points, out string? error);
 
     bool TrySaveTeachPoint(RobotTeachPointInfo point, out string? error);
+
+    bool TryMarkSlotFull(string posName, out string? error);
 }

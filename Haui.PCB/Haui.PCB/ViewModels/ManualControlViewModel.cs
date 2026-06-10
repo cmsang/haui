@@ -12,13 +12,10 @@ namespace Haui.PCB.ViewModels;
 /// </summary>
 public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 {
-    private const int GripperOpenAngle = 90;
-    private const int GripperCloseAngle = 0;
-    private static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(120);
-
     private readonly IRobotConfigService _robotConfigService;
     private readonly IRobotSerialService _serialService;
     private readonly IAppSettingService _appSettingService;
+    private readonly RobotPickPlaceExecutor _pickPlaceExecutor;
     private IReadOnlyList<RobotTeachPoint> _allTeachPoints = [];
     private readonly bool _disposeSerialService;
     private AppSetting _appSetting;
@@ -43,6 +40,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         _robotConfigService = robotConfigService;
         _serialService = serialService;
         _appSettingService = appSettingService;
+        _pickPlaceExecutor = new RobotPickPlaceExecutor(serialService);
         _disposeSerialService = disposeSerialService;
         _appSetting = appSettingService.Load();
 
@@ -298,29 +296,8 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         {
             var ct = _testCts.Token;
 
-            await RunStepAsync("1/8 — Mở gripper 90° (G90x)",
-                () => SendGripper(GripperOpenAngle), ct);
-
-            await RunStepAsync("2/8 — Move → PickUp",
-                () => SendMove(pickUp), ct);
-
-            await RunStepAsync("3/8 — Đóng gripper 0° (G0x)",
-                () => SendGripper(GripperCloseAngle), ct);
-
-            await RunStepAsync("4/8 — Move → Wait",
-                () => SendMove(wait), ct);
-
-            await RunStepAsync($"5/8 — Move → {destination.Name}",
-                () => SendMove(destination), ct);
-
-            await RunStepAsync("6/8 — Mở gripper 90° (G90x)",
-                () => SendGripper(GripperOpenAngle), ct);
-
-            await RunStepAsync("7/8 — Move → Wait",
-                () => SendMove(wait), ct);
-
-            await RunStepAsync("8/8 — Đóng gripper 0° (G0x)",
-                () => SendGripper(GripperCloseAngle), ct);
+            await _pickPlaceExecutor.RunPickUpToDestinationAsync(
+                pickUp, wait, destination, msg => StatusText = msg, ct);
 
             StatusText = $"Test hoàn tất: PickUp → {destination.Group} {destination.Name} → Wait.";
         }
@@ -404,96 +381,17 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             : RobotTeachPositions.CreateDefault();
     }
 
-    private async Task RunStepAsync(string label, Action send, CancellationToken ct)
-    {
-        StatusText = $"{label} — gửi lệnh...";
-        send();
-        StatusText = $"{label} — chờ Dx...";
-        await WaitForDoneAsync(StepTimeout, ct);
-        StatusText = $"{label} — nhận Dx, chuyển bước tiếp.";
-    }
-
-    private void SendGripper(int angleDegrees)
-    {
-        var cmd = RobotSerialProtocol.GripperCommand(angleDegrees);
-        _serialService.SendAscii(cmd);
-        StatusText = $"TX {cmd}x";
-    }
-
-    private void SendMove(RobotTeachPoint point)
-    {
-        var cmd = RobotSerialProtocol.MoveCommand(
-            point.J1, point.J2, point.J3, point.J4, point.J5);
-        _serialService.SendAscii(cmd);
-        StatusText = $"TX {cmd}x → {point.Name}";
-    }
-
     private void SendMoveOnly(RobotTeachPoint point, string label)
     {
-        if (!TrySend(() => SendMove(point), out var err))
+        if (!TrySend(() =>
+        {
+            var cmd = RobotSerialProtocol.MoveCommand(
+                point.J1, point.J2, point.J3, point.J4, point.J5);
+            _serialService.SendAscii(cmd);
+        }, out var err))
             StatusText = err;
         else
             StatusText = $"TX move → {label} (không chờ Dx)";
-    }
-
-    private async Task WaitForDoneAsync(TimeSpan timeout, CancellationToken ct)
-    {
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        void OnLine(string line)
-        {
-            if (IsDoneSignal(line))
-                tcs.TrySetResult();
-        }
-
-        void OnData(string chunk)
-        {
-            if (IsDoneSignal(chunk))
-                tcs.TrySetResult();
-        }
-
-        _serialService.LineReceived += OnLine;
-        _serialService.DataReceived += OnData;
-
-        try
-        {
-            using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            linked.CancelAfter(timeout);
-
-            var completed = await Task.WhenAny(
-                tcs.Task,
-                Task.Delay(Timeout.InfiniteTimeSpan, linked.Token));
-
-            if (completed != tcs.Task)
-            {
-                if (ct.IsCancellationRequested)
-                    throw new OperationCanceledException(ct);
-
-                throw new TimeoutException("Timeout — không nhận được Dx từ robot.");
-            }
-
-            await tcs.Task;
-        }
-        finally
-        {
-            _serialService.LineReceived -= OnLine;
-            _serialService.DataReceived -= OnData;
-        }
-    }
-
-    private static bool IsDoneSignal(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return false;
-
-        foreach (var segment in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            var s = segment.Trim();
-            if (s.Length >= 2 && s[0] == 'D')
-                return true;
-        }
-
-        var trimmed = text.Trim();
-        return trimmed.Length >= 2 && trimmed[0] == 'D';
     }
 
     private bool TrySend(Action send, out string error)

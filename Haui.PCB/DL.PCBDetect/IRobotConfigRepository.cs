@@ -14,4 +14,6 @@ public interface IRobotConfigRepository
         string j3,
         string j4,
         string j5);
+
+    void UpdateFullState(string connectionString, string posName, string fullState);
 }

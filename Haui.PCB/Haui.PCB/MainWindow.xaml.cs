@@ -31,8 +31,12 @@ public partial class MainWindow : System.Windows.Window
     public MainWindow()
     {
         InitializeComponent();
-        _viewModel = new MainViewModel(new CameraService());
         var appSettingService = new AppSettingService();
+        var materialTransfer = new MaterialTransferService(
+            new RobotConfigService(appSettingService),
+            _serialService,
+            appSettingService);
+        _viewModel = new MainViewModel(new CameraService(), materialTransfer);
         _robotViewModel = new RobotTeachViewModel(
             new RobotConfigService(appSettingService),
             _serialService,
@@ -104,6 +108,7 @@ public partial class MainWindow : System.Windows.Window
         };
 
         Loaded += async (_, _) => await LoadCamerasAsync();
+        Closing += Window_Closing;
     }
 
     // ──── Camera Loading ──────────────────────────────────────────────────────
@@ -392,6 +397,26 @@ public partial class MainWindow : System.Windows.Window
         _viewModel.Dispose();
     }
 
+    private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (_viewModel.IsMaterialTransferRunning)
+        {
+            var result = MessageBox.Show(
+                "Chu trình Pass/Fail đang chạy. Hủy và thoát?",
+                "Xác nhận",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            _viewModel.CancelMaterialTransfer();
+        }
+    }
+
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         _robotViewModel.ReloadAppSettings();
@@ -485,5 +510,41 @@ public partial class MainWindow : System.Windows.Window
         EnsureMainSerialDataReceiver();
         _robotViewModel.SyncConnectionState();
         UpdateRobotSerialStatus();
+    }
+
+    private async void btnPass_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.IsMaterialTransferRunning) return;
+
+        btnPass.IsEnabled = false;
+        btnFail.IsEnabled = false;
+        try
+        {
+            await _viewModel.TransferPassMaterial();
+        }
+        finally
+        {
+            btnPass.IsEnabled = true;
+            btnFail.IsEnabled = true;
+            StatusText.Text = _viewModel.StatusText;
+        }
+    }
+
+    private async void btnFail_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.IsMaterialTransferRunning) return;
+
+        btnPass.IsEnabled = false;
+        btnFail.IsEnabled = false;
+        try
+        {
+            await _viewModel.TransferFailMaterial();
+        }
+        finally
+        {
+            btnPass.IsEnabled = true;
+            btnFail.IsEnabled = true;
+            StatusText.Text = _viewModel.StatusText;
+        }
     }
 }

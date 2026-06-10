@@ -41,7 +41,10 @@ public class RobotConfigBL : IRobotConfigBL
                     J2 = RobotConfigRepository.ParseAngle(entity.J2),
                     J3 = RobotConfigRepository.ParseAngle(entity.J3),
                     J4 = RobotConfigRepository.ParseAngle(entity.J4),
-                    J5 = RobotConfigRepository.ParseAngle(entity.J5)
+                    J5 = RobotConfigRepository.ParseAngle(entity.J5),
+                    FullState = string.IsNullOrWhiteSpace(entity.FullState)
+                        ? SlotFullState.Empty
+                        : entity.FullState
                 })
                 .ToList();
 
@@ -81,6 +84,34 @@ public class RobotConfigBL : IRobotConfigBL
                 RobotConfigRepository.FormatAngle(point.J4),
                 RobotConfigRepository.FormatAngle(point.J5));
 
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    public bool TryMarkSlotFull(string posName, out string? error)
+    {
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(posName))
+        {
+            error = "Tên slot không hợp lệ.";
+            return false;
+        }
+
+        if (!TryGetConnectionString(out var connectionString))
+        {
+            error = "Chưa cấu hình DatabaseConnection trong setting.json.";
+            return false;
+        }
+
+        try
+        {
+            _repository.UpdateFullState(connectionString, posName.Trim(), SlotFullState.Full);
             return true;
         }
         catch (Exception ex)

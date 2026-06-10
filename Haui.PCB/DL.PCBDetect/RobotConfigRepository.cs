@@ -67,6 +67,21 @@ public class RobotConfigRepository : IRobotConfigRepository
         cmd.ExecuteNonQuery();
     }
 
+    public void UpdateFullState(string connectionString, string posName, string fullState)
+    {
+        using var conn = new SqlConnection(connectionString);
+        using var cmd = new SqlCommand("dbo.Update_RobotConfig_FullState", conn)
+        {
+            CommandType = CommandType.StoredProcedure
+        };
+
+        cmd.Parameters.AddWithValue("@PosName", posName);
+        cmd.Parameters.AddWithValue("@FullState", fullState);
+
+        conn.Open();
+        cmd.ExecuteNonQuery();
+    }
+
     private static string ReadString(SqlDataReader reader, string column)
     {
         var ordinal = reader.GetOrdinal(column);

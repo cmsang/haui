@@ -55,6 +55,24 @@ BEGIN
 END;
 GO
 
+-- Cập nhật FullState slot (EMPTY / FULL) sau khi đặt hoặc lấy hàng
+CREATE OR ALTER PROCEDURE dbo.Update_RobotConfig_FullState
+    @PosName    NVARCHAR(255),
+    @FullState  NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM RobotConfig WHERE PosName = @PosName)
+    BEGIN
+        UPDATE RobotConfig
+        SET FullState  = @FullState,
+            UpdateTime = GETDATE()
+        WHERE PosName = @PosName;
+    END
+END;
+GO
+
 -- Lấy một vị trí theo tên
 CREATE OR ALTER PROCEDURE dbo.Get_RobotConfig_ByName
     @PosName NVARCHAR(255)

@@ -39,6 +39,9 @@ public class RobotConfigService : IRobotConfigService
     public bool TrySaveTeachPoint(RobotTeachPoint point, out string? error)
         => _robotConfigBL.TrySaveTeachPoint(ToInfo(point), out error);
 
+    public bool TryMarkSlotFull(string posName, out string? error)
+        => _robotConfigBL.TryMarkSlotFull(posName, out error);
+
     private static RobotTeachPoint ToModel(RobotTeachPointInfo info) => new()
     {
         Name = info.Name,
@@ -47,7 +50,8 @@ public class RobotConfigService : IRobotConfigService
         J2 = info.J2,
         J3 = info.J3,
         J4 = info.J4,
-        J5 = info.J5
+        J5 = info.J5,
+        FullState = info.FullState
     };
 
     private static RobotTeachPointInfo ToInfo(RobotTeachPoint point) => new()

@@ -16,6 +16,12 @@ public static class RobotTeachPositions
         "NG1", "NG2", "NG3", "NG4", "NG5", "NG6"
     ];
 
+    public static readonly IReadOnlyList<string> OkSlotNames =
+        ["OK1", "OK2", "OK3", "OK4", "OK5", "OK6"];
+
+    public static readonly IReadOnlyList<string> NgSlotNames =
+        ["NG1", "NG2", "NG3", "NG4", "NG5", "NG6"];
+
     public static bool IsStandard(string name)
         => StandardNames.Contains(name, StringComparer.OrdinalIgnoreCase);
 

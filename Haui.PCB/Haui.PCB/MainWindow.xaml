@@ -136,7 +136,9 @@
         <Grid Grid.Column="0">
 
             <Grid.RowDefinitions>
-                <RowDefinition Height="3*"/>
+                <RowDefinition Height="3.5*"/>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="2*"/>
                 <RowDefinition Height="2*"/>
                 <RowDefinition Height="2*"/>
                 <RowDefinition Height="2*"/>
@@ -223,6 +225,20 @@
             </Grid>
 
             <Grid Grid.Row="7" Background="#2E4053">
+                <Button Height="69" x:Name="btnPass" Click="btnPass_Click" VerticalAlignment="Top"
+                        Background="#2E4053" BorderBrush="#2E4053"></Button>
+                <TextBlock Text="Pass" FontSize="16" Height="20" Margin="90,0,0,0" 
+               Foreground="White" MouseDown="btnPass_Click"/>
+                <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
+            </Grid>
+            <Grid Grid.Row="8" Background="#2E4053">
+                <Button Height="69" x:Name="btnFail" Click="btnFail_Click" VerticalAlignment="Top"
+                    Background="#2E4053" BorderBrush="#2E4053"></Button>
+                <TextBlock Text="Fail" FontSize="16" Height="20" Margin="90,0,0,0" 
+                    Foreground="White" MouseDown="btnFail_Click"/>
+                <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
+            </Grid>
+            <Grid Grid.Row="9" Background="#2E4053">
                 <Rectangle StrokeThickness="1" Width="1" HorizontalAlignment="Right" Fill="Gray"></Rectangle>
             </Grid>
 
