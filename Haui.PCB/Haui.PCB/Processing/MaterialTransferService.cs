@@ -4,7 +4,7 @@ using Haui.PCB.Models;
 namespace Haui.PCB.Processing;
 
 /// <summary>
-/// Luồng Pass/Fail material — PickUp → ô OK/NG trống (EMPTY), sau đó đánh dấu FULL trong Database.
+/// Luồng Pass/Fail material — PickUp → ô OK/NG trống (EMPTY), đánh dấu FULL, báo warehouse khi buffer đầy.
 /// </summary>
 public class MaterialTransferService : IMaterialTransferService
 {
@@ -78,6 +78,7 @@ public class MaterialTransferService : IMaterialTransferService
         if (slotName == null)
         {
             var group = isPass ? "OK" : "NG";
+            NotifyWarehouseIfBufferFull(points, isPass, reportStatus);
             reportStatus($"Tất cả slot {group} đã FULL — không còn chỗ trống.");
             return;
         }
@@ -89,7 +90,7 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
-        if (!EnsureSerialConnected(reportStatus))
+        if (!EnsureRobotSerialConnected(reportStatus))
             return;
 
         _cts = new CancellationTokenSource();
@@ -109,6 +110,12 @@ public class MaterialTransferService : IMaterialTransferService
                 reportStatus(
                     $"{label} — robot xong nhưng cập nhật FULL thất bại ({slotName}): {markError}");
                 return;
+            }
+
+            if (_robotConfigService.TryLoadTeachPoints(out var updatedPoints, out _))
+            {
+                var updated = RobotTeachPositions.Normalize(updatedPoints);
+                NotifyWarehouseIfBufferFull(updated, isPass, reportStatus);
             }
 
             reportStatus(
@@ -134,6 +141,76 @@ public class MaterialTransferService : IMaterialTransferService
         }
     }
 
+    private void NotifyWarehouseIfBufferFull(
+        IEnumerable<RobotTeachPoint> points,
+        bool isPass,
+        Action<string> reportStatus)
+    {
+        var slotNames = isPass ? RobotTeachPositions.OkSlotNames : RobotTeachPositions.NgSlotNames;
+        if (!AreAllSlotsFull(points, slotNames))
+            return;
+
+        var command = isPass
+            ? RobotSerialProtocol.WarehouseOkBufferFull
+            : RobotSerialProtocol.WarehouseNgBufferFull;
+
+        var group = isPass ? "OK" : "NG";
+
+        if (!TrySendWarehouseCommand(command, out var warehouseCom, out var error))
+        {
+            reportStatus($"Tất cả slot {group} FULL — gửi {command}x thất bại: {error}");
+            return;
+        }
+
+        reportStatus($"Tất cả slot {group} FULL — đã gửi {command}x → {warehouseCom}.");
+    }
+
+    private bool TrySendWarehouseCommand(string command, out string warehouseCom, out string? error)
+    {
+        warehouseCom = string.Empty;
+        error = null;
+
+        var setting = _appSettingService.Load();
+        warehouseCom = setting.WarehouseCom?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(warehouseCom))
+        {
+            error = "Chưa cấu hình warehouseCom trong setting.json.";
+            return false;
+        }
+
+        try
+        {
+            using var warehouseSerial = new RobotSerialService();
+            warehouseSerial.Connect(warehouseCom, setting.BaudRate);
+            warehouseSerial.SendAscii(command);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static bool AreAllSlotsFull(
+        IEnumerable<RobotTeachPoint> points,
+        IReadOnlyList<string> slotNames)
+    {
+        var map = points.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var name in slotNames)
+        {
+            if (!map.TryGetValue(name, out var point))
+                return false;
+
+            if (SlotFullState.IsEmpty(point.FullState))
+                return false;
+        }
+
+        return slotNames.Count > 0;
+    }
+
     private static string? FindFirstEmptySlot(
         IEnumerable<RobotTeachPoint> points,
         IReadOnlyList<string> slotNames)
@@ -152,7 +229,7 @@ public class MaterialTransferService : IMaterialTransferService
         return null;
     }
 
-    private bool EnsureSerialConnected(Action<string> reportStatus)
+    private bool EnsureRobotSerialConnected(Action<string> reportStatus)
     {
         if (_serialService.IsConnected)
             return true;

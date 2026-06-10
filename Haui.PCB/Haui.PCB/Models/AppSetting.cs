@@ -10,6 +10,10 @@ public class AppSetting
     /// <summary>Cổng COM robot (vd: COM3).</summary>
     public string Com { get; set; } = "COM3";
 
+    /// <summary>Cổng COM warehouse — nhận lệnh C1/C2 khi buffer đầy.</summary>
+    [JsonPropertyName("warehouseCom")]
+    public string WarehouseCom { get; set; } = string.Empty;
+
     public int BaudRate { get; set; } = 115200;
 
     /// <summary>Số bước motor trên 1 độ — STEPS_PER_DEG.</summary>

@@ -15,6 +15,10 @@ public static class RobotSerialProtocol
     public const byte CmdTuning = (byte)'S';   //  6 bytes: S + Axis ASCII + V + A (uint16 LE)
     public const byte CmdGripper = (byte)'G';  //  2 bytes: G + Val (0–255)
 
+    /// <summary>Warehouse: C1 = tất cả ô OK full, C2 = tất cả ô NG full.</summary>
+    public const string WarehouseOkBufferFull = "C1";
+    public const string WarehouseNgBufferFull = "C2";
+
     public const ushort MaxVelocityStepsPerSec = 40_000;
     public const ushort DefaultAcceleration = 10_000;
 
