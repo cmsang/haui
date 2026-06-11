@@ -1,14 +1,14 @@
 ﻿using System.Windows;
 using Haui.PCB.Processing;
 
-namespace Haui.PCB;
+namespace Haui.PCB.Views.Windows;
 
 /// <summary>
-/// Cửa sổ popup Manual Control — bọc <see cref="Views.MainTabs.ManualControlTabView"/>.
+/// Cửa sổ popup Manual Control — bọc <see cref="Tabs.ManualControlTabView"/>.
 /// </summary>
-public partial class wdManualControl : Window
+public partial class ManualControlWindow : Window
 {
-    public wdManualControl(IRobotSerialService? sharedSerialService = null)
+    public ManualControlWindow(IRobotSerialService? sharedSerialService = null)
     {
         InitializeComponent();
         ManualPanel.ShowCloseButton = true;

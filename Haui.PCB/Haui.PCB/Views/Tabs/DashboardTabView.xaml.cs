@@ -5,9 +5,9 @@ using System.Windows.Input;
 using System.Windows.Shapes;
 using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
-using Haui.PCB.Views;
+using Haui.PCB.Views.Windows;
 
-namespace Haui.PCB.Views.MainTabs;
+namespace Haui.PCB.Views.Tabs;
 
 /// <summary>
 /// Tab Dashboard — đồng hồ AGV/buffer và màn hình camera kiểm tra PCB.

@@ -5,7 +5,7 @@ using Haui.PCB.Models;
 using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 
-namespace Haui.PCB.Views.MainTabs;
+namespace Haui.PCB.Views.Tabs;
 
 /// <summary>
 /// Tab Manual Control — test di chuyển PickUp → vị trí OK/NG đã teach.

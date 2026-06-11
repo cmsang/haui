@@ -11,13 +11,13 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace Haui.PCB.Views
+namespace Haui.PCB.Views.Controls;
+
+/// <summary>
+/// Đồng hồ cung tròn dùng trên Dashboard.
+/// </summary>
+public partial class ArcGauge : UserControl
 {
-    /// <summary>
-    /// Interaction logic for ArcGauge.xaml
-    /// </summary>
-    public partial class ArcGauge : UserControl
-    {
         public ArcGauge()
         {
             InitializeComponent();
@@ -99,5 +99,4 @@ namespace Haui.PCB.Views
             get { return (string)this.GetValue(TitleProperty); }
             set { this.SetValue(TitleProperty, value); }
         }
-    }
 }

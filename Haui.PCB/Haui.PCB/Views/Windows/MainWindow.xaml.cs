@@ -5,12 +5,12 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
-using Haui.PCB.Views.MainTabs;
+using Haui.PCB.Views.Tabs;
 
-namespace Haui.PCB;
+namespace Haui.PCB.Views.Windows;
 
 /// <summary>
-/// Shell chính — sidebar điều hướng tab; nội dung từng tab nằm trong <see cref="Views.MainTabs"/>.
+/// Shell chính — sidebar điều hướng tab; nội dung từng tab nằm trong <see cref="Tabs"/>.
 /// </summary>
 public partial class MainWindow : Window
 {

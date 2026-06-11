@@ -18,7 +18,7 @@ Tài liệu mô tả các luồng điều khiển robot 5 khớp RRRRR + gripper
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  UI (WPF)                                                    │
-│  MainWindow · wdTeaching · wdManualControl                   │
+│  MainWindow · RobotTeachingWindow · ManualControlWindow      │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
@@ -160,7 +160,7 @@ sequenceDiagram
 
 ## 7. Luồng Teach vị trí (Robot Teaching)
 
-**Màn hình:** `wdTeaching`  
+**Màn hình:** `RobotTeachingWindow` (hoặc tab `RobotTeachingTabView` trong MainWindow)  
 **ViewModel:** `RobotTeachViewModel`
 
 ```mermaid
@@ -183,7 +183,7 @@ flowchart LR
 
 ## 8. Luồng Manual Control
 
-**Màn hình:** `wdManualControl`  
+**Màn hình:** `ManualControlWindow` (hoặc tab `ManualControlTabView` trong MainWindow)  
 **ViewModel:** `ManualControlViewModel`  
 **Executor:** `RobotPickPlaceExecutor`
 
@@ -265,7 +265,7 @@ flowchart TB
     end
 
     subgraph Teaching
-        T1[wdTeaching]
+        T1[RobotTeachingWindow]
         T2[Teach → Update DB J1-J5]
         T1 --> T2
     end

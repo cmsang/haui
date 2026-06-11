@@ -2,11 +2,11 @@
 
 ## Current focus
 
-**MainWindow tab navigation** — sidebar chuyển tab qua `ContentControl`; mỗi tab là UserControl trong `Views/MainTabs/`.
+**MainWindow tab navigation** — sidebar chuyển tab qua `ContentControl`; tab trong `Views/Tabs/`, cửa sổ trong `Views/Windows/`, control dùng chung trong `Views/Controls/`.
 
 ## Recent change
 
-- **MainWindow tabs:** `DashboardTabView`, `JobHistoryTabView`, `RobotTeachingTabView`, `ManualControlTabView`, `SettingTabView`; `wdTeaching` / `wdManualControl` bọc lại tab view
+- **UI layer ngang:** `Views/Windows/` (MainWindow + inspection + `RobotTeachingWindow` / `ManualControlWindow`), `Views/Tabs/` (5 tab), `Views/Controls/` (ArcGauge); `ViewModels/` giữ nguyên
 
 - **Build fix:** sửa `HintPath` `Microsoft.Expression.Drawing`; khôi phục `MainWindow.xaml.cs` (gỡ duplicate merge); xóa duplicate `MAIN CONTENT` + `BtnCapture` trong `MainWindow.xaml`; thêm lại `Basler.Pylon` + `PlatformTarget=x64` trong csproj
 - **Thư viện mẫu:** bỏ `UseCustomFolder` và UI chọn thư mục trên Create; luôn dùng `ComponentTemplates.CustomFolder` trong `appsettings.json` (rỗng → `templates/`)

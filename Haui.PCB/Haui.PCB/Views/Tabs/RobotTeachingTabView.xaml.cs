@@ -5,7 +5,7 @@ using System.Windows.Media;
 using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 
-namespace Haui.PCB.Views.MainTabs;
+namespace Haui.PCB.Views.Tabs;
 
 /// <summary>
 /// Tab Robot Teaching — teach vị trí robot 5 DOF + gripper qua SerialPort.

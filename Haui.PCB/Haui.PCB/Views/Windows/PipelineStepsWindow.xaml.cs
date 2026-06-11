@@ -3,7 +3,7 @@ using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 using OpenCvSharp;
 
-namespace Haui.PCB.Views;
+namespace Haui.PCB.Views.Windows;
 
 /// <summary>
 /// Code-behind của PipelineStepsWindow — chỉ chứa logic giao diện thuần túy.

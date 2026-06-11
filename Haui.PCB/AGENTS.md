@@ -30,7 +30,7 @@ dotnet run --project Haui.PCB/Haui.PCB.csproj
 - App project: `Haui.PCB/` (WPF, `net10.0-windows`)
 - Services: `Haui.PCB/Processing/`
 - ViewModels: `Haui.PCB/ViewModels/`
-- Windows: `Haui.PCB/Views/` + `MainWindow.xaml`
+- Views: `Haui.PCB/Views/Windows/`, `Views/Tabs/`, `Views/Controls/`; shell: `Views/Windows/MainWindow.xaml`
 
 ## Do not edit
 

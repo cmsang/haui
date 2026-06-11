@@ -1,7 +1,7 @@
-﻿<UserControl x:Class="Haui.PCB.Views.MainTabs.DashboardTabView"
+﻿<UserControl x:Class="Haui.PCB.Views.Tabs.DashboardTabView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:v="clr-namespace:Haui.PCB.Views"
+             xmlns:controls="clr-namespace:Haui.PCB.Views.Controls"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              Loaded="UserControl_Loaded">
     <UserControl.Resources>
@@ -84,7 +84,7 @@
                         </Grid.ColumnDefinitions>
 
                         <Grid Grid.Column="1">
-                            <v:ArcGauge x:Name="AGV_Connect"
+                            <controls:ArcGauge x:Name="AGV_Connect"
                             AngleValue="0"
                             TotalValue= "1"
                             FullValue="1"                                    
@@ -128,7 +128,7 @@
 
                         </Grid>
                         <Grid Grid.Column="2">
-                            <v:ArcGauge x:Name="AGV_FullState"
+                            <controls:ArcGauge x:Name="AGV_FullState"
                             AngleValue="{Binding Angle_Empty, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                             TotalValue="{Binding TotalAGV, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                             FullValue="{Binding Full_Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -145,7 +145,7 @@
 
                         </Grid>
                         <Grid Grid.Column="3">
-                            <v:ArcGauge x:Name="AGV_RunState"
+                            <controls:ArcGauge x:Name="AGV_RunState"
                             AngleValue="{Binding AngleDisconnect, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                             TotalValue="{Binding TotalAGV, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                             FullValue="{Binding Run_value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -238,7 +238,7 @@
                         </Grid>
                         <Grid Grid.Column="5">
                             <Rectangle Width="1" Fill="Gray" HorizontalAlignment="Left"/>
-                            <v:ArcGauge x:Name="Buffer_FullState"
+                            <controls:ArcGauge x:Name="Buffer_FullState"
                             AngleValue="{Binding AngleDisconnect, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                             TotalValue="{Binding TotalAGV, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                             FullValue="{Binding Full_value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -255,7 +255,7 @@
 
                         </Grid>
                         <!--<Grid Grid.Column="6">
-                    <v:ArcGauge Width="222" 
+                    <controls:ArcGauge Width="222" 
                         AngleValue="{Binding AngleDisconnect, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         TotalValue="{Binding TotalAGV, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                         FullValue="{Binding Full_value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"

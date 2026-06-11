@@ -1,4 +1,4 @@
-﻿<Window x:Class="Haui.PCB.Views.TemplateViewerWindow"
+﻿<Window x:Class="Haui.PCB.Views.Windows.TemplateViewerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Thư viện ảnh mẫu"

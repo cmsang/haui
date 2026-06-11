@@ -4,12 +4,14 @@
 
 ```
 Haui.PCB/                 # WPF app project
-├── App.xaml(.cs)         # Startup → MainWindow (no composition root)
-├── MainWindow.xaml(.cs)  # Camera hub
+├── App.xaml(.cs)         # Startup → Views/Windows/MainWindow
 ├── Processing/           # Services + I* interfaces
 ├── Models/               # DTOs (TemplateRegion, TemplateEntry, …)
 ├── ViewModels/           # INotifyPropertyChanged, business logic
-└── Views/                # Secondary windows + thin code-behind
+└── Views/                # UI theo layer ngang
+    ├── Windows/          # *Window (MainWindow, inspection, robot popup)
+    ├── Tabs/             # *TabView (sidebar content)
+    └── Controls/         # ArcGauge, …
 ```
 
 ## Architecture

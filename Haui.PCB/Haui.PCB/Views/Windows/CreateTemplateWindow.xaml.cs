@@ -7,7 +7,7 @@ using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 using OpenCvSharp;
 
-namespace Haui.PCB.Views;
+namespace Haui.PCB.Views.Windows;
 
 /// <summary>
 /// Code-behind của CreateTemplateWindow — chỉ chứa logic giao diện.

@@ -3,7 +3,7 @@
 ## MainWindow navigation (2026-06)
 
 - [x] Sidebar → `ContentControl` hiển thị tab tương ứng
-- [x] Tách tab ra `Views/MainTabs/*.xaml` (Dashboard + camera, Job History, Robot Teaching, Manual Control, Setting)
+- [x] UI layer ngang: `Views/Windows/`, `Views/Tabs/`, `Views/Controls/`; rename `wdTeaching`/`wdManualControl` → `RobotTeachingWindow`/`ManualControlWindow`
 - [ ] Job History / Setting — nội dung chi tiết (hiện placeholder)
 
 

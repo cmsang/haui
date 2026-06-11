@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace Haui.PCB.Views.MainTabs;
+namespace Haui.PCB.Views.Tabs;
 
 public partial class JobHistoryTabView : UserControl
 {

@@ -5,7 +5,7 @@ using System.Windows.Shapes;
 using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 
-namespace Haui.PCB.Views;
+namespace Haui.PCB.Views.Windows;
 
 /// <summary>
 /// Code-behind của TemplateViewerWindow — chỉ chứa logic giao diện.

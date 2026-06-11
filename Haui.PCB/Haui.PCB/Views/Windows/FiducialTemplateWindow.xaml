@@ -1,4 +1,4 @@
-<Window x:Class="Haui.PCB.Views.FiducialTemplateWindow"
+<Window x:Class="Haui.PCB.Views.Windows.FiducialTemplateWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Thư viện mẫu lỗ tròn định vị"
