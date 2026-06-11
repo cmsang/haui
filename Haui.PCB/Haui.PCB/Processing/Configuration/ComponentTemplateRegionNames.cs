@@ -7,6 +7,9 @@ internal static class ComponentTemplateRegionNames
     public static HashSet<string> LoadAllowedNames()
         => LoadAllowedNamesInOrder().ToHashSet(StringComparer.Ordinal);
 
+    /// <summary>Số vùng linh kiện bắt buộc trên mỗi ảnh mẫu (theo <c>AllowedRegionNames</c>).</summary>
+    public static int RequiredRegionCount => LoadAllowedNamesInOrder().Count;
+
     /// <summary>Thứ tự như trong <c>setting.json</c> → AllowedRegionNames.</summary>
     public static IReadOnlyList<string> LoadAllowedNamesInOrder()
     {

@@ -10,7 +10,6 @@
   "DatabaseConnection": "Data Source=.\\SQLExpress;Initial Catalog=SmartWarehouse;Integrated Security=True;TrustServerCertificate=True",
   "ComponentTemplates": {
     "customFolder": "../../../../pcb_templates",
-    "requiredRegionCount": 18,
     "allowedRegionNames": [
       "KF1",
       "KF2",

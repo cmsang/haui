@@ -7,9 +7,6 @@ public sealed class ComponentTemplateSettings
 {
     public const string DefaultLibraryFolder = "templates";
 
-    /// <summary>Số vùng linh kiện bắt buộc trên mỗi ảnh mẫu (Viewer thư viện).</summary>
-    public const int DefaultRequiredRegionCount = 18;
-
     /// <summary>Ngưỡng % tương đồng tối thiểu để coi vùng là giống mẫu (Test pipeline).</summary>
     public const double DefaultMinMatchSimilarityPercent = 80.0;
 
@@ -22,9 +19,6 @@ public sealed class ComponentTemplateSettings
 
     /// <summary>Thư mục thư viện mẫu (đường dẫn tuyệt đối hoặc tương đối CWD). Rỗng → <see cref="DefaultLibraryFolder"/>.</summary>
     public string CustomFolder { get; set; } = string.Empty;
-
-    /// <summary>Số vùng linh kiện tối thiểu để lưu từ Viewer thư viện.</summary>
-    public int RequiredRegionCount { get; set; } = DefaultRequiredRegionCount;
 
     /// <summary>Danh sách tên vùng được phép khi tạo / chỉnh sửa mẫu.</summary>
     public List<string> AllowedRegionNames { get; set; } =

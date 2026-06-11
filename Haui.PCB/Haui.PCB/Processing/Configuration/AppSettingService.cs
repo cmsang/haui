@@ -239,8 +239,7 @@ public class AppSettingService : IAppSettingService
     private static void MergeVisionSections(AppSetting target, AppSetting source)
     {
         if (source.ComponentTemplates.AllowedRegionNames.Count > 0
-            || !string.IsNullOrWhiteSpace(source.ComponentTemplates.CustomFolder)
-            || source.ComponentTemplates.RequiredRegionCount != 0)
+            || !string.IsNullOrWhiteSpace(source.ComponentTemplates.CustomFolder))
         {
             target.ComponentTemplates = source.ComponentTemplates;
         }

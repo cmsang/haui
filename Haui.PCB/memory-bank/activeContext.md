@@ -12,7 +12,7 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 | Section | Purpose |
 |---------|---------|
-| `ComponentTemplates` | Library folder, `MinMatchSimilarityPercent`, `AllowedRegionNames`, `RequiredRegionCount` |
+| `ComponentTemplates` | Library folder, `MinMatchSimilarityPercent`, `AllowedRegionNames` (region count = list size) |
 | `FiducialHoles` | Fiducial template folder, `MinMatchScore`, `MaxMatchDimension` |
 | `CameraBasler` / `CameraCapture` | GenICam defaults, quick-capture save folder |
 | Robot | `com`, `warehouseCom`, `DatabaseConnection`, … |
