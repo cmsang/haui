@@ -3,8 +3,6 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Haui.PCB.Models;
-using Haui.PCB.Processing;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
 

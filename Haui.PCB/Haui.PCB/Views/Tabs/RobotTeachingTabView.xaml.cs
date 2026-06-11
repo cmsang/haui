@@ -1,14 +1,13 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 
 namespace Haui.PCB.Views.Tabs;
 
 /// <summary>
-/// Tab Robot Teaching — teach vị trí robot 5 DOF + gripper qua SerialPort.
+/// Tab Robot Teaching â€” teach vá»‹ trÃ­ robot 5 DOF + gripper qua SerialPort.
 /// </summary>
 public partial class RobotTeachingTabView : UserControl
 {
@@ -112,12 +111,12 @@ public partial class RobotTeachingTabView : UserControl
 
         if (_viewModel.IsSerialConnected)
         {
-            TxtSerialState.Text = $"● {_viewModel.SerialPortName} Online";
+            TxtSerialState.Text = $"â— {_viewModel.SerialPortName} Online";
             TxtSerialState.Foreground = new SolidColorBrush(Color.FromRgb(0x27, 0xAE, 0x60));
         }
         else
         {
-            TxtSerialState.Text = "● Offline";
+            TxtSerialState.Text = "â— Offline";
             TxtSerialState.Foreground = new SolidColorBrush(Color.FromRgb(0xE7, 0x4C, 0x3C));
         }
     }
@@ -221,7 +220,7 @@ public partial class RobotTeachingTabView : UserControl
 
     private void TeachPointsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (TeachPointsGrid.SelectedItem is Models.RobotTeachPoint point)
+        if (TeachPointsGrid.SelectedItem is RobotTeachPoint point)
         {
             _viewModel!.SelectedPoint = point;
             UpdateJointSummary();

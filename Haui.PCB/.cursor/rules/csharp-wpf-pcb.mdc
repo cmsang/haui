@@ -14,7 +14,7 @@ alwaysApply: false
 
 ## Services
 
-Add abstractions under `Haui.PCB/Processing/`:
+Add abstractions under `Haui.PCB/Processing/{Domain}/` (Camera, Segmentation, Templates, …):
 
 - `ICameraService`, `IPcbSegmentationService`, `ITemplateLibraryService`
 - `ITemplateLibraryService`, `IRegionComparisonService`, `IPipelineDebugService`
@@ -32,7 +32,7 @@ Convert to WPF with `BitmapSourceConverter.ToBitmapSource(mat)` then `.Freeze()`
 
 ## C# style
 
-- File-scoped namespaces: `namespace Haui.PCB.Processing;`
+- File-scoped namespaces theo folder: `namespace Haui.PCB.Processing.Camera;` (xem `GlobalUsings.cs`)
 - `using var` for `IDisposable`
 - `_camelCase` private fields; PascalCase public members
 - Vietnamese comments OK for non-obvious vision logic

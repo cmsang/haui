@@ -3,9 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using Haui.PCB.Models;
 using OpenCvSharp;
-using Haui.PCB.Processing;
 
 namespace Haui.PCB.ViewModels;
 

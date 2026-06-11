@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using Haui.PCB.Processing;
 
 namespace Haui.PCB.Views.Windows;
 

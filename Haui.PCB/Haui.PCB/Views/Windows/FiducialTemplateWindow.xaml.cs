@@ -1,16 +1,15 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 using OpenCvSharp;
 
 namespace Haui.PCB.Views.Windows;
 
 /// <summary>
-/// Cửa sổ thêm mẫu lỗ tròn vào thư viện (Morphology Close).
+/// Cá»­a sá»• thÃªm máº«u lá»— trÃ²n vÃ o thÆ° viá»‡n (Morphology Close).
 /// </summary>
 public partial class FiducialTemplateWindow : System.Windows.Window
 {

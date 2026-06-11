@@ -1,14 +1,12 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using Haui.PCB.Models;
-using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 
 namespace Haui.PCB.Views.Tabs;
 
 /// <summary>
-/// Tab Manual Control — test di chuyển PickUp → vị trí OK/NG đã teach.
+/// Tab Manual Control â€” test di chuyá»ƒn PickUp â†’ vá»‹ trÃ­ OK/NG Ä‘Ã£ teach.
 /// </summary>
 public partial class ManualControlTabView : UserControl
 {
@@ -101,12 +99,12 @@ public partial class ManualControlTabView : UserControl
 
         if (_viewModel.IsSerialConnected)
         {
-            TxtSerialState.Text = $"● {_viewModel.SerialPortName} Online";
+            TxtSerialState.Text = $"â— {_viewModel.SerialPortName} Online";
             TxtSerialState.Foreground = new SolidColorBrush(Color.FromRgb(0x27, 0xAE, 0x60));
         }
         else
         {
-            TxtSerialState.Text = "● Offline";
+            TxtSerialState.Text = "â— Offline";
             TxtSerialState.Foreground = new SolidColorBrush(Color.FromRgb(0xE7, 0x4C, 0x3C));
         }
     }

@@ -4,10 +4,23 @@
 
 ```
 Haui.PCB/                 # WPF app project
+├── GlobalUsings.cs       # global using cho Models.* và Processing.*
 ├── App.xaml(.cs)         # Startup → Views/Windows/MainWindow
-├── Processing/           # Services + I* interfaces
-├── Models/               # DTOs (TemplateRegion, TemplateEntry, …)
+├── Models/               # DTO / POCO theo domain
+│   ├── Configuration/    # AppSetting, ComponentTemplateSettings, …
+│   ├── Templates/        # TemplateEntry, TemplateRegion, …
+│   ├── Segmentation/     # SegmentationPipelineResult, RegionComparisonResult, …
+│   ├── Camera/           # CameraInfo, ResolutionInfo
+│   └── Robot/            # RobotTeachPoint, RobotJointLimits, …
+├── Processing/           # Services + I* theo domain
+│   ├── Configuration/    # AppSettingService, AppConfigPaths, …
+│   ├── Camera/           # BaslerCameraService, CameraCaptureService, …
+│   ├── Segmentation/     # PcbSegmentationService, PipelineDebugService
+│   ├── Templates/        # TemplateLibraryService, RegionComparisonService, …
+│   ├── Fiducial/         # FiducialHoleDetectionService, …
+│   └── Robot/            # RobotSerialService, RobotConfigService, …
 ├── ViewModels/           # INotifyPropertyChanged, business logic
+│   └── Pipeline/         # PipelineStep (WPF BitmapSource)
 └── Views/                # UI theo layer ngang
     ├── Windows/          # *Window (MainWindow, inspection, robot popup)
     ├── Tabs/             # *TabView (sidebar content)
@@ -69,6 +82,6 @@ Never hold long-lived `Mat` on ViewModel without clear ownership; prefer `Bitmap
 
 ## Extension pattern
 
-1. Add `IMyService` + implementation in `Processing/`
+1. Add `IMyService` + implementation in `Processing/{Domain}/`
 2. Instantiate in the window that needs it (same as `MainWindow.xaml.cs` line ~27)
 3. Inject into ViewModel via constructor

@@ -1,16 +1,15 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Haui.PCB.Processing;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
 
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// Một vùng chờ lưu mẫu lỗ tròn trên ảnh Morphology Close.
+/// Má»™t vÃ¹ng chá» lÆ°u máº«u lá»— trÃ²n trÃªn áº£nh Morphology Close.
 /// </summary>
 public sealed class FiducialHoleRegionItem : INotifyPropertyChanged
 {
@@ -21,7 +20,7 @@ public sealed class FiducialHoleRegionItem : INotifyPropertyChanged
     public double RelHeight { get; set; }
     public Color RegionColor { get; set; }
 
-    public string Label => $"Vùng {Index}";
+    public string Label => $"VÃ¹ng {Index}";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -30,7 +29,7 @@ public sealed class FiducialHoleRegionItem : INotifyPropertyChanged
 }
 
 /// <summary>
-/// ViewModel tạo thư viện mẫu lỗ tròn — chọn nhiều vùng, lưu một lần.
+/// ViewModel táº¡o thÆ° viá»‡n máº«u lá»— trÃ²n â€” chá»n nhiá»u vÃ¹ng, lÆ°u má»™t láº§n.
 /// </summary>
 public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposable
 {
@@ -87,7 +86,7 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
         ImageReady?.Invoke(bitmap);
 
         RefreshSavedTemplates();
-        StatusText = "Ảnh Morphology Close — kéo thả nhiều vùng quanh lỗ tròn, rồi bấm Lưu mẫu.";
+        StatusText = "áº¢nh Morphology Close â€” kÃ©o tháº£ nhiá»u vÃ¹ng quanh lá»— trÃ²n, rá»“i báº¥m LÆ°u máº«u.";
         OnPropertyChanged(nameof(ImageWidth));
         OnPropertyChanged(nameof(ImageHeight));
     }
@@ -116,8 +115,8 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
         OnPropertyChanged(nameof(HasPendingRegions));
         PendingRegionsChanged?.Invoke();
         StatusText = PendingRegions.Count == 1
-            ? "Đã chọn 1 vùng — thêm vùng khác hoặc bấm Lưu mẫu."
-            : $"Đã chọn {PendingRegions.Count} vùng — tiếp tục kéo thả hoặc bấm Lưu mẫu.";
+            ? "ÄÃ£ chá»n 1 vÃ¹ng â€” thÃªm vÃ¹ng khÃ¡c hoáº·c báº¥m LÆ°u máº«u."
+            : $"ÄÃ£ chá»n {PendingRegions.Count} vÃ¹ng â€” tiáº¿p tá»¥c kÃ©o tháº£ hoáº·c báº¥m LÆ°u máº«u.";
     }
 
     public void RemovePendingRegion(FiducialHoleRegionItem item)
@@ -133,8 +132,8 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
         OnPropertyChanged(nameof(HasPendingRegions));
         PendingRegionsChanged?.Invoke();
         StatusText = PendingRegions.Count > 0
-            ? $"Còn {PendingRegions.Count} vùng chờ lưu."
-            : "Kéo thả vùng quanh lỗ tròn để thêm mẫu.";
+            ? $"CÃ²n {PendingRegions.Count} vÃ¹ng chá» lÆ°u."
+            : "KÃ©o tháº£ vÃ¹ng quanh lá»— trÃ²n Ä‘á»ƒ thÃªm máº«u.";
     }
 
     public void ClearPendingRegions()
@@ -142,20 +141,20 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
         PendingRegions.Clear();
         OnPropertyChanged(nameof(HasPendingRegions));
         PendingRegionsChanged?.Invoke();
-        StatusText = "Đã xóa tất cả vùng chờ lưu.";
+        StatusText = "ÄÃ£ xÃ³a táº¥t cáº£ vÃ¹ng chá» lÆ°u.";
     }
 
     public void SavePendingTemplates()
     {
         if (_sourceImage is null || _sourceImage.Empty())
         {
-            StatusText = "Chưa có ảnh.";
+            StatusText = "ChÆ°a cÃ³ áº£nh.";
             return;
         }
 
         if (PendingRegions.Count == 0)
         {
-            StatusText = "Chọn ít nhất một vùng trước khi lưu.";
+            StatusText = "Chá»n Ã­t nháº¥t má»™t vÃ¹ng trÆ°á»›c khi lÆ°u.";
             return;
         }
 
@@ -174,7 +173,7 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
 
             if (patches.Count == 0)
             {
-                StatusText = "Không có vùng hợp lệ để lưu.";
+                StatusText = "KhÃ´ng cÃ³ vÃ¹ng há»£p lá»‡ Ä‘á»ƒ lÆ°u.";
                 return;
             }
 
@@ -187,12 +186,12 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
             RefreshSavedTemplates();
 
             StatusText = savedNames.Count == 1
-                ? $"Đã lưu 1 mẫu \"{savedNames[0]}\" ({SavedTemplateFiles.Count} mẫu trong thư mục)."
-                : $"Đã lưu {savedNames.Count} mẫu ({SavedTemplateFiles.Count} mẫu trong thư mục).";
+                ? $"ÄÃ£ lÆ°u 1 máº«u \"{savedNames[0]}\" ({SavedTemplateFiles.Count} máº«u trong thÆ° má»¥c)."
+                : $"ÄÃ£ lÆ°u {savedNames.Count} máº«u ({SavedTemplateFiles.Count} máº«u trong thÆ° má»¥c).";
         }
         catch (Exception ex)
         {
-            StatusText = $"Lỗi lưu mẫu: {ex.Message}";
+            StatusText = $"Lá»—i lÆ°u máº«u: {ex.Message}";
         }
         finally
         {
@@ -208,12 +207,12 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
             _templateService.DeleteTemplate(fileName);
             RefreshSavedTemplates();
             StatusText = SavedTemplateFiles.Count > 0
-                ? $"Đã xóa \"{fileName}\" — còn {SavedTemplateFiles.Count} mẫu."
-                : $"Đã xóa \"{fileName}\" — thư mục trống.";
+                ? $"ÄÃ£ xÃ³a \"{fileName}\" â€” cÃ²n {SavedTemplateFiles.Count} máº«u."
+                : $"ÄÃ£ xÃ³a \"{fileName}\" â€” thÆ° má»¥c trá»‘ng.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Lỗi xóa mẫu: {ex.Message}";
+            StatusText = $"Lá»—i xÃ³a máº«u: {ex.Message}";
         }
     }
 

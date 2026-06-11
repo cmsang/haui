@@ -4,6 +4,7 @@
 
 - [x] Sidebar → `ContentControl` hiển thị tab tương ứng
 - [x] UI layer ngang: `Views/Windows/`, `Views/Tabs/`, `Views/Controls/`; rename `wdTeaching`/`wdManualControl` → `RobotTeachingWindow`/`ManualControlWindow`
+- [x] Models / Processing theo domain subfolder + `GlobalUsings.cs`
 - [ ] Job History / Setting — nội dung chi tiết (hiện placeholder)
 
 

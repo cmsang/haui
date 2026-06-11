@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 using Haui.PCB.Views.Tabs;
 

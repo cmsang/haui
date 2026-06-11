@@ -1,27 +1,25 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using Haui.PCB.Models;
-using Haui.PCB.Processing;
 using OpenCvSharp;
 
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// ViewModel cho PipelineStepsWindow — chạy pipeline debug và cung cấp
-/// danh sách các bước xử lý để hiển thị mỗi bước một khung riêng biệt.
+/// ViewModel cho PipelineStepsWindow â€” cháº¡y pipeline debug vÃ  cung cáº¥p
+/// danh sÃ¡ch cÃ¡c bÆ°á»›c xá»­ lÃ½ Ä‘á»ƒ hiá»ƒn thá»‹ má»—i bÆ°á»›c má»™t khung riÃªng biá»‡t.
 /// </summary>
 public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IPipelineDebugService _debugService;
     private Mat? _sourceMat;
-    private string _statusText = "Đang chờ...";
+    private string _statusText = "Äang chá»...";
     private bool _isBusy;
     private bool _disposed;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    // ──── Properties ─────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€ Properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public ObservableCollection<PipelineStep> Steps { get; } = [];
 
@@ -37,16 +35,16 @@ public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
         private set { _isBusy = value; OnPropertyChanged(); }
     }
 
-    // ──── Khởi tạo ───────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€ Khá»Ÿi táº¡o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public PipelineStepsViewModel(IPipelineDebugService debugService)
     {
         _debugService = debugService;
     }
 
-    // ──── Actions ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€ Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    /// <summary>Nạp ảnh từ camera và tự động chạy pipeline.</summary>
+    /// <summary>Náº¡p áº£nh tá»« camera vÃ  tá»± Ä‘á»™ng cháº¡y pipeline.</summary>
     public void LoadImage(Mat mat)
     {
         _sourceMat?.Dispose();
@@ -54,17 +52,17 @@ public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
         _ = RunAsync();
     }
 
-    /// <summary>Chạy pipeline debug và điền kết quả vào <see cref="Steps"/>.</summary>
+    /// <summary>Cháº¡y pipeline debug vÃ  Ä‘iá»n káº¿t quáº£ vÃ o <see cref="Steps"/>.</summary>
     public async Task RunAsync()
     {
         if (_sourceMat is null || _sourceMat.Empty())
         {
-            StatusText = "Không có ảnh đầu vào.";
+            StatusText = "KhÃ´ng cÃ³ áº£nh Ä‘áº§u vÃ o.";
             return;
         }
 
         IsBusy = true;
-        StatusText = "Đang chạy pipeline...";
+        StatusText = "Äang cháº¡y pipeline...";
         Steps.Clear();
 
         try
@@ -75,11 +73,11 @@ public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
             foreach (var step in results)
                 Steps.Add(step);
 
-            StatusText = $"Hoàn thành — {Steps.Count} bước xử lý.";
+            StatusText = $"HoÃ n thÃ nh â€” {Steps.Count} bÆ°á»›c xá»­ lÃ½.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Lỗi: {ex.Message}";
+            StatusText = $"Lá»—i: {ex.Message}";
         }
         finally
         {
@@ -87,12 +85,12 @@ public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    // ──── INotifyPropertyChanged ──────────────────────────────────────────────
+    // â”€â”€â”€â”€ INotifyPropertyChanged â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-    // ──── IDisposable ─────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€ IDisposable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public void Dispose()
     {

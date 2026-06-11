@@ -1,13 +1,12 @@
-using System.Windows;
-using Haui.PCB.Processing;
+﻿using System.Windows;
 using Haui.PCB.ViewModels;
 using OpenCvSharp;
 
 namespace Haui.PCB.Views.Windows;
 
 /// <summary>
-/// Code-behind của PipelineStepsWindow — chỉ chứa logic giao diện thuần túy.
-/// Toàn bộ nghiệp vụ xử lý ảnh được uỷ thác cho <see cref="PipelineStepsViewModel"/>.
+/// Code-behind cá»§a PipelineStepsWindow â€” chá»‰ chá»©a logic giao diá»‡n thuáº§n tÃºy.
+/// ToÃ n bá»™ nghiá»‡p vá»¥ xá»­ lÃ½ áº£nh Ä‘Æ°á»£c uá»· thÃ¡c cho <see cref="PipelineStepsViewModel"/>.
 /// </summary>
 public partial class PipelineStepsWindow : System.Windows.Window
 {
@@ -19,10 +18,10 @@ public partial class PipelineStepsWindow : System.Windows.Window
         _viewModel = new PipelineStepsViewModel(new PipelineDebugService());
         DataContext = _viewModel;
 
-        // Bind danh sách bước vào ItemsControl
+        // Bind danh sÃ¡ch bÆ°á»›c vÃ o ItemsControl
         StepsPanel.ItemsSource = _viewModel.Steps;
 
-        // Đồng bộ trạng thái
+        // Äá»“ng bá»™ tráº¡ng thÃ¡i
         _viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(PipelineStepsViewModel.StatusText))
@@ -32,15 +31,15 @@ public partial class PipelineStepsWindow : System.Windows.Window
         };
     }
 
-    // ──── Public API ──────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    /// <summary>Nạp ảnh từ bên ngoài (từ camera chụp) — pipeline tự động chạy.</summary>
+    /// <summary>Náº¡p áº£nh tá»« bÃªn ngoÃ i (tá»« camera chá»¥p) â€” pipeline tá»± Ä‘á»™ng cháº¡y.</summary>
     public void LoadImage(Mat mat)
     {
         _viewModel.LoadImage(mat);
     }
 
-    // ──── Lifecycle ───────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     protected override void OnClosed(EventArgs e)
     {

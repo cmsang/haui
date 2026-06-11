@@ -28,8 +28,10 @@ dotnet run --project Haui.PCB/Haui.PCB.csproj
 
 - Solution: `Haui.PCB.slnx`
 - App project: `Haui.PCB/` (WPF, `net10.0-windows`)
-- Services: `Haui.PCB/Processing/`
-- ViewModels: `Haui.PCB/ViewModels/`
+- Models: `Haui.PCB/Models/{Configuration,Templates,Segmentation,Camera,Robot}/`
+- Services: `Haui.PCB/Processing/{Configuration,Camera,Segmentation,Templates,Fiducial,Robot}/`
+- ViewModels: `Haui.PCB/ViewModels/` (+ `Pipeline/` cho `PipelineStep`)
+- `GlobalUsings.cs` — namespace con của Models/Processing
 - Views: `Haui.PCB/Views/Windows/`, `Views/Tabs/`, `Views/Controls/`; shell: `Views/Windows/MainWindow.xaml`
 
 ## Do not edit
@@ -38,7 +40,7 @@ dotnet run --project Haui.PCB/Haui.PCB.csproj
 
 ## Extension points
 
-1. New capability → `Processing/IMyService.cs` + implementation
+1. New capability → `Processing/{Domain}/IMyService.cs` + implementation
 2. Register in the window that needs it: `new MyViewModel(new MyService(), …)`
 3. UI strings and labels: Vietnamese
 
