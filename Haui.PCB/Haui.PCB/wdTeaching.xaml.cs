@@ -228,7 +228,6 @@ public partial class wdTeaching : Window
     {
         _viewModel.SaveConfiguration();
         _viewModel.CancelPendingOperations();
-        _viewModel.DisconnectSerial();
 
         if (_ownsSerialService)
             _viewModel.Dispose();

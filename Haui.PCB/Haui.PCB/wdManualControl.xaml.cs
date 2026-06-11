@@ -133,7 +133,6 @@ public partial class wdManualControl : Window
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         _viewModel.CancelPendingOperations();
-        _viewModel.DisconnectSerial();
 
         if (_ownsSerialService)
             _viewModel.Dispose();
