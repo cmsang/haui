@@ -2,9 +2,11 @@
 
 ## Current focus
 
-**Thư viện mẫu** — đã bỏ `template_board` / `TemplateRegionService`; Test + Create + Viewer chỉ dùng thư mục `*.png` + `*_regions.json`.
+**MainWindow tab navigation** — sidebar chuyển tab qua `ContentControl`; mỗi tab là UserControl trong `Views/MainTabs/`.
 
 ## Recent change
+
+- **MainWindow tabs:** `DashboardTabView`, `JobHistoryTabView`, `RobotTeachingTabView`, `ManualControlTabView`, `SettingTabView`; `wdTeaching` / `wdManualControl` bọc lại tab view
 
 - **Build fix:** sửa `HintPath` `Microsoft.Expression.Drawing`; khôi phục `MainWindow.xaml.cs` (gỡ duplicate merge); xóa duplicate `MAIN CONTENT` + `BtnCapture` trong `MainWindow.xaml`; thêm lại `Basler.Pylon` + `PlatformTarget=x64` trong csproj
 - **Thư viện mẫu:** bỏ `UseCustomFolder` và UI chọn thư mục trên Create; luôn dùng `ComponentTemplates.CustomFolder` trong `appsettings.json` (rỗng → `templates/`)

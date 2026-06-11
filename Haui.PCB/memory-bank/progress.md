@@ -1,5 +1,12 @@
 # Progress — Haui.PCB
 
+## MainWindow navigation (2026-06)
+
+- [x] Sidebar → `ContentControl` hiển thị tab tương ứng
+- [x] Tách tab ra `Views/MainTabs/*.xaml` (Dashboard + camera, Job History, Robot Teaching, Manual Control, Setting)
+- [ ] Job History / Setting — nội dung chi tiết (hiện placeholder)
+
+
 ## Working features
 
 - [x] Basler GigE/USB camera via pylon SDK (`BaslerCameraService`) — **only** camera backend

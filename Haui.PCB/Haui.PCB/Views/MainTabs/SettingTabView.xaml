@@ -1,0 +1,17 @@
+<UserControl x:Class="Haui.PCB.Views.MainTabs.SettingTabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Background="{DynamicResource MaterialDesignPaper}">
+    <Grid Margin="24">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="480">
+            <md:PackIcon Kind="CogSyncOutline" Width="64" Height="64" Foreground="#90A4AE"
+                         HorizontalAlignment="Center" Margin="0,0,0,16"/>
+            <TextBlock Text="Cài đặt hệ thống" FontSize="22" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
+            <TextBlock TextWrapping="Wrap" TextAlignment="Center"
+                       FontSize="14" Foreground="#666666"
+                       Text="Cấu hình robot, camera và thư viện mẫu qua appsettings.json và Config/setting.json. Màn hình cài đặt chi tiết sẽ bổ sung sau."/>
+        </StackPanel>
+    </Grid>
+</UserControl>
