@@ -6,6 +6,7 @@
 
 ## Recent change
 
+- **Build fix:** sửa `HintPath` `Microsoft.Expression.Drawing`; khôi phục `MainWindow.xaml.cs` (gỡ duplicate merge); xóa duplicate `MAIN CONTENT` + `BtnCapture` trong `MainWindow.xaml`; thêm lại `Basler.Pylon` + `PlatformTarget=x64` trong csproj
 - **Thư viện mẫu:** bỏ `UseCustomFolder` và UI chọn thư mục trên Create; luôn dùng `ComponentTemplates.CustomFolder` trong `appsettings.json` (rỗng → `templates/`)
 - **Chụp ảnh nhanh:** nút «📷 Chụp» cạnh «Xem mẫu»; lưu PNG vào `CameraCapture.SaveFolder` trong `appsettings.json`; mặc định chọn độ phân giải lớn nhất khi chọn camera
 - **Cấu hình:** gộp `appsettings.json` (ComponentTemplates, FiducialHoles, CameraBasler); migrate tự động từ 3 file cũ nếu còn

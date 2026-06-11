@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <PlatformTarget>x64</PlatformTarget>
+    <PylonRoot Condition="'$(PylonRoot)' == ''">C:\Program Files\Basler\pylon</PylonRoot>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,9 +27,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Microsoft.Expression.Drawing">
-      <HintPath>$(NuGetPackageRoot)expression.blend.sdk.wpf\1.0.1\lib\net45\Microsoft.Expression.Drawing.dll</HintPath>
+    <Reference Include="Basler.Pylon">
+      <HintPath>$(PylonRoot)\Development\Assemblies\Basler.Pylon\net8.0\x64\Basler.Pylon.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Expression.Drawing">
+      <HintPath>$(NuGetPackageRoot)\expression.blend.sdk.wpf\1.0.1\lib\net45\Microsoft.Expression.Drawing.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="$(PylonRoot)\Development\Assemblies\Basler.Pylon\net8.0\x64\Basler.Pylon.dll">
+      <Link>Basler.Pylon.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

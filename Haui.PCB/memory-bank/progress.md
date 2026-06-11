@@ -38,4 +38,4 @@
 
 ## Build status
 
-Last documented command: `dotnet build Haui.PCB.slnx` — verify after major changes.
+`dotnet build Haui.PCB.slnx` — **OK** (2026-06-12). Cần pylon x64 + `Basler.Pylon.dll` trong csproj; `Expression.Blend.Sdk.WPF` vẫn cảnh báo NU1701.
