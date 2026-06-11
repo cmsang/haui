@@ -5,35 +5,27 @@ alwaysApply: true
 
 # Memory Bank Bootstrap
 
-## At session start
+## Session start
 
-Read these files (in order) before non-trivial work:
+Read in order before non-trivial work:
 
 1. `memory-bank/projectbrief.md`
 2. `memory-bank/systemPatterns.md`
 3. `memory-bank/techContext.md`
 4. `memory-bank/activeContext.md`
-5. `memory-bank/progress.md`
 
-Use `memory-bank/productContext.md` when changing UX or operator flows.
+Use `memory-bank/progress.md` for feature status; `memory-bank/productContext.md` for UX/operator flows.
 
-## Coding standards
+## Standards
 
-Do not duplicate rules here — follow `.github/copilot-instructions.md` (SOLID, MVVM separation, C# style, AForge/OpenCV).
+Coding rules → `.github/copilot-instructions.md` only (SOLID, MVVM, C# style, OpenCV disposal). Do not duplicate here.
 
-## Critical gotcha
+## Gotcha
 
-**Test / Create / Viewer** share one template library folder (`*.png` + `*_regions.json` per sample). Configure via `Config/setting.json` → `ComponentTemplates`.
+**Test / Create / Viewer** → one template folder via `Config/setting.json` → `ComponentTemplates` (`ITemplateLibraryService`).
 
-## After meaningful tasks
+## After tasks
 
-Update only:
+Update only `memory-bank/activeContext.md` and `memory-bank/progress.md` — incremental edits.
 
-- `memory-bank/activeContext.md` — current focus, open decisions, key files
-- `memory-bank/progress.md` — checklist, limitations, next steps
-
-Keep edits small; do not rewrite the full Memory Bank each session.
-
-## Agent entry
-
-See `AGENTS.md` for build commands and project map.
+Entry point: `AGENTS.md`.

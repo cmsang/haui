@@ -4,40 +4,27 @@ globs: Haui.PCB/**/*.cs
 alwaysApply: false
 ---
 
-# Haui.PCB C# / WPF Rules
+# Haui.PCB C# / WPF
 
 ## Layering
 
-- **ViewModels** and **Processing** — all business and vision logic
+- **ViewModels** + **Processing** — business and vision logic
 - **Views** (`*.xaml.cs`) — UI events, `Dispatcher`, control updates only
-- Never put segmentation, comparison, or file I/O in code-behind beyond delegating to ViewModel
+- Service list and wiring → `memory-bank/systemPatterns.md`
 
-## Services
-
-Add abstractions under `Haui.PCB/Processing/{Domain}/` (Camera, Segmentation, Templates, …):
-
-- `ICameraService`, `IPcbSegmentationService`, `ITemplateLibraryService`
-- `ITemplateLibraryService`, `IRegionComparisonService`, `IPipelineDebugService`
-
-Wire implementations in the window constructor (see `MainWindow.xaml.cs`).
-
-## OpenCV / resources
+## OpenCV
 
 ```csharp
 using var mat = new Mat();
-// Dispose every Mat; caller disposes frames passed between windows
+// Caller disposes Mat passed between windows
 ```
 
-Convert to WPF with `BitmapSourceConverter.ToBitmapSource(mat)` then `.Freeze()`.
+`BitmapSourceConverter.ToBitmapSource(mat)` then `.Freeze()` for bindings.
 
-## C# style
+## Style
 
-- File-scoped namespaces theo folder: `namespace Haui.PCB.Processing.Camera;` (xem `GlobalUsings.cs`)
-- `using var` for `IDisposable`
-- `_camelCase` private fields; PascalCase public members
-- Vietnamese comments OK for non-obvious vision logic
-- No new NuGet packages without strong justification
+File-scoped namespaces per folder (`GlobalUsings.cs`); `using var` for `IDisposable`; `_camelCase` private fields; Vietnamese comments for non-obvious vision logic. Full rules → `.github/copilot-instructions.md`.
 
 ## Async
 
-Use `async`/`await` for camera refresh and long I/O; marshal UI updates via `Dispatcher`.
+`async`/`await` for camera and I/O; marshal UI via `Dispatcher`.

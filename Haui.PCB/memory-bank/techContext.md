@@ -10,14 +10,14 @@
 
 ## Build and run
 
-From workspace root `D:\haui\Haui.PCB\`:
+From workspace root (see `AGENTS.md`):
 
 ```bash
 dotnet build Haui.PCB.slnx
 dotnet run --project Haui.PCB/Haui.PCB.csproj
 ```
 
-**Requirements:** Windows x64, .NET 10 SDK, Basler camera with pylon installed.
+**Requirements:** Windows x64, .NET 10 SDK, Basler pylon installed.
 
 Runtime **working directory** = process CWD (typically `bin/Debug/net10.0-windows/` when run from IDE). All data paths below are relative to CWD.
 

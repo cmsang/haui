@@ -83,5 +83,5 @@ Never hold long-lived `Mat` on ViewModel without clear ownership; prefer `Bitmap
 ## Extension pattern
 
 1. Add `IMyService` + implementation in `Processing/{Domain}/`
-2. Instantiate in the window that needs it (same as `MainWindow.xaml.cs` line ~27)
+2. Instantiate in the window constructor (`MainWindow.xaml.cs` as reference)
 3. Inject into ViewModel via constructor

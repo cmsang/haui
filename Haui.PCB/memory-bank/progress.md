@@ -1,50 +1,44 @@
 # Progress — Haui.PCB
 
-## MainWindow navigation (2026-06)
+## MainWindow (2026-06)
 
-- [x] Sidebar → `ContentControl` hiển thị tab tương ứng
-- [x] UI layer ngang: `Views/Windows/`, `Views/Tabs/`, `Views/Controls/`; rename `wdTeaching`/`wdManualControl` → `RobotTeachingWindow`/`ManualControlWindow`
-- [x] Models / Processing theo domain subfolder + `GlobalUsings.cs`
-- [ ] Job History / Setting — nội dung chi tiết (hiện placeholder)
-
+- [x] Sidebar → `ContentControl` with tab views
+- [x] UI layers: `Views/Windows/`, `Views/Tabs/`, `Views/Controls/`
+- [x] Models / Processing domain subfolders + `GlobalUsings.cs`
+- [ ] Job History / Setting — detailed content (placeholder)
 
 ## Working features
 
-- [x] Basler GigE/USB camera via pylon SDK (`BaslerCameraService`) — **only** camera backend
-- [x] **Basler parameter UI** on MainWindow (Exposure, Gain, Gamma; Apply / Reset from `camera_basler_defaults.json`)
-- [x] **Chụp ảnh nhanh** — nút «Chụp» lưu PNG vào `CameraCapture.SaveFolder`; độ phân giải mặc định = lớn nhất
-- [x] Optional ROI selection on main preview (`last_region.json`)
-- [x] PCB segmentation (rotated rect → perspective-corrected board image)
-- [x] **Canny thresholds** on MainWindow (slider 0–255; shared by Test / Test 2 / Tạo mẫu)
-- [x] **4 lỗ tròn định vị** — thư viện `hole_*.png`; matching downscale + cache RAM; fast path Segment
-- [x] Pipeline step debugger window (Test 2)
-- [x] Create template: draw regions, save PNG + JSON; tên vùng ∈ `AllowedRegionNames` (config); Viewer vẫn bắt `RequiredRegionCount`
-- [x] Multi-template: mỗi ảnh mẫu vùng linh kiện độc lập; thư viện lưu khi tất cả mẫu đủ N vùng
-- [x] Thư viện mẫu linh kiện: thư mục qua `Config/setting.json` → `ComponentTemplates.CustomFolder`
-- [x] Cấu hình thống nhất: gộp `appsettings.json` vào `Config/setting.json` (`AppSettingService`)
-- [x] Multi-template library (`templates/index.json`) with viewer and edit/delete
-- [x] Library without index.json — scan `*.png` + `*_regions.json` (`TemplateRegionsDocument`)
-- [x] Test pipeline: segment + so khớp tổng hợp theo `AllowedRegionNames` (mỗi tên = ứng viên đầu tiên > 80% trong nhóm)
-- [x] Test pipeline: fallback xoay 180° khi chưa đạt, so lại
-- [x] Region overlay visualization (match green / mismatch red)
-- [x] Sharpest-frame selection in camera service (Laplacian variance)
-- [x] Region compare preprocessing: 128×128, LAB-L + CLAHE + bilateral before histogram
+- [x] Basler camera via pylon (`BaslerCameraService`, x64)
+- [x] Basler parameter UI (Exposure, Gain, Gamma; Apply / Reset)
+- [x] Quick capture → PNG in `CameraCapture.SaveFolder`
+- [x] Optional ROI on preview (`last_region.json`)
+- [x] PCB segmentation (rotated rect → perspective warp)
+- [x] Canny thresholds on MainWindow (shared by Test / Test 2 / Tạo mẫu)
+- [x] Fiducial holes — `hole_*.png` library; downscale + RAM cache; fast Segment path
+- [x] Pipeline step debugger (`PipelineStepsWindow`)
+- [x] Create template — draw regions, save PNG + `*_regions.json`; names ∈ `AllowedRegionNames`
+- [x] Template library — scan `*.png` + `*_regions.json` (no `index.json`); folder via `ComponentTemplates.CustomFolder`
+- [x] Test pipeline — composite match by `AllowedRegionNames`; 180° retry; overlay green/red
+- [x] Region compare — 128×128, LAB-L + CLAHE + bilateral, threshold from `MinMatchSimilarityPercent`
+- [x] Unified config — `Config/setting.json` (`AppSettingService`)
+- [x] Sharpest-frame selection (Laplacian variance)
 
 ## Known limitations
 
-- **Basler requires pylon x64** installed; build uses `PlatformTarget=x64`
-- **Parameter sliders** use fixed ranges; real camera min/max not yet bound to UI
-- **Paths relative to CWD** — running from different folders breaks saved templates
-- **No unit/integration tests** in repository
-- **No persistence** of comparison history or export
+- Basler requires pylon x64; `PlatformTarget=x64`
+- Parameter sliders use fixed ranges (not camera min/max)
+- Data paths relative to process CWD — different launch folder breaks saved files
+- No unit/integration tests
+- No comparison history export
 
-## Suggested next improvements
+## Suggested next
 
 1. Centralize data directory (e.g. `Environment.SpecialFolder.ApplicationData`)
-2. Add `App.xaml.cs` service registration for shared `ICameraService` lifetime
+2. Shared `ICameraService` lifetime via `App.xaml.cs`
 3. Export comparison results (CSV/JSON) from `TestPipelineViewModel`
-4. Configurable match threshold (currently hardcoded 80% in `RegionComparisonResult`)
+4. Fiducial threshold sliders in UI
 
 ## Build status
 
-`dotnet build Haui.PCB.slnx` — **OK** (2026-06-12). Cần pylon x64 + `Basler.Pylon.dll` trong csproj; `Expression.Blend.Sdk.WPF` vẫn cảnh báo NU1701.
+`dotnet build Haui.PCB.slnx` — **OK** (2026-06-12). NU1701 on `Expression.Blend.Sdk.WPF`.

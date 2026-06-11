@@ -1,48 +1,34 @@
-# Copilot Instructions
+# Copilot / Cursor Coding Instructions
 
-> **Important:** This file must be read and fully applied every time Copilot performs any task in this workspace.
+Project context → `AGENTS.md` and `memory-bank/`. This file is **coding standards only**.
 
-## AI Context (Cursor)
+## Architecture (SOLID)
 
-- **Memory Bank:** `memory-bank/` — architecture, progress, active work
-- **Agent entry:** `AGENTS.md`
-- **Cursor rules:** `.cursor/rules/`
+- **S**ingle Responsibility — one reason to change per class
+- **O**pen/Closed — extend via interfaces, not by editing consumers
+- **L**iskov Substitution — subtypes substitutable for abstractions
+- **I**nterface Segregation — small focused interfaces
+- **D**ependency Inversion — depend on `I*` in `Processing/`; wire with `new` in window constructors (no DI container)
 
-## Workspace & Project Info
-- **Workspace root:** `D:\haui\Haui.PCB\`
-- **Target framework:** .NET 10
+## MVVM
 
-## Architecture Principles (SOLID)
-- **S**ingle Responsibility: each class has only one reason to change
-- **O**pen/Closed: open for extension, closed for modification
-- **L**iskov Substitution: subtypes must be substitutable for their supertypes
-- **I**nterface Segregation: do not force classes to implement interfaces they do not need
-- **D**ependency Inversion: depend on abstractions, not on concrete implementations
+- Business logic in **ViewModel** or **Processing** services — never in XAML code-behind beyond UI events
+- Windows construct services and inject into ViewModels (see `MainWindow.xaml.cs`)
 
-## Coding Guidelines
-- **Separate main logic from UI forms**: all business logic must reside in ViewModel or Service; Form/Window should only contain UI event handling code and control updates
-- Separate UI logic from processing and ML logic
-- Avoid putting business logic inside Form classes
-- Use async/await for long-running operations
-- Keep methods small and testable
-- Add Vietnamese comments for complex logic
-- Follow OOP principles
+## Code style
 
-## Code Style
-- PascalCase for public methods
-- camelCase for local variables and private fields (prefix `_` for private fields)
-- Meaningful variable names
-- Avoid magic numbers — use `const` or `readonly` fields
-- Use `using` declarations (C# 8+) for all `IDisposable` objects
-- Prefer `using var` over `using()` blocks for readability
-- Use file-scoped namespaces (`namespace Foo.Bar;`)
+- File-scoped namespaces: `namespace Haui.PCB.Processing.Camera;`
+- One main type per file; file name matches type name
+- PascalCase public members; `_camelCase` private fields; camelCase locals
+- `using var` for all `IDisposable` (especially `OpenCvSharp.Mat`)
+- Avoid magic numbers — use `const` / `readonly`
+- Vietnamese comments for complex vision logic
 
-## File & Namespace Conventions
-- File-scoped namespaces are mandatory: `namespace Haui.PCB.SomeModule;`
-- File name must match class name
-- Each file contains only one main class/interface/enum
+## Libraries
 
-## Tool & Library Preferences
-- OpenCvSharp for image processing; Basler pylon for camera capture
-- Apply the `IDisposable` pattern correctly for all disposable objects
-- Do not add new libraries unless absolutely necessary
+- **OpenCvSharp** for image processing; **Basler pylon** for camera
+- No new NuGet packages unless strongly justified
+
+## Async
+
+Use `async`/`await` for long operations; `Dispatcher.InvokeAsync` for UI updates from camera callbacks.

@@ -46,9 +46,9 @@ Template and ROI files are written relative to the **process working directory**
 
 ## AI-assisted development
 
-- **Memory Bank:** `memory-bank/` — start here for architecture and current state
-- **Agent guide:** `AGENTS.md`
-- **Coding rules:** `.github/copilot-instructions.md` and `.cursor/rules/`
+- **Agent entry:** `AGENTS.md` (read order + build)
+- **Memory Bank:** `memory-bank/` — architecture, config, progress
+- **Coding rules:** `.github/copilot-instructions.md`; Cursor: `.cursor/rules/`
 
 ## License
 

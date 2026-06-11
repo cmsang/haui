@@ -9,7 +9,7 @@ Desktop WPF application for **PCB board inspection**: live camera capture, autom
 - Capture frames from Basler cameras (pylon SDK)
 - Detect and straighten rotated rectangular PCBs (OpenCV contour + perspective warp)
 - Let operators define named regions on a segmented board (relative 0..1 coordinates)
-- Compare new boards to a template using histogram correlation (80% threshold = match)
+- Compare new boards to a template using histogram correlation (threshold via `Config/setting.json` → `ComponentTemplates.MinMatchSimilarityPercent`, default 80%)
 - Support debug visualization of the segmentation pipeline step-by-step
 
 ## Non-Goals (current scope)
@@ -23,7 +23,6 @@ Desktop WPF application for **PCB board inspection**: live camera capture, autom
 
 | Item | Path |
 |------|------|
-| Workspace root | `D:\haui\Haui.PCB\` |
 | Solution | `Haui.PCB.slnx` |
 | Main project | `Haui.PCB/Haui.PCB.csproj` |
 | Target framework | `net10.0-windows` (WPF) |
@@ -32,4 +31,4 @@ Desktop WPF application for **PCB board inspection**: live camera capture, autom
 
 - Business logic stays in `ViewModels/` or `Processing/`, not in XAML code-behind beyond UI events
 - All `OpenCvSharp.Mat` instances disposed via `using` / `using var`
-- Follow conventions in `.github/copilot-instructions.md`
+- Follow `.github/copilot-instructions.md`
