@@ -6,7 +6,7 @@
 - [x] Sidebar → `ContentControl` with tab views
 - [x] UI layers: `Views/Windows/`, `Views/Tabs/`, `Views/Controls/`
 - [x] Models / Processing domain subfolders + `GlobalUsings.cs`
-- [x] Setting tab — `developerMode`, `virtualSerialPort` (restart to apply)
+- [x] Setting tab — full `setting.json` editor; AllowedRegionNames DataGrid (STT + tên, thêm/sửa/xóa); DeveloperMode + Virtual Serial
 - [ ] Job History — detailed content (placeholder)
 
 ## Working features

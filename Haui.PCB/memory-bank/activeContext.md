@@ -24,7 +24,7 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 
 1. **Calibrate defaults** — `camera_basler_defaults.json` for acA4600-7gc on real bench
 2. **Fiducial UI** — `MinMatchScore` / `MaxMatchDimension` in setting.json; no slider UI yet
-3. **Job History tab** — placeholder; **Setting tab** has DeveloperMode + Virtual Serial toggles (restart required)
+3. **Job History tab** — placeholder; **Setting tab** edits full `Config/setting.json` (DeveloperMode, robot, DB, ComponentTemplates incl. AllowedRegionNames grid, Fiducial, Camera)
 
 ## Entry files by task
 
@@ -34,5 +34,5 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 | Fiducial holes | `Processing/Fiducial/FiducialHoleDetectionService.cs`, `Views/Windows/FiducialTemplateWindow.xaml.cs` |
 | Segmentation | `Processing/Segmentation/PcbSegmentationService.cs` |
 | Basler parameters | `Processing/Camera/ICameraParameterService.cs`, `Config/setting.json` → `CameraBasler` |
-| App config | `Processing/Configuration/AppSettingService.cs`, `Models/Configuration/AppSetting.cs` |
+| App config | `Processing/Configuration/AppSettingService.cs`, `ViewModels/SettingViewModel.cs`, `Views/Tabs/SettingTabView.xaml` |
 | Template library / test | `Processing/Templates/TemplateLibraryService.cs`, `ViewModels/TestPipelineViewModel.cs` |

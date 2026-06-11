@@ -5,44 +5,291 @@
              Background="{DynamicResource MaterialDesignPaper}"
              FontFamily="{DynamicResource MaterialDesignFont}"
              Loaded="UserControl_Loaded">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <Style x:Key="SectionBorder" TargetType="Border">
+            <Setter Property="BorderBrush" Value="#DDDDDD"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,8,8"/>
+            <Setter Property="Foreground" Value="#444444"/>
+        </Style>
+        <Style x:Key="FieldTextBox" TargetType="TextBox">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+        <Style x:Key="DangerBtn" TargetType="Button">
+            <Setter Property="Background" Value="#D13438"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#A4262C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Margin="24">
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel MaxWidth="520">
-                <TextBlock Text="Cài đặt hệ thống" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,16"/>
+            <StackPanel MaxWidth="720">
 
+                <TextBlock Text="Cài đặt hệ thống" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8"/>
                 <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="13" Margin="0,0,0,20"
-                           Text="Robot, camera và thư viện mẫu vẫn cấu hình trong Config/setting.json. Các tùy chọn dưới đây được lưu vào cùng file."/>
+                           Text="Chỉnh sửa và lưu trực tiếp vào Config/setting.json. Một số thay đổi cần khởi động lại hoặc làm mới tab liên quan."/>
 
-                <Border BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="6" Padding="16" Margin="0,0,0,16">
+                <!-- Developer -->
+                <Border Style="{StaticResource SectionBorder}">
                     <StackPanel>
-                        <TextBlock Text="Chế độ phát triển" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <CheckBox x:Name="ChkDeveloperMode"
-                                  Content="Bật DeveloperMode (hiện nút tạo mẫu trên Dashboard)"
-                                  Margin="0,0,0,8"
-                                  Checked="ChkDeveloperMode_Changed"
-                                  Unchecked="ChkDeveloperMode_Changed"/>
-                        <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11"
+                        <TextBlock Text="Chế độ phát triển" Style="{StaticResource SectionTitle}"/>
+                        <CheckBox Content="Bật DeveloperMode (hiện nút tạo mẫu trên Dashboard)"
+                                  IsChecked="{Binding DeveloperMode, Mode=TwoWay}"
+                                  Margin="0,0,0,8"/>
+                        <StackPanel Visibility="{Binding IsVirtualSerialVisible, Converter={StaticResource BoolToVis}}">
+                            <CheckBox Content="Virtual Serial Port (không cần kết nối cổng COM)"
+                                      IsChecked="{Binding VirtualSerialPort, Mode=TwoWay}"
+                                      Margin="0,0,0,8"/>
+                            <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11"
+                                       Text="Chỉ có hiệu lực khi DeveloperMode bật. Robot và warehouse chạy giả lập."/>
+                        </StackPanel>
+                        <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11" Margin="0,4,0,0"
                                    Text="Mặc định tắt trên máy vận hành. Bật để tạo/sửa mẫu linh kiện và mẫu lỗ định vị."/>
                     </StackPanel>
                 </Border>
 
-                <Border x:Name="PanelVirtualSerial" BorderBrush="#DDDDDD" BorderThickness="1"
-                        CornerRadius="6" Padding="16" Margin="0,0,0,16" Visibility="Collapsed">
+                <!-- Robot -->
+                <Border Style="{StaticResource SectionBorder}">
                     <StackPanel>
-                        <TextBlock Text="Serial ảo" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <CheckBox x:Name="ChkVirtualSerialPort"
-                                  Content="Virtual Serial Port (không cần kết nối cổng COM)"
-                                  Margin="0,0,0,8"/>
-                        <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11"
-                                   Text="Chỉ có hiệu lực khi DeveloperMode bật. Robot và warehouse chạy giả lập — khởi động lại ứng dụng sau khi lưu."/>
+                        <TextBlock Text="Robot" Style="{StaticResource SectionTitle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="Cổng COM robot" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding Com, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Grid.Row="1" Text="Cổng COM warehouse" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding WarehouseCom, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Grid.Row="2" Text="Baud rate" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding BaudRate, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Grid.Row="3" Text="Steps / độ" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding StepsPerDeg, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Grid.Row="4" Text="Bước jog (độ)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding JogStepDegrees, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <TextBlock Grid.Row="5" Text="Tốc độ Go To (%)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="5" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding SpeedPercent, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
-                <Button x:Name="BtnSaveSettings" Content="Lưu cài đặt" Height="36" Width="140"
+                <!-- Database -->
+                <Border Style="{StaticResource SectionBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Cơ sở dữ liệu" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="DatabaseConnection" Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
+                        <TextBox Style="{StaticResource FieldTextBox}" MinHeight="56" AcceptsReturn="True"
+                                 TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                                 Text="{Binding DatabaseConnection, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Component templates -->
+                <Border Style="{StaticResource SectionBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Thư viện mẫu linh kiện" Style="{StaticResource SectionTitle}"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Thư mục mẫu" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding TemplateCustomFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="1" Text="Ngưỡng giống (%)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding MinMatchSimilarityPercent, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+
+                        <TextBlock Text="Danh sách tên vùng được phép (AllowedRegionNames)"
+                                   FontWeight="SemiBold" FontSize="13" Margin="0,4,0,8"/>
+                        <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11" Margin="0,0,0,8"
+                                   Text="Thứ tự trong bảng quyết định STT và số vùng bắt buộc khi tạo mẫu."/>
+
+                        <DataGrid x:Name="AllowedRegionNamesGrid"
+                                  ItemsSource="{Binding AllowedRegionNames}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  CanUserDeleteRows="False"
+                                  SelectionMode="Single"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal"
+                                  FontSize="12"
+                                  MinHeight="120"
+                                  MaxHeight="280"
+                                  Margin="0,0,0,8">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="STT"
+                                                    Binding="{Binding Index}"
+                                                    Width="48"
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Tên vùng"
+                                                    Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                                    Width="*"/>
+                                <DataGridTemplateColumn Header="" Width="44">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="✕"
+                                                    Style="{StaticResource DangerBtn}"
+                                                    Click="BtnDeleteRegionName_Click"
+                                                    Tag="{Binding}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <Button Content="Thêm dòng" Height="32" Width="110" HorizontalAlignment="Left"
+                                Click="BtnAddRegionName_Click"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Fiducial -->
+                <Border Style="{StaticResource SectionBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Lỗ định vị (FiducialHoles)" Style="{StaticResource SectionTitle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Thư mục mẫu lỗ" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding FiducialTemplateFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="1" Text="Min match score" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding FiducialMinMatchScore, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="2" Text="Max match dimension (px)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding FiducialMaxMatchDimension, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Camera Basler -->
+                <Border Style="{StaticResource SectionBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Camera Basler (mặc định)" Style="{StaticResource SectionTitle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Text="Exposure (µs)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding CameraExposureTimeUs, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="1" Text="Gain (dB)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding CameraGainDb, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="2" Text="Gamma" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding CameraGamma, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="3" Text="Width (px)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding CameraWidth, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="4" Text="Height (px)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding CameraHeight, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="5" Text="Balance white auto" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="5" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding CameraBalanceWhiteAuto, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Camera capture -->
+                <Border Style="{StaticResource SectionBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Lưu ảnh chụp nhanh" Style="{StaticResource SectionTitle}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Thư mục lưu" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding CameraCaptureSaveFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Button Content="Lưu cài đặt" Height="36" Width="140"
                         HorizontalAlignment="Left" Click="BtnSaveSettings_Click"
                         Style="{StaticResource MaterialDesignRaisedButton}"/>
 
-                <TextBlock x:Name="TxtSaveStatus" TextWrapping="Wrap" Margin="0,12,0,0"
+                <TextBlock Text="{Binding SaveStatusText}" TextWrapping="Wrap" Margin="0,12,0,0"
                            Foreground="#666666" FontSize="12"/>
             </StackPanel>
         </ScrollViewer>
