@@ -460,8 +460,6 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         CancelPendingOperations();
         if (_enableSerialEvents)
             _serialService.LineReceived -= OnSerialLineReceived;
-
-        DisconnectSerial();
     }
 
     public void Dispose()
@@ -472,10 +470,11 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         if (_enableSerialEvents)
             _serialService.LineReceived -= OnSerialLineReceived;
 
-        DisconnectSerial();
-
         if (_disposeSerialService)
+        {
+            DisconnectSerial();
             _serialService.Dispose();
+        }
     }
 
     private void SendMoveToPoint(RobotTeachPoint point)

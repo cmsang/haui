@@ -349,7 +349,6 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed) return;
         CancelPendingOperations();
         _serialService.LineReceived -= OnSerialLineReceived;
-        DisconnectSerial();
     }
 
     public void Dispose()
@@ -358,10 +357,12 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         _disposed = true;
         CancelPendingOperations();
         _serialService.LineReceived -= OnSerialLineReceived;
-        DisconnectSerial();
 
         if (_disposeSerialService)
+        {
+            DisconnectSerial();
             _serialService.Dispose();
+        }
     }
 
     private RobotTeachPoint? GetTeachPoint(string name)
