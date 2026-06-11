@@ -1,7 +1,7 @@
 namespace Haui.PCB.Models;
 
 /// <summary>
-/// Cấu hình lưu ảnh chụp nhanh — section <c>CameraCapture</c> trong <c>appsettings.json</c>.
+/// Cấu hình lưu ảnh chụp nhanh — section <c>CameraCapture</c> trong <c>setting.json</c>.
 /// </summary>
 public sealed class CameraCaptureSettings
 {

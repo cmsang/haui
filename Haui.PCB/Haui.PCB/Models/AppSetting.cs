@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Haui.PCB.Models;
 
 /// <summary>
-/// Cấu hình phần cứng đọc từ setting.json.
+/// Cấu hình ứng dụng — đọc/ghi từ <c>Config/setting.json</c>.
 /// </summary>
 public class AppSetting
 {
@@ -25,8 +25,20 @@ public class AppSetting
     /// <summary>Tốc độ di chuyển khi Go To (0–100%).</summary>
     public int SpeedPercent { get; set; } = 50;
 
-    /// <summary>Chuỗi kết nối SQL Server — AGVControlSystem.</summary>
+    /// <summary>Chuỗi kết nối SQL Server.</summary>
     [JsonPropertyName("DatabaseConnection")]
     public string DatabaseConnection { get; set; } =
         @"Data Source=.\SQLExpress;Initial Catalog=AGVControlSystem;Integrated Security=True;TrustServerCertificate=True";
+
+    [JsonPropertyName("ComponentTemplates")]
+    public ComponentTemplateSettings ComponentTemplates { get; set; } = new();
+
+    [JsonPropertyName("FiducialHoles")]
+    public FiducialHoleSettings FiducialHoles { get; set; } = new();
+
+    [JsonPropertyName("CameraBasler")]
+    public CameraParameters CameraBasler { get; set; } = new();
+
+    [JsonPropertyName("CameraCapture")]
+    public CameraCaptureSettings CameraCapture { get; set; } = new();
 }

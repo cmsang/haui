@@ -11,7 +11,7 @@
                        HorizontalAlignment="Center" Margin="0,0,0,8"/>
             <TextBlock TextWrapping="Wrap" TextAlignment="Center"
                        FontSize="14" Foreground="#666666"
-                       Text="Cấu hình robot, camera và thư viện mẫu qua appsettings.json và Config/setting.json. Màn hình cài đặt chi tiết sẽ bổ sung sau."/>
+                       Text="Cấu hình robot, camera và thư viện mẫu qua Config/setting.json. Màn hình cài đặt chi tiết sẽ bổ sung sau."/>
         </StackPanel>
     </Grid>
 </UserControl>

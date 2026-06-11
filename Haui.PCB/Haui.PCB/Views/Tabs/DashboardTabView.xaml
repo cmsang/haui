@@ -613,7 +613,7 @@
                                FontWeight="SemiBold"
                                Margin="0,0,0,10" />
 
-                    <TextBlock Text="4 lỗ giống nhau — mỗi lần lưu thêm một ảnh mẫu; pipeline so khớp tất cả. Thư mục lưu: chỉnh FiducialHoles trong appsettings.json."
+                    <TextBlock Text="4 lỗ giống nhau — mỗi lần lưu thêm một ảnh mẫu; pipeline so khớp tất cả. Thư mục lưu: chỉnh FiducialHoles trong Config/setting.json."
                                TextWrapping="Wrap"
                                Foreground="#666666"
                                FontSize="11"

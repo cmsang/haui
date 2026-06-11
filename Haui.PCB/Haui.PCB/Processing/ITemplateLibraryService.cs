@@ -26,6 +26,6 @@ public interface ITemplateLibraryService
     /// <summary>Lưu tên mẫu và danh sách vùng ra file JSON.</summary>
     void SaveRegions(string regionsFilePath, string templateName, IEnumerable<TemplateRegion> regions);
 
-    /// <summary>Thư mục thư viện đang dùng (<c>appsettings.json</c> → ComponentTemplates.CustomFolder).</summary>
+    /// <summary>Thư mục thư viện đang dùng (<c>setting.json</c> → ComponentTemplates.CustomFolder).</summary>
     string GetLibraryFolder();
 }

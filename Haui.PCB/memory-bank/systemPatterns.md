@@ -33,7 +33,7 @@ Haui.PCB/                 # WPF app project
 
 ## Template storage
 
-Thư mục cấu hình (`templates/` hoặc tùy chỉnh qua `appsettings.json` → ComponentTemplates):
+Thư mục cấu hình (`templates/` hoặc tùy chỉnh qua `Config/setting.json` → ComponentTemplates):
 
 - `{name}_{timestamp}.png` — ảnh bo mẫu
 - `{name}_{timestamp}_regions.json` — `TemplateRegionsDocument` (tên + vùng)

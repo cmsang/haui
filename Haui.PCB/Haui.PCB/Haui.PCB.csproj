@@ -36,9 +36,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="$(PylonRoot)\Development\Assemblies\Basler.Pylon\net8.0\x64\Basler.Pylon.dll">
       <Link>Basler.Pylon.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

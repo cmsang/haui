@@ -19,7 +19,7 @@ public class RegionComparisonResult
     /// <summary>Hiển thị phần trăm.</summary>
     public string SimilarityText => $"{Similarity:F1}%";
 
-    /// <summary>Ngưỡng % từ <c>appsettings.json</c> khi tạo kết quả.</summary>
+    /// <summary>Ngưỡng % từ <c>setting.json</c> khi tạo kết quả.</summary>
     public double MatchThresholdPercent { get; init; } = ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
 
     /// <summary>True nếu độ tương đồng đạt ngưỡng cấu hình.</summary>

@@ -19,7 +19,8 @@
 - [x] Pipeline step debugger window (Test 2)
 - [x] Create template: draw regions, save PNG + JSON; tên vùng ∈ `AllowedRegionNames` (config); Viewer vẫn bắt `RequiredRegionCount`
 - [x] Multi-template: mỗi ảnh mẫu vùng linh kiện độc lập; thư viện lưu khi tất cả mẫu đủ N vùng
-- [x] Thư viện mẫu linh kiện: thư mục chỉ qua `appsettings.json` → `ComponentTemplates.CustomFolder`
+- [x] Thư viện mẫu linh kiện: thư mục qua `Config/setting.json` → `ComponentTemplates.CustomFolder`
+- [x] Cấu hình thống nhất: gộp `appsettings.json` vào `Config/setting.json` (`AppSettingService`)
 - [x] Multi-template library (`templates/index.json`) with viewer and edit/delete
 - [x] Library without index.json — scan `*.png` + `*_regions.json` (`TemplateRegionsDocument`)
 - [x] Test pipeline: segment + so khớp tổng hợp theo `AllowedRegionNames` (mỗi tên = ứng viên đầu tiên > 80% trong nhóm)

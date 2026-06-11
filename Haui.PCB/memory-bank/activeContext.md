@@ -9,10 +9,10 @@
 - **UI layer ngang:** `Views/Windows/` (MainWindow + inspection + `RobotTeachingWindow` / `ManualControlWindow`), `Views/Tabs/` (5 tab), `Views/Controls/` (ArcGauge); `ViewModels/` giữ nguyên
 
 - **Build fix:** sửa `HintPath` `Microsoft.Expression.Drawing`; khôi phục `MainWindow.xaml.cs` (gỡ duplicate merge); xóa duplicate `MAIN CONTENT` + `BtnCapture` trong `MainWindow.xaml`; thêm lại `Basler.Pylon` + `PlatformTarget=x64` trong csproj
-- **Thư viện mẫu:** bỏ `UseCustomFolder` và UI chọn thư mục trên Create; luôn dùng `ComponentTemplates.CustomFolder` trong `appsettings.json` (rỗng → `templates/`)
-- **Chụp ảnh nhanh:** nút «📷 Chụp» cạnh «Xem mẫu»; lưu PNG vào `CameraCapture.SaveFolder` trong `appsettings.json`; mặc định chọn độ phân giải lớn nhất khi chọn camera
-- **Cấu hình:** gộp `appsettings.json` (ComponentTemplates, FiducialHoles, CameraBasler); migrate tự động từ 3 file cũ nếu còn
-- **Mẫu lỗ định vị:** thư mục qua `appsettings.json` → FiducialHoles; đã bỏ chọn thư mục trên MainWindow
+- **Cấu hình thống nhất:** một file `Config/setting.json` — robot (`com`, `DatabaseConnection`…) + vision (`ComponentTemplates`, `FiducialHoles`, `CameraBasler`, `CameraCapture`); đã xóa `appsettings.json`; migrate tự động từ file cũ nếu còn
+- **Thư viện mẫu:** `ComponentTemplates.CustomFolder` trong `setting.json` (rỗng → `templates/`)
+- **Chụp ảnh nhanh:** lưu PNG vào `CameraCapture.SaveFolder` trong `setting.json`
+- **Mẫu lỗ định vị:** thư mục qua `setting.json` → FiducialHoles
 - **Test pipeline:** ngưỡng so khớp `MinMatchSimilarityPercent` trong `component_template_settings.json` (mặc định 80); so khớp tổng hợp theo `AllowedRegionNames`
 - **Tạo mẫu:** nút «Xoay 180°» cạnh Lưu/Đóng — xoay ảnh bo mạch và cập nhật tọa độ vùng tương đối
 - **Test pipeline:** nếu chưa đạt đủ vùng → xoay bo mạch 180° → so lại; hiển thị ảnh xoay + ghi chú trạng thái

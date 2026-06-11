@@ -26,8 +26,8 @@ Runtime **working directory** = process CWD (typically `bin/Debug/net10.0-window
 | Path | Written by | Purpose |
 |------|------------|---------|
 | `last_region.json` | `MainViewModel` | Last camera ROI (pixel rect) |
-| `ComponentTemplates.CustomFolder` (`appsettings.json`) | `TemplateLibraryService` | Thư mục thư viện mẫu (`*.png` + `*_regions.json`; rỗng → `templates/`) |
-| `appsettings.json` | `AppSettingsStore` | `ComponentTemplates`, `FiducialHoles`, `CameraBasler` (thay 3 file cũ) |
+| `Config/setting.json` | `AppSettingService` | Robot, `DatabaseConnection`, `ComponentTemplates`, `FiducialHoles`, `CameraBasler`, `CameraCapture` |
+| `ComponentTemplates.CustomFolder` (`setting.json`) | `TemplateLibraryService` | Thư mục thư viện mẫu (`*.png` + `*_regions.json`; rỗng → `templates/`) |
 | `fiducial_holes/hole_*.png` | `FiducialHoleTemplateService` | Thư viện mẫu lỗ (nhiều ảnh, cùng hình dạng) |
 
 ## Segmentation constants (`PcbSegmentationService`)
@@ -47,7 +47,7 @@ Pipeline: BGR→gray → GaussianBlur(5×5) → Canny → morphology close → l
 - Resize to **128×128** (`INTER_AREA` when downscaling, `INTER_LINEAR` when upscaling)
 - Preprocess: **LAB L** → **CLAHE** (clip 2.0, tile 8×8) → **bilateral** (d=5) → grayscale histogram
 - `CompareHist` with `HistCompMethods.Correl`; hist MinMax normalize
-- Match threshold **`MinMatchSimilarityPercent`** in `appsettings.json` → ComponentTemplates (default 80); `RegionComparisonResult.IsMatch`
+- Match threshold **`MinMatchSimilarityPercent`** in `setting.json` → ComponentTemplates (default 80); `RegionComparisonResult.IsMatch`
 
 ## Models
 

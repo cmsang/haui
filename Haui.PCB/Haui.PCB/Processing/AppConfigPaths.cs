@@ -51,4 +51,38 @@ public static class AppConfigPaths
         Directory.CreateDirectory(ConfigDirectory);
         File.Copy(legacy, target);
     }
+
+    /// <summary>Thư mục có thể chứa file JSON cấu hình cũ (CWD, bin, walk-up).</summary>
+    public static IEnumerable<string> LegacySearchDirectories() => EnumerateLegacyDirectories();
+
+    /// <summary>Tìm file cấu hình cũ theo tên (ưu tiên gần exe, rồi walk-up).</summary>
+    public static IEnumerable<string> FindLegacyConfigFiles(string fileName)
+    {
+        foreach (var dir in EnumerateLegacyDirectories())
+        {
+            var path = Path.Combine(dir, fileName);
+            if (File.Exists(path))
+                yield return path;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateLegacyDirectories()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (seen.Add(Path.GetFullPath(Directory.GetCurrentDirectory())))
+            yield return Directory.GetCurrentDirectory();
+
+        var baseDir = AppContext.BaseDirectory;
+        if (seen.Add(Path.GetFullPath(baseDir)))
+            yield return baseDir;
+
+        var dirInfo = new DirectoryInfo(baseDir);
+        while (dirInfo != null)
+        {
+            if (seen.Add(dirInfo.FullName))
+                yield return dirInfo.FullName;
+            dirInfo = dirInfo.Parent;
+        }
+    }
 }

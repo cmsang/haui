@@ -1,7 +1,7 @@
 namespace Haui.PCB.Models;
 
 /// <summary>
-/// Cấu hình thư viện mẫu linh kiện — section <c>ComponentTemplates</c> trong <c>appsettings.json</c>.
+/// Cấu hình thư viện mẫu linh kiện — section <c>ComponentTemplates</c> trong <c>setting.json</c>.
 /// </summary>
 public sealed class ComponentTemplateSettings
 {

@@ -5,7 +5,7 @@ using OpenCvSharp;
 namespace Haui.PCB.Processing;
 
 /// <summary>
-/// Lưu frame camera vào thư mục cấu hình (<c>appsettings.json</c> → CameraCapture).
+/// Lưu frame camera vào thư mục cấu hình (<c>setting.json</c> → CameraCapture).
 /// </summary>
 public class CameraCaptureService
 {
