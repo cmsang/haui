@@ -2,6 +2,7 @@
 
 ## MainWindow (2026-06)
 
+- [x] Vietnamese UI strings — mojibake fixed in ViewModels/windows code-behind; `MaterialDesignFont` on all operator windows/tabs
 - [x] Sidebar → `ContentControl` with tab views
 - [x] UI layers: `Views/Windows/`, `Views/Tabs/`, `Views/Controls/`
 - [x] Models / Processing domain subfolders + `GlobalUsings.cs`

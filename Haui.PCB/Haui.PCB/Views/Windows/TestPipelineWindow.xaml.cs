@@ -6,8 +6,8 @@ using OpenCvSharp;
 namespace Haui.PCB.Views.Windows;
 
 /// <summary>
-/// Code-behind cá»§a TestPipelineWindow â€” chá»‰ chá»©a logic giao diá»‡n thuáº§n tÃºy.
-/// ToÃ n bá»™ nghiá»‡p vá»¥ xá»­ lÃ½ áº£nh Ä‘Æ°á»£c uá»· thÃ¡c cho <see cref="TestPipelineViewModel"/>.
+/// Code-behind của TestPipelineWindow — chỉ chứa logic giao diện thuần túy.
+/// Toàn bộ nghiệp vụ xử lý ảnh được uỷ thác cho <see cref="TestPipelineViewModel"/>.
 /// </summary>
 public partial class TestPipelineWindow : System.Windows.Window
 {
@@ -23,14 +23,14 @@ public partial class TestPipelineWindow : System.Windows.Window
             new CompositeTemplateMatchService(libraryService, comparisonService));
         DataContext = _viewModel;
 
-        // Láº¯ng nghe áº£nh bo máº¡ch Ä‘Ã£ cáº¯t sáºµn sÃ ng
+        // Lắng nghe ảnh bo mạch đã cắt sẵn sàng
         _viewModel.ProcessedImageReady += bitmap =>
         {
             if (bitmap is null)
             {
                 ProcessedImage.Source = null;
                 ProcessedPlaceholder.Visibility = Visibility.Visible;
-                ProcessedPlaceholder.Text = "KhÃ´ng tÃ¬m tháº¥y bo máº¡ch";
+                ProcessedPlaceholder.Text = "Không tìm thấy bo mạch";
             }
             else
             {
@@ -39,7 +39,7 @@ public partial class TestPipelineWindow : System.Windows.Window
             }
         };
 
-        // Äá»“ng bá»™ StatusText vÃ  tráº¡ng thÃ¡i nÃºt tá»« ViewModel
+        // Đồng bộ StatusText và trạng thái nút từ ViewModel
         _viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(TestPipelineViewModel.StatusText))
@@ -56,7 +56,7 @@ public partial class TestPipelineWindow : System.Windows.Window
         MatchedGrid.ItemsSource = _viewModel.MatchedRegions;
         DifferentGrid.ItemsSource = _viewModel.DifferentRegions;
 
-        // Hiá»ƒn thá»‹ áº£nh Ä‘Ã£ váº½ annotations lÃªn áº£nh bo máº¡ch sau khi so sÃ¡nh xong
+        // Hiển thị ảnh đã vẽ annotations lên ảnh bo mạch sau khi so sánh xong
         _viewModel.AnnotatedImageReady += bitmap =>
         {
             if (bitmap is not null)
@@ -67,22 +67,22 @@ public partial class TestPipelineWindow : System.Windows.Window
         };
     }
 
-    // â”€â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Public API ──────────────────────────────────────────────────────────
 
-    /// <summary>Náº¡p áº£nh tá»« bÃªn ngoÃ i (tá»« camera chá»¥p) â€” pipeline tá»± Ä‘á»™ng cháº¡y.</summary>
+    /// <summary>Nạp ảnh từ bên ngoài (từ camera chụp) — pipeline tự động chạy.</summary>
     public void LoadImage(Mat mat)
     {
         _viewModel.LoadImage(mat);
     }
 
-    // â”€â”€â”€â”€ Event Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Event Handlers ──────────────────────────────────────────────────────
 
     private void BtnSelectImage_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
         {
-            Title = "Chá»n áº£nh bo máº¡ch",
-            Filter = "áº¢nh|*.jpg;*.jpeg;*.png;*.bmp;*.tif;*.tiff",
+            Title = "Chọn ảnh bo mạch",
+            Filter = "Ảnh|*.jpg;*.jpeg;*.png;*.bmp;*.tif;*.tiff",
             Multiselect = false
         };
 

@@ -6,7 +6,8 @@
         MinHeight="480" MinWidth="750"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
-        Closed="Window_Closed">
+        Closed="Window_Closed"
+        FontFamily="{DynamicResource MaterialDesignFont}">
 
     <Window.Resources>
         <Style x:Key="HeaderBorderStyle" TargetType="Border">

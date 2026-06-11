@@ -7,6 +7,7 @@
         MinHeight="520" MinWidth="800"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
-        Background="{DynamicResource MaterialDesignPaper}">
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignFont}">
     <tabs:ManualControlTabView x:Name="ManualPanel"/>
 </Window>

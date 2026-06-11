@@ -6,7 +6,7 @@ using System.Windows;
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// ViewModel mÃ n Manual Control â€” test PickUp â†’ vá»‹ trÃ­ OK/NG theo chu trÃ¬nh cÃ³ chá» Dx.
+/// ViewModel màn Manual Control — test PickUp → vị trí OK/NG theo chu trình có chờ Dx.
 /// </summary>
 public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 {
@@ -18,7 +18,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     private readonly bool _disposeSerialService;
     private AppSetting _appSetting;
     private RobotTeachPoint? _selectedDestination;
-    private string _statusText = "Káº¿t ná»‘i SerialPort, chá»n vá»‹ trÃ­ OK/NG vÃ  cháº¡y test.";
+    private string _statusText = "Kết nối SerialPort, chọn vị trí OK/NG và chạy test.";
     private string _serialPort = "COM3";
     private int _baudRate = 115200;
     private int _stepsPerDeg = 100;
@@ -88,8 +88,8 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
     public string SelectedDestinationSummary =>
         SelectedDestination == null
-            ? "ChÆ°a chá»n vá»‹ trÃ­ Ä‘Ã­ch"
-            : $"{SelectedDestination.Group} Â· {SelectedDestination.Name} â€” " +
+            ? "Chưa chọn vị trí đích"
+            : $"{SelectedDestination.Group} · {SelectedDestination.Name} — " +
               $"J1={SelectedDestination.J1:F1}, J2={SelectedDestination.J2:F1}, " +
               $"J3={SelectedDestination.J3:F1}, J4={SelectedDestination.J4:F1}, " +
               $"J5={SelectedDestination.J5:F1}, G={SelectedDestination.GripperAngle:F1}";
@@ -105,7 +105,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string SerialConnectButtonText => IsSerialConnected ? "Ngáº¯t káº¿t ná»‘i" : "Káº¿t ná»‘i";
+    public string SerialConnectButtonText => IsSerialConnected ? "Ngắt kết nối" : "Kết nối";
 
     public string SerialPortName
     {
@@ -157,7 +157,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             : DestinationPoints.FirstOrDefault(p =>
                 p.Name.Equals(selectedName, StringComparison.OrdinalIgnoreCase));
 
-        StatusText = $"ÄÃ£ táº£i {DestinationPoints.Count} vá»‹ trÃ­ OK/NG tá»« Database.";
+        StatusText = $"Đã tải {DestinationPoints.Count} vị trí OK/NG từ Database.";
     }
 
     public void RefreshAvailablePorts()
@@ -178,7 +178,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         SyncConnectionState();
         if (IsSerialConnected)
         {
-            StatusText = $"Serial online â€” {SerialPortName} @ {BaudRate}.";
+            StatusText = $"Serial online — {SerialPortName} @ {BaudRate}.";
             return true;
         }
 
@@ -186,19 +186,19 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         {
             if (string.IsNullOrWhiteSpace(SerialPortName))
             {
-                StatusText = "ChÆ°a cáº¥u hÃ¬nh cá»•ng COM trong setting.json.";
+                StatusText = "Chưa cấu hình cổng COM trong setting.json.";
                 return false;
             }
 
             _serialService.Connect(SerialPortName, BaudRate);
             IsSerialConnected = true;
-            StatusText = $"ÄÃ£ káº¿t ná»‘i {SerialPortName} @ {BaudRate}.";
+            StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
             return true;
         }
         catch (Exception ex)
         {
             IsSerialConnected = false;
-            StatusText = $"Káº¿t ná»‘i Serial tháº¥t báº¡i: {ex.Message}";
+            StatusText = $"Kết nối Serial thất bại: {ex.Message}";
             return false;
         }
     }
@@ -215,7 +215,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         if (IsSerialConnected)
         {
             DisconnectSerial();
-            StatusText = "ÄÃ£ ngáº¯t káº¿t ná»‘i SerialPort.";
+            StatusText = "Đã ngắt kết nối SerialPort.";
             return;
         }
 
@@ -226,10 +226,10 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     {
         if (!IsTestRunning) return;
         CancelPendingOperations();
-        StatusText = "Äang há»§y chu trÃ¬nh test...";
+        StatusText = "Đang hủy chu trình test...";
     }
 
-    /// <summary>Há»§y chu trÃ¬nh test vÃ  cÃ¡c thao tÃ¡c Ä‘ang chá» Dx trÃªn mÃ n hÃ¬nh nÃ y.</summary>
+    /// <summary>Hủy chu trình test và các thao tác đang chờ Dx trên màn hình này.</summary>
     public void CancelPendingOperations()
     {
         _closing = true;
@@ -247,8 +247,8 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>
-    /// Chu trÃ¬nh: G180x â†’ PickUp â†’ G0x â†’ Wait â†’ Destination â†’ G180x â†’ Wait â†’ G0x.
-    /// Má»—i bÆ°á»›c chá» pháº£n há»“i Dx tá»« robot.
+    /// Chu trình: G180x → PickUp → G0x → Wait → Destination → G180x → Wait → G0x.
+    /// Mỗi bước chờ phản hồi Dx từ robot.
     /// </summary>
     public async Task RunPickUpToDestinationTestAsync()
     {
@@ -257,13 +257,13 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
         if (IsTestRunning)
         {
-            StatusText = "Chu trÃ¬nh test Ä‘ang cháº¡y.";
+            StatusText = "Chu trình test đang chạy.";
             return;
         }
 
         if (SelectedDestination == null)
         {
-            StatusText = "Chá»n vá»‹ trÃ­ Ä‘Ã­ch (OK hoáº·c NG) trong báº£ng.";
+            StatusText = "Chọn vị trí đích (OK hoặc NG) trong bảng.";
             return;
         }
 
@@ -273,13 +273,13 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
         if (pickUp == null)
         {
-            StatusText = "KhÃ´ng tÃ¬m tháº¥y vá»‹ trÃ­ PickUp trong cáº¥u hÃ¬nh teach.";
+            StatusText = "Không tìm thấy vị trí PickUp trong cấu hình teach.";
             return;
         }
 
         if (wait == null)
         {
-            StatusText = "KhÃ´ng tÃ¬m tháº¥y vá»‹ trÃ­ Wait trong cáº¥u hÃ¬nh teach.";
+            StatusText = "Không tìm thấy vị trí Wait trong cấu hình teach.";
             return;
         }
 
@@ -297,11 +297,11 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             await _pickPlaceExecutor.RunPickUpToDestinationAsync(
                 pickUp, wait, destination, msg => StatusText = msg, ct);
 
-            StatusText = $"Test hoÃ n táº¥t: PickUp â†’ {destination.Group} {destination.Name} â†’ Wait.";
+            StatusText = $"Test hoàn tất: PickUp → {destination.Group} {destination.Name} → Wait.";
         }
         catch (OperationCanceledException)
         {
-            StatusText = "ÄÃ£ há»§y chu trÃ¬nh test.";
+            StatusText = "Đã hủy chu trình test.";
         }
         catch (TimeoutException ex)
         {
@@ -309,7 +309,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            StatusText = $"Lá»—i chu trÃ¬nh test: {ex.Message}";
+            StatusText = $"Lỗi chu trình test: {ex.Message}";
         }
         finally
         {
@@ -324,7 +324,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         var pickUp = GetTeachPoint(RobotTeachPositions.PickUp);
         if (pickUp == null)
         {
-            StatusText = "KhÃ´ng tÃ¬m tháº¥y vá»‹ trÃ­ PickUp.";
+            StatusText = "Không tìm thấy vị trí PickUp.";
             return;
         }
 
@@ -335,7 +335,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     {
         if (SelectedDestination == null)
         {
-            StatusText = "Chá»n vá»‹ trÃ­ Ä‘Ã­ch trong báº£ng.";
+            StatusText = "Chọn vị trí đích trong bảng.";
             return;
         }
 
@@ -371,7 +371,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     {
         if (!_robotConfigService.TryLoadTeachPoints(out var dbPoints, out var error))
         {
-            StatusText = $"KhÃ´ng táº£i Ä‘Æ°á»£c Database: {error}";
+            StatusText = $"Không tải được Database: {error}";
             return RobotTeachPositions.CreateDefault();
         }
 
@@ -390,20 +390,20 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }, out var err))
             StatusText = err;
         else
-            StatusText = $"TX move â†’ {label} (khÃ´ng chá» Dx)";
+            StatusText = $"TX move → {label} (không chờ Dx)";
     }
 
     private bool TrySend(Action send, out string error)
     {
         if (_closing || _disposed)
         {
-            error = "Äang Ä‘Ã³ng mÃ n hÃ¬nh â€” thao tÃ¡c bá»‹ há»§y.";
+            error = "Đang đóng màn hình — thao tác bị hủy.";
             return false;
         }
 
         if (!IsSerialConnected)
         {
-            error = "ChÆ°a káº¿t ná»‘i SerialPort.";
+            error = "Chưa kết nối SerialPort.";
             return false;
         }
 
@@ -426,8 +426,8 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
         var msg = line switch
         {
-            _ when line.StartsWith('A') => $"Robot báº¯t Ä‘áº§u homing trá»¥c {line[1..]}...",
-            _ when line.StartsWith('D') => $"Robot hoÃ n thÃ nh trá»¥c {line[1..]}.",
+            _ when line.StartsWith('A') => $"Robot bắt đầu homing trục {line[1..]}...",
+            _ when line.StartsWith('D') => $"Robot hoàn thành trục {line[1..]}.",
             _ => $"RX: {line}"
         };
 

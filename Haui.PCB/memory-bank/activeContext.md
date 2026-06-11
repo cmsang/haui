@@ -4,7 +4,7 @@
 
 Stable layout: **Models** and **Processing** by domain subfolder; **Views** as `Windows/` · `Tabs/` · `Controls/`; config unified in **`Config/setting.json`**.
 
-Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments **English**; operator UI **Vietnamese** with `MaterialDesignFont` / `Segoe UI` (not Consolas for labels).
+Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments **English**; operator UI **Vietnamese** with `MaterialDesignFont` / `Segoe UI` (not Consolas for labels). Mojibake in 13 ViewModel/code-behind `.cs` files fixed (2026-06); child windows/tabs now set `MaterialDesignFont` on root.
 
 ## Configuration (single file)
 

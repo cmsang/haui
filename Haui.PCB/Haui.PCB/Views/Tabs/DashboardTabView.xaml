@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:Haui.PCB.Views.Controls"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             FontFamily="{DynamicResource MaterialDesignFont}"
              Loaded="UserControl_Loaded">
     <UserControl.Resources>
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">

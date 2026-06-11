@@ -165,7 +165,7 @@
 
         <!-- Selected summary -->
         <Border Grid.Row="3" Background="#F5F5F5" CornerRadius="4" Padding="10,8" Margin="0,12,0,0">
-            <TextBlock x:Name="TxtSelectedSummary" FontSize="12" FontFamily="Consolas" TextWrapping="Wrap"/>
+            <TextBlock x:Name="TxtSelectedSummary" FontSize="12" TextWrapping="Wrap"/>
         </Border>
 
         <!-- Actions -->

@@ -5,8 +5,8 @@ using OpenCvSharp;
 namespace Haui.PCB.Views.Windows;
 
 /// <summary>
-/// Code-behind cá»§a PipelineStepsWindow â€” chá»‰ chá»©a logic giao diá»‡n thuáº§n tÃºy.
-/// ToÃ n bá»™ nghiá»‡p vá»¥ xá»­ lÃ½ áº£nh Ä‘Æ°á»£c uá»· thÃ¡c cho <see cref="PipelineStepsViewModel"/>.
+/// Code-behind của PipelineStepsWindow — chỉ chứa logic giao diện thuần túy.
+/// Toàn bộ nghiệp vụ xử lý ảnh được uỷ thác cho <see cref="PipelineStepsViewModel"/>.
 /// </summary>
 public partial class PipelineStepsWindow : System.Windows.Window
 {
@@ -18,10 +18,10 @@ public partial class PipelineStepsWindow : System.Windows.Window
         _viewModel = new PipelineStepsViewModel(new PipelineDebugService());
         DataContext = _viewModel;
 
-        // Bind danh sÃ¡ch bÆ°á»›c vÃ o ItemsControl
+        // Bind danh sách bước vào ItemsControl
         StepsPanel.ItemsSource = _viewModel.Steps;
 
-        // Äá»“ng bá»™ tráº¡ng thÃ¡i
+        // Đồng bộ trạng thái
         _viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(PipelineStepsViewModel.StatusText))
@@ -31,15 +31,15 @@ public partial class PipelineStepsWindow : System.Windows.Window
         };
     }
 
-    // â”€â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Public API ──────────────────────────────────────────────────────────
 
-    /// <summary>Náº¡p áº£nh tá»« bÃªn ngoÃ i (tá»« camera chá»¥p) â€” pipeline tá»± Ä‘á»™ng cháº¡y.</summary>
+    /// <summary>Nạp ảnh từ bên ngoài (từ camera chụp) — pipeline tự động chạy.</summary>
     public void LoadImage(Mat mat)
     {
         _viewModel.LoadImage(mat);
     }
 
-    // â”€â”€â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Lifecycle ───────────────────────────────────────────────────────────
 
     protected override void OnClosed(EventArgs e)
     {

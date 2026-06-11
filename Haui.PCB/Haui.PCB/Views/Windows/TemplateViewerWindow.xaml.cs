@@ -7,14 +7,14 @@ using Haui.PCB.ViewModels;
 namespace Haui.PCB.Views.Windows;
 
 /// <summary>
-/// Code-behind cá»§a TemplateViewerWindow â€” chá»‰ chá»©a logic giao diá»‡n.
-/// ToÃ n bá»™ nghiá»‡p vá»¥ Ä‘Æ°á»£c uá»· thÃ¡c cho <see cref="TemplateViewerViewModel"/>.
+/// Code-behind của TemplateViewerWindow — chỉ chứa logic giao diện.
+/// Toàn bộ nghiệp vụ được uỷ thác cho <see cref="TemplateViewerViewModel"/>.
 /// </summary>
 public partial class TemplateViewerWindow : System.Windows.Window
 {
     private readonly TemplateViewerViewModel _viewModel;
 
-    // Danh sÃ¡ch hÃ¬nh chá»¯ nháº­t vÃ¹ng Ä‘Ã£ váº½ lÃªn áº£nh máº«u
+    // Danh sách hình chữ nhật vùng đã vẽ lên ảnh mẫu
     private readonly List<Rectangle> _regionRects = [];
 
     public TemplateViewerWindow()
@@ -26,14 +26,14 @@ public partial class TemplateViewerWindow : System.Windows.Window
         TemplatesGrid.ItemsSource = _viewModel.Templates;
         RegionsGrid.ItemsSource = _viewModel.Regions;
 
-        // Äá»“ng bá»™ StatusText tá»« ViewModel
+        // Đồng bộ StatusText từ ViewModel
         _viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(TemplateViewerViewModel.StatusText))
                 Dispatcher.InvokeAsync(() => StatusText.Text = _viewModel.StatusText);
         };
 
-        // Cáº­p nháº­t áº£nh preview
+        // Cập nhật ảnh preview
         _viewModel.PreviewImageChanged += bitmap =>
         {
             Dispatcher.InvokeAsync(() =>
@@ -49,7 +49,7 @@ public partial class TemplateViewerWindow : System.Windows.Window
         Loaded += (_, _) => _viewModel.LoadTemplates();
     }
 
-    // â”€â”€â”€â”€ Váº½ láº¡i cÃ¡c hÃ¬nh chá»¯ nháº­t vÃ¹ng lÃªn áº£nh máº«u â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Vẽ lại các hình chữ nhật vùng lên ảnh mẫu ─────────────────────────
 
     private void RedrawRegionRects()
     {
@@ -86,8 +86,8 @@ public partial class TemplateViewerWindow : System.Windows.Window
     }
 
     /// <summary>
-    /// TÃ­nh hÃ¬nh chá»¯ nháº­t hiá»ƒn thá»‹ thá»±c sá»± cá»§a áº£nh máº«u trÃªn canvas (Stretch=Uniform).
-    /// Canvas cÃ³ Margin=8 giá»‘ng Image nÃªn khÃ´ng cáº§n bÃ¹ thÃªm.
+    /// Tính hình chữ nhật hiển thị thực sự của ảnh mẫu trên canvas (Stretch=Uniform).
+    /// Canvas có Margin=8 giống Image nên không cần bù thêm.
     /// </summary>
     private System.Windows.Rect GetImageRenderRect()
     {
@@ -110,7 +110,7 @@ public partial class TemplateViewerWindow : System.Windows.Window
     private void RegionOverlayCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
         => RedrawRegionRects();
 
-    // â”€â”€â”€â”€ Event Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Event Handlers ──────────────────────────────────────────────────────
 
     private void TemplatesGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -122,7 +122,7 @@ public partial class TemplateViewerWindow : System.Windows.Window
     {
         if (TemplatesGrid.SelectedItem is not TemplateEntryItem item)
         {
-            MessageBox.Show("Vui lÃ²ng chá»n má»™t áº£nh máº«u Ä‘á»ƒ sá»­a.", "ThÃ´ng bÃ¡o",
+            MessageBox.Show("Vui lòng chọn một ảnh mẫu để sửa.", "Thông báo",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -130,7 +130,7 @@ public partial class TemplateViewerWindow : System.Windows.Window
         var boardMat = _viewModel.GetSelectedBoardImage(item);
         if (boardMat is null)
         {
-            MessageBox.Show("KhÃ´ng tÃ¬m tháº¥y áº£nh bo máº¡ch cá»§a máº«u nÃ y.", "Lá»—i",
+            MessageBox.Show("Không tìm thấy ảnh bo mạch của mẫu này.", "Lỗi",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -138,15 +138,15 @@ public partial class TemplateViewerWindow : System.Windows.Window
         var editWindow = new CreateTemplateWindow
         {
             Owner = this,
-            Title = $"Sá»­a máº«u â€” {item.Name}"
+            Title = $"Sửa mẫu — {item.Name}"
         };
 
-        // Náº¡p áº£nh vÃ  vÃ¹ng hiá»‡n táº¡i vÃ o form táº¡o máº«u
+        // Nạp ảnh và vùng hiện tại vào form tạo mẫu
         editWindow.Show();
         editWindow.LoadExistingTemplate(boardMat, item.Source.Regions);
         boardMat.Dispose();
 
-        // Khi ngÆ°á»i dÃ¹ng báº¥m LÆ°u trong form chá»‰nh sá»­a â†’ cáº­p nháº­t láº¡i vÃ¹ng
+        // Khi người dùng bấm Lưu trong form chỉnh sửa → cập nhật lại vùng
         editWindow.RegionsSaved += newRegions =>
         {
             _viewModel.UpdateTemplateRegions(item, newRegions);
@@ -158,14 +158,14 @@ public partial class TemplateViewerWindow : System.Windows.Window
     {
         if (TemplatesGrid.SelectedItem is not TemplateEntryItem item)
         {
-            MessageBox.Show("Vui lÃ²ng chá»n má»™t áº£nh máº«u Ä‘á»ƒ xÃ³a.", "ThÃ´ng bÃ¡o",
+            MessageBox.Show("Vui lòng chọn một ảnh mẫu để xóa.", "Thông báo",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
         var result = MessageBox.Show(
-            $"Báº¡n cÃ³ cháº¯c muá»‘n xÃ³a máº«u \"{item.Name}\"?\nThao tÃ¡c nÃ y chÆ°a lÆ°u file cho Ä‘áº¿n khi báº¡n báº¥m LÆ°u.",
-            "XÃ¡c nháº­n xÃ³a", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            $"Bạn có chắc muốn xóa mẫu \"{item.Name}\"?\nThao tác này chưa lưu file cho đến khi bạn bấm Lưu.",
+            "Xác nhận xóa", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
         if (result == MessageBoxResult.Yes)
             _viewModel.DeleteTemplate(item);
@@ -175,12 +175,12 @@ public partial class TemplateViewerWindow : System.Windows.Window
     {
         if (!_viewModel.TrySaveLibrary(out var error))
         {
-            MessageBox.Show(error, "KhÃ´ng thá»ƒ lÆ°u thÆ° viá»‡n",
+            MessageBox.Show(error, "Không thể lưu thư viện",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        MessageBox.Show("ÄÃ£ lÆ°u thÆ° viá»‡n áº£nh máº«u thÃ nh cÃ´ng.", "ThÃ nh cÃ´ng",
+        MessageBox.Show("Đã lưu thư viện ảnh mẫu thành công.", "Thành công",
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -189,14 +189,14 @@ public partial class TemplateViewerWindow : System.Windows.Window
         if (_viewModel.HasUnsavedChanges)
         {
             var result = MessageBox.Show(
-                "CÃ³ thay Ä‘á»•i chÆ°a Ä‘Æ°á»£c lÆ°u. Báº¡n cÃ³ muá»‘n lÆ°u trÆ°á»›c khi Ä‘Ã³ng khÃ´ng?",
-                "LÆ°u thay Ä‘á»•i?", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+                "Có thay đổi chưa được lưu. Bạn có muốn lưu trước khi đóng không?",
+                "Lưu thay đổi?", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)
             {
                 if (!_viewModel.TrySaveLibrary(out var error))
                 {
-                    MessageBox.Show(error, "KhÃ´ng thá»ƒ lÆ°u thÆ° viá»‡n",
+                    MessageBox.Show(error, "Không thể lưu thư viện",
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }

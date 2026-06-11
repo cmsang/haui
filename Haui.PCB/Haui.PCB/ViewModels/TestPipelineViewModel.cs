@@ -6,8 +6,8 @@ using OpenCvSharp;
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// ViewModel cho TestPipelineWindow â€” chá»©a toÃ n bá»™ logic xá»­ lÃ½ áº£nh vÃ  phÃ¢n vÃ¹ng PCB.
-/// TÃ¡ch biá»‡t hoÃ n toÃ n khá»i UI, tuÃ¢n theo SOLID: SRP, DIP.
+/// ViewModel cho TestPipelineWindow — chứa toàn bộ logic xử lý ảnh và phân vùng PCB.
+/// Tách biệt hoàn toàn khỏi UI, tuân theo SOLID: SRP, DIP.
 /// </summary>
 public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 {
@@ -20,17 +20,17 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     private bool _disposed;
     private double _matchThresholdPercent = ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
 
-    // â”€â”€â”€â”€ Sá»± kiá»‡n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Sự kiện ────────────────────────────────────────────────────────────
 
-    /// <summary>PhÃ¡t khi áº£nh Ä‘Ã£ xá»­ lÃ½ (bo máº¡ch Ä‘Ã£ cáº¯t) sáºµn sÃ ng â€” BitmapSource Ä‘Ã£ Freeze.</summary>
+    /// <summary>Phát khi ảnh đã xử lý (bo mạch đã cắt) sẵn sàng — BitmapSource đã Freeze.</summary>
     public event Action<System.Windows.Media.Imaging.BitmapSource?>? ProcessedImageReady;
 
-    /// <summary>PhÃ¡t khi áº£nh Ä‘Ã£ váº½ cÃ¡c vÃ¹ng so sÃ¡nh sáºµn sÃ ng â€” BitmapSource Ä‘Ã£ Freeze.</summary>
+    /// <summary>Phát khi ảnh đã vẽ các vùng so sánh sẵn sàng — BitmapSource đã Freeze.</summary>
     public event Action<System.Windows.Media.Imaging.BitmapSource?>? AnnotatedImageReady;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    // â”€â”€â”€â”€ Properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Properties ─────────────────────────────────────────────────────────
 
     public string StatusText
     {
@@ -46,22 +46,22 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasSource => _sourceMat is not null && !_sourceMat.Empty();
 
-    /// <summary>NgÆ°á»¡ng % tá»« <c>setting.json</c> (cáº­p nháº­t má»—i láº§n so).</summary>
+    /// <summary>Ngưỡng % từ <c>setting.json</c> (cập nhật mỗi lần so).</summary>
     public double MatchThresholdPercent => _matchThresholdPercent;
 
     public string DifferentRegionsHeader =>
-        $"âš  VÃ¹ng khÃ¡c nhau (< {FormatThresholdPercent(_matchThresholdPercent)})";
+        $"⚠ Vùng khác nhau (< {FormatThresholdPercent(_matchThresholdPercent)})";
 
     public string MatchedRegionsHeader =>
-        $"âœ” VÃ¹ng giá»‘ng nhau (â‰¥ {FormatThresholdPercent(_matchThresholdPercent)})";
+        $"✔ Vùng giống nhau (≥ {FormatThresholdPercent(_matchThresholdPercent)})";
 
-    /// <summary>CÃ¡c vÃ¹ng Ä‘áº¡t ngÆ°á»¡ng cáº¥u hÃ¬nh (giá»‘ng nhau).</summary>
+    /// <summary>Các vùng đạt ngưỡng cấu hình (giống nhau).</summary>
     public ObservableCollection<RegionComparisonResult> MatchedRegions { get; } = [];
 
-    /// <summary>CÃ¡c vÃ¹ng dÆ°á»›i ngÆ°á»¡ng cáº¥u hÃ¬nh (khÃ¡c nhau).</summary>
+    /// <summary>Các vùng dưới ngưỡng cấu hình (khác nhau).</summary>
     public ObservableCollection<RegionComparisonResult> DifferentRegions { get; } = [];
 
-    // â”€â”€â”€â”€ Khá»Ÿi táº¡o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
     public TestPipelineViewModel(
         IPcbSegmentationService segmentation,
@@ -72,9 +72,9 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         RefreshMatchThresholdFromConfig();
     }
 
-    // â”€â”€â”€â”€ Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Actions ─────────────────────────────────────────────────────────────
 
-    /// <summary>Náº¡p áº£nh tá»« bÃªn ngoÃ i (vÃ­ dá»¥ tá»« camera chá»¥p) rá»“i tá»± Ä‘á»™ng cháº¡y pipeline.</summary>
+    /// <summary>Nạp ảnh từ bên ngoài (ví dụ từ camera chụp) rồi tự động chạy pipeline.</summary>
     public void LoadImage(Mat mat)
     {
         _sourceMat?.Dispose();
@@ -84,7 +84,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         _ = RunSegmentationAsync();
     }
 
-    /// <summary>Náº¡p áº£nh tá»« Ä‘Æ°á»ng dáº«n file.</summary>
+    /// <summary>Nạp ảnh từ đường dẫn file.</summary>
     public void LoadImageFromFile(string filePath)
     {
         _sourceMat?.Dispose();
@@ -92,28 +92,28 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
         if (_sourceMat.Empty())
         {
-            StatusText = "KhÃ´ng thá»ƒ Ä‘á»c áº£nh.";
+            StatusText = "Không thể đọc ảnh.";
             OnPropertyChanged(nameof(HasSource));
             return;
         }
 
-        StatusText = $"ÄÃ£ chá»n: {System.IO.Path.GetFileName(filePath)}";
+        StatusText = $"Đã chọn: {System.IO.Path.GetFileName(filePath)}";
         OnPropertyChanged(nameof(HasSource));
     }
 
     /// <summary>
-    /// Cháº¡y pipeline: cáº¯t bo máº¡ch â†’ hiá»ƒn thá»‹ â†’ so sÃ¡nh vÃ¹ng vá»›i thÆ° viá»‡n máº«u.
+    /// Chạy pipeline: cắt bo mạch → hiển thị → so sánh vùng với thư viện mẫu.
     /// </summary>
     public async Task RunSegmentationAsync()
     {
         if (!HasSource)
         {
-            StatusText = "Vui lÃ²ng chá»n áº£nh trÆ°á»›c.";
+            StatusText = "Vui lòng chọn ảnh trước.";
             return;
         }
 
         IsBusy = true;
-        StatusText = "Äang xá»­ lÃ½...";
+        StatusText = "Đang xử lý...";
         MatchedRegions.Clear();
         DifferentRegions.Clear();
 
@@ -126,7 +126,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
             if (newBoard is null)
             {
-                StatusText = "KhÃ´ng phÃ¡t hiá»‡n Ä‘Æ°á»£c bo máº¡ch. Thá»­ Ä‘iá»u chá»‰nh áº£nh.";
+                StatusText = "Không phát hiện được bo mạch. Thử điều chỉnh ảnh.";
                 ProcessedImageReady?.Invoke(null);
                 return;
             }
@@ -150,8 +150,8 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>
-    /// So tá»«ng tÃªn trong AllowedRegionNames: láº¥y á»©ng viÃªn Ä‘áº§u tiÃªn Ä‘áº¡t MinMatchSimilarityPercent trong nhÃ³m.
-    /// Náº¿u chÆ°a Ä‘áº¡t Ä‘á»§, xoay bo máº¡ch 180Â° vÃ  so láº¡i.
+    /// So từng tên trong AllowedRegionNames: lấy ứng viên đầu tiên đạt MinMatchSimilarityPercent trong nhóm.
+    /// Nếu chưa đạt đủ, xoay bo mạch 180° và so lại.
     /// </summary>
     private async Task CompareWithTemplatesAsync(Mat newBoard)
     {
@@ -164,7 +164,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         if (match is null)
         {
             RefreshMatchThresholdFromConfig();
-            StatusText = "Bo máº¡ch Ä‘Ã£ cáº¯t. ChÆ°a cÃ³ máº«u nÃ o trong thÆ° viá»‡n (hoáº·c thiáº¿u vÃ¹ng/áº£nh).";
+            StatusText = "Bo mạch đã cắt. Chưa có mẫu nào trong thư viện (hoặc thiếu vùng/ảnh).";
             return;
         }
 
@@ -207,10 +207,10 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         PublishAnnotatedImage(boardForDisplay, match.RegionResults);
 
         var thresholdText = FormatThresholdPercent(match.MatchThresholdPercent);
-        var rotationNote = usedRotation ? " (Ä‘Ã£ xoay áº£nh 180Â°)" : "";
+        var rotationNote = usedRotation ? " (đã xoay ảnh 180°)" : "";
         StatusText = match.IsFullMatch
-            ? $"Äáº¡t â€” {match.MatchedCount}/{match.TotalCount} vÃ¹ng giá»‘ng (â‰¥ {thresholdText} má»—i tÃªn).{rotationNote}"
-            : $"ChÆ°a Ä‘áº¡t â€” TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} vÃ¹ng giá»‘ng (ngÆ°á»¡ng {thresholdText}).{rotationNote}";
+            ? $"Đạt — {match.MatchedCount}/{match.TotalCount} vùng giống (≥ {thresholdText} mỗi tên).{rotationNote}"
+            : $"Chưa đạt — TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} vùng giống (ngưỡng {thresholdText}).{rotationNote}";
 
         rotatedBoard?.Dispose();
     }
@@ -247,7 +247,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>
-    /// Váº½ hÃ¬nh chá»¯ nháº­t lÃªn áº£nh bo máº¡ch: xanh lÃ¡ = giá»‘ng, Ä‘á» = khÃ¡c.
+    /// Vẽ hình chữ nhật lên ảnh bo mạch: xanh lá = giống, đỏ = khác.
     /// </summary>
     public void PublishAnnotatedImage(Mat board, IReadOnlyList<RegionComparisonResult> results)
     {

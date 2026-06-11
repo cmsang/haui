@@ -9,7 +9,7 @@ using OpenCvSharp;
 namespace Haui.PCB.Views.Windows;
 
 /// <summary>
-/// Cá»­a sá»• thÃªm máº«u lá»— trÃ²n vÃ o thÆ° viá»‡n (Morphology Close).
+/// Cửa sổ thêm mẫu lỗ tròn vào thư viện (Morphology Close).
 /// </summary>
 public partial class FiducialTemplateWindow : System.Windows.Window
 {

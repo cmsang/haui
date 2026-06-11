@@ -5,7 +5,8 @@
         Title="Kiểm tra bo mạch"
         Height="700" Width="1100"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize">
+        ResizeMode="CanResize"
+        FontFamily="{DynamicResource MaterialDesignFont}">
 
     <Window.Resources>
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">

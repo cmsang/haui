@@ -9,23 +9,23 @@ using OpenCvSharp;
 namespace Haui.PCB.Views.Windows;
 
 /// <summary>
-/// Code-behind cá»§a CreateTemplateWindow â€” chá»‰ chá»©a logic giao diá»‡n.
-/// ToÃ n bá»™ nghiá»‡p vá»¥ Ä‘Æ°á»£c uá»· thÃ¡c cho <see cref="CreateTemplateViewModel"/>.
+/// Code-behind của CreateTemplateWindow — chỉ chứa logic giao diện.
+/// Toàn bộ nghiệp vụ được uỷ thác cho <see cref="CreateTemplateViewModel"/>.
 /// </summary>
 public partial class CreateTemplateWindow : System.Windows.Window
 {
     private readonly CreateTemplateViewModel _viewModel;
 
-    // Tráº¡ng thÃ¡i kÃ©o tháº£
+    // Trạng thái kéo thả
     private bool _isDragging;
     private System.Windows.Point _dragStart;
 
-    // Danh sÃ¡ch hÃ¬nh chá»¯ nháº­t vÃ¹ng Ä‘Ã£ váº½ (Ã¡nh xáº¡ 1-1 vá»›i Regions)
+    // Danh sách hình chữ nhật vùng đã vẽ (ánh xạ 1-1 với Regions)
     private readonly List<Rectangle> _regionRects = [];
 
     /// <summary>
-    /// Sá»± kiá»‡n phÃ¡t ra khi ngÆ°á»i dÃ¹ng báº¥m LÆ°u á»Ÿ cháº¿ Ä‘á»™ chá»‰nh sá»­a máº«u.
-    /// Tham sá»‘ lÃ  danh sÃ¡ch vÃ¹ng Ä‘Ã£ cáº­p nháº­t.
+    /// Sự kiện phát ra khi người dùng bấm Lưu ở chế độ chỉnh sửa mẫu.
+    /// Tham số là danh sách vùng đã cập nhật.
     /// </summary>
     public event Action<List<TemplateRegion>>? RegionsSaved;
 
@@ -39,7 +39,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
         DataContext = _viewModel;
         RegionsGrid.ItemsSource = _viewModel.Regions;
 
-        // Láº¯ng nghe áº£nh bo máº¡ch sáºµn sÃ ng
+        // Lắng nghe ảnh bo mạch sẵn sàng
         _viewModel.BoardImageReady += bitmap =>
             Dispatcher.InvokeAsync(() =>
             {
@@ -48,7 +48,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
                 RedrawRegionRects();
             });
 
-        // Láº¯ng nghe thay Ä‘á»•i StatusText
+        // Lắng nghe thay đổi StatusText
         _viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(CreateTemplateViewModel.StatusText))
@@ -58,23 +58,23 @@ public partial class CreateTemplateWindow : System.Windows.Window
                 Dispatcher.InvokeAsync(() => BtnSave.IsEnabled = _viewModel.CanSave);
         };
 
-        // Váº½ láº¡i khi danh sÃ¡ch vÃ¹ng thay Ä‘á»•i
+        // Vẽ lại khi danh sách vùng thay đổi
         _viewModel.Regions.CollectionChanged += (_, _) =>
             Dispatcher.InvokeAsync(RedrawRegionRects);
     }
 
-    // â”€â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Public API ──────────────────────────────────────────────────────────
 
-    /// <summary>Náº¡p frame chá»¥p tá»« camera vÃ o form.</summary>
+    /// <summary>Nạp frame chụp từ camera vào form.</summary>
     public Task LoadFrameAsync(Mat frame) => _viewModel.LoadFrameAsync(frame);
 
-    /// <summary>Náº¡p máº«u cÃ³ sáºµn Ä‘á»ƒ chá»‰nh sá»­a (áº£nh + danh sÃ¡ch vÃ¹ng).</summary>
+    /// <summary>Nạp mẫu có sẵn để chỉnh sửa (ảnh + danh sách vùng).</summary>
     public void LoadExistingTemplate(Mat boardImage, IEnumerable<TemplateRegion> regions)
     {
         _viewModel.LoadExistingTemplate(boardImage, regions);
     }
 
-    // â”€â”€â”€â”€ KÃ©o tháº£ táº¡o vÃ¹ng â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Kéo thả tạo vùng ───────────────────────────────────────────────────
 
     private void RegionCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -117,7 +117,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
         if (rw < 5 || rh < 5) return;
 
-        // Chuyá»ƒn tá»a Ä‘á»™ canvas â†’ tá»a Ä‘á»™ tÆ°Æ¡ng Ä‘á»‘i trÃªn áº£nh bo máº¡ch
+        // Chuyển tọa độ canvas → tọa độ tương đối trên ảnh bo mạch
         var renderRect = GetImageRenderRect();
         if (renderRect.Width <= 0 || renderRect.Height <= 0) return;
 
@@ -126,7 +126,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
         double relW = rw / renderRect.Width;
         double relH = rh / renderRect.Height;
 
-        // Giá»›i háº¡n trong [0, 1]
+        // Giới hạn trong [0, 1]
         relX = Math.Clamp(relX, 0, 1);
         relY = Math.Clamp(relY, 0, 1);
         relW = Math.Clamp(relW, 0, 1 - relX);
@@ -136,11 +136,11 @@ public partial class CreateTemplateWindow : System.Windows.Window
             _viewModel.AddRegion(relX, relY, relW, relH);
     }
 
-    // â”€â”€â”€â”€ Váº½ láº¡i cÃ¡c hÃ¬nh chá»¯ nháº­t vÃ¹ng Ä‘Ã£ chá»n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Vẽ lại các hình chữ nhật vùng đã chọn ─────────────────────────────
 
     private void RedrawRegionRects()
     {
-        // XÃ³a cÃ¡c rect cÅ© khá»i canvas
+        // Xóa các rect cũ khỏi canvas
         foreach (var rect in _regionRects)
             RegionCanvas.Children.Remove(rect);
         _regionRects.Clear();
@@ -179,7 +179,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
     }
 
     /// <summary>
-    /// TÃ­nh toÃ¡n hÃ¬nh chá»¯ nháº­t hiá»ƒn thá»‹ thá»±c sá»± cá»§a áº£nh bo máº¡ch trÃªn canvas (Stretch=Uniform).
+    /// Tính toán hình chữ nhật hiển thị thực sự của ảnh bo mạch trên canvas (Stretch=Uniform).
     /// </summary>
     private System.Windows.Rect GetImageRenderRect()
     {
@@ -199,7 +199,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
         return new System.Windows.Rect(offsetX, offsetY, renderW, renderH);
     }
 
-    // â”€â”€â”€â”€ Váº½ láº¡i khi canvas thay Ä‘á»•i kÃ­ch thÆ°á»›c â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Vẽ lại khi canvas thay đổi kích thước ──────────────────────────────
 
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
     {
@@ -207,11 +207,11 @@ public partial class CreateTemplateWindow : System.Windows.Window
         RedrawRegionRects();
     }
 
-    // â”€â”€â”€â”€ Event Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Event Handlers ──────────────────────────────────────────────────────
 
     private void RegionsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        // Highlight vÃ¹ng Ä‘Æ°á»£c chá»n: viá»n tráº¯ng khi chá»n, mÃ u cá»§a vÃ¹ng khi khÃ´ng chá»n
+        // Highlight vùng được chọn: viền trắng khi chọn, màu của vùng khi không chọn
         var selectedItem = RegionsGrid.SelectedItem as TemplateRegionItem;
         for (int i = 0; i < _viewModel.Regions.Count && i < _regionRects.Count; i++)
         {
@@ -235,7 +235,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
         var regions = _viewModel.GetCurrentRegions();
         if (!_viewModel.ValidateRegions(regions, out var error))
         {
-            MessageBox.Show(error, "TÃªn vÃ¹ng khÃ´ng há»£p lá»‡",
+            MessageBox.Show(error, "Tên vùng không hợp lệ",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -248,13 +248,13 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
         if (!_viewModel.TrySaveRegions(out error))
         {
-            MessageBox.Show(error, "KhÃ´ng thá»ƒ lÆ°u", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(error, "Không thể lưu", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         MessageBox.Show(
-            $"ÄÃ£ lÆ°u áº£nh máº«u vá»›i {_viewModel.RegionCount} vÃ¹ng linh kiá»‡n vÃ o thÆ° viá»‡n.",
-            "ThÃ nh cÃ´ng",
+            $"Đã lưu ảnh mẫu với {_viewModel.RegionCount} vùng linh kiện vào thư viện.",
+            "Thành công",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
     }

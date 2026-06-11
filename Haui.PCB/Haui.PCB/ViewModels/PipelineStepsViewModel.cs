@@ -6,20 +6,20 @@ using OpenCvSharp;
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// ViewModel cho PipelineStepsWindow â€” cháº¡y pipeline debug vÃ  cung cáº¥p
-/// danh sÃ¡ch cÃ¡c bÆ°á»›c xá»­ lÃ½ Ä‘á»ƒ hiá»ƒn thá»‹ má»—i bÆ°á»›c má»™t khung riÃªng biá»‡t.
+/// ViewModel cho PipelineStepsWindow — chạy pipeline debug và cung cấp
+/// danh sách các bước xử lý để hiển thị mỗi bước một khung riêng biệt.
 /// </summary>
 public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IPipelineDebugService _debugService;
     private Mat? _sourceMat;
-    private string _statusText = "Äang chá»...";
+    private string _statusText = "Đang chờ...";
     private bool _isBusy;
     private bool _disposed;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    // â”€â”€â”€â”€ Properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Properties ─────────────────────────────────────────────────────────
 
     public ObservableCollection<PipelineStep> Steps { get; } = [];
 
@@ -35,16 +35,16 @@ public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
         private set { _isBusy = value; OnPropertyChanged(); }
     }
 
-    // â”€â”€â”€â”€ Khá»Ÿi táº¡o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
     public PipelineStepsViewModel(IPipelineDebugService debugService)
     {
         _debugService = debugService;
     }
 
-    // â”€â”€â”€â”€ Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── Actions ─────────────────────────────────────────────────────────────
 
-    /// <summary>Náº¡p áº£nh tá»« camera vÃ  tá»± Ä‘á»™ng cháº¡y pipeline.</summary>
+    /// <summary>Nạp ảnh từ camera và tự động chạy pipeline.</summary>
     public void LoadImage(Mat mat)
     {
         _sourceMat?.Dispose();
@@ -52,17 +52,17 @@ public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
         _ = RunAsync();
     }
 
-    /// <summary>Cháº¡y pipeline debug vÃ  Ä‘iá»n káº¿t quáº£ vÃ o <see cref="Steps"/>.</summary>
+    /// <summary>Chạy pipeline debug và điền kết quả vào <see cref="Steps"/>.</summary>
     public async Task RunAsync()
     {
         if (_sourceMat is null || _sourceMat.Empty())
         {
-            StatusText = "KhÃ´ng cÃ³ áº£nh Ä‘áº§u vÃ o.";
+            StatusText = "Không có ảnh đầu vào.";
             return;
         }
 
         IsBusy = true;
-        StatusText = "Äang cháº¡y pipeline...";
+        StatusText = "Đang chạy pipeline...";
         Steps.Clear();
 
         try
@@ -73,7 +73,7 @@ public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
             foreach (var step in results)
                 Steps.Add(step);
 
-            StatusText = $"HoÃ n thÃ nh â€” {Steps.Count} bÆ°á»›c xá»­ lÃ½.";
+            StatusText = $"Hoàn thành — {Steps.Count} bước xử lý.";
         }
         catch (Exception ex)
         {
@@ -85,12 +85,12 @@ public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    // â”€â”€â”€â”€ INotifyPropertyChanged â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── INotifyPropertyChanged ──────────────────────────────────────────────
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-    // â”€â”€â”€â”€ IDisposable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──── IDisposable ─────────────────────────────────────────────────────────
 
     public void Dispose()
     {

@@ -7,7 +7,7 @@ using System.Windows;
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// Má»™t khá»›p quay / gripper trÃªn panel Ä‘iá»u khiá»ƒn.
+/// Một khớp quay / gripper trên panel điều khiển.
 /// </summary>
 public class RobotJointItem : INotifyPropertyChanged
 {
@@ -20,7 +20,7 @@ public class RobotJointItem : INotifyPropertyChanged
     public double MaxAngle { get; init; }
     public bool IsGripper { get; init; }
 
-    /// <summary>Sá»‘ trá»¥c firmware 1â€“5 (J1â€“J5); gripper = 0.</summary>
+    /// <summary>Số trục firmware 1–5 (J1–J5); gripper = 0.</summary>
     public int AxisNumber => IsGripper ? 0 : Index + 1;
 
     public double Angle
@@ -36,7 +36,7 @@ public class RobotJointItem : INotifyPropertyChanged
         }
     }
 
-    public string AngleText => $"{Angle:F1}Â°";
+    public string AngleText => $"{Angle:F1}°";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -56,7 +56,7 @@ public class RobotJointItem : INotifyPropertyChanged
 }
 
 /// <summary>
-/// ViewModel mÃ n hÃ¬nh teach vá»‹ trÃ­ robot 5 DOF RRRRR + gripper â€” gá»­i lá»‡nh qua SerialPort.
+/// ViewModel màn hình teach vị trí robot 5 DOF RRRRR + gripper — gửi lệnh qua SerialPort.
 /// </summary>
 public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 {
@@ -67,7 +67,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private readonly bool _enableSerialEvents;
     private AppSetting _appSetting;
     private RobotTeachPoint? _selectedPoint;
-    private string _statusText = "Káº¿t ná»‘i SerialPort Ä‘á»ƒ báº¯t Ä‘áº§u teach.";
+    private string _statusText = "Kết nối SerialPort để bắt đầu teach.";
     private string _serialPort = "COM3";
     private int _baudRate = 115200;
     private int _stepsPerDeg = 100;
@@ -144,7 +144,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string SerialConnectButtonText => IsSerialConnected ? "Ngáº¯t káº¿t ná»‘i" : "Káº¿t ná»‘i";
+    public string SerialConnectButtonText => IsSerialConnected ? "Ngắt kết nối" : "Kết nối";
 
     public string SerialPortName
     {
@@ -213,7 +213,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         SyncConnectionState();
         if (IsSerialConnected)
         {
-            StatusText = $"Serial online â€” {SerialPortName} @ {BaudRate}.";
+            StatusText = $"Serial online — {SerialPortName} @ {BaudRate}.";
             return true;
         }
 
@@ -221,19 +221,19 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         {
             if (string.IsNullOrWhiteSpace(SerialPortName))
             {
-                StatusText = "ChÆ°a cáº¥u hÃ¬nh cá»•ng COM trong setting.json.";
+                StatusText = "Chưa cấu hình cổng COM trong setting.json.";
                 return false;
             }
 
             _serialService.Connect(SerialPortName, BaudRate);
             IsSerialConnected = true;
-            StatusText = $"ÄÃ£ káº¿t ná»‘i {SerialPortName} @ {BaudRate}.";
+            StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
             return true;
         }
         catch (Exception ex)
         {
             IsSerialConnected = false;
-            StatusText = $"Káº¿t ná»‘i Serial tháº¥t báº¡i: {ex.Message}";
+            StatusText = $"Kết nối Serial thất bại: {ex.Message}";
             return false;
         }
     }
@@ -250,7 +250,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         if (IsSerialConnected)
         {
             DisconnectSerial();
-            StatusText = "ÄÃ£ ngáº¯t káº¿t ná»‘i SerialPort.";
+            StatusText = "Đã ngắt kết nối SerialPort.";
             return;
         }
 
@@ -276,7 +276,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
                 : joint.AxisNumber.ToString(CultureInfo.InvariantCulture);
             var cmd = RobotSerialProtocol.JogCommand(axisName, direction > 0, JogStep);
             _serialService.SendAscii(cmd);
-            StatusText = $"TX {cmd} â†’ {joint.AngleText}";
+            StatusText = $"TX {cmd} → {joint.AngleText}";
         }
         catch (Exception ex)
         {
@@ -315,7 +315,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        StatusText = $"G â†’ {g.AngleText}";
+        StatusText = $"G → {g.AngleText}";
     }
 
     public void PerformHoming()
@@ -327,15 +327,15 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        StatusText = $"TX {cmd} â€” Homing táº¥t cáº£ trá»¥c (3â†’2â†’1â†’4â†’5)...";
+        StatusText = $"TX {cmd} — Homing tất cả trục (3→2→1→4→5)...";
     }
 
-    /// <summary>Homing má»™t trá»¥c J1â€“J5 â€” gá»­i "H1".."H5".</summary>
+    /// <summary>Homing một trục J1–J5 — gửi "H1".."H5".</summary>
     public void PerformHomingAxis(RobotJointItem joint)
     {
         if (joint.IsGripper)
         {
-            StatusText = "Gripper khÃ´ng dÃ¹ng lá»‡nh H â€” dÃ¹ng G hoáº·c jog.";
+            StatusText = "Gripper không dùng lệnh H — dùng G hoặc jog.";
             return;
         }
 
@@ -346,14 +346,14 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        StatusText = $"TX {cmd} â€” Homing {joint.Key}...";
+        StatusText = $"TX {cmd} — Homing {joint.Key}...";
     }
 
     public void TeachSelectedPoint()
     {
         if (SelectedPoint == null)
         {
-            StatusText = "Chá»n vá»‹ trÃ­ cáº§n teach.";
+            StatusText = "Chọn vị trí cần teach.";
             return;
         }
 
@@ -362,18 +362,18 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
         if (!_robotConfigService.TrySaveTeachPoint(SelectedPoint, out var error))
         {
-            StatusText = $"Teach \"{SelectedPoint.Name}\" tháº¥t báº¡i â€” {error}";
+            StatusText = $"Teach \"{SelectedPoint.Name}\" thất bại — {error}";
             return;
         }
 
-        StatusText = $"ÄÃ£ teach \"{SelectedPoint.Name}\" â†’ lÆ°u Database.";
+        StatusText = $"Đã teach \"{SelectedPoint.Name}\" → lưu Database.";
     }
 
     public void GoToSelectedPoint()
     {
         if (SelectedPoint == null)
         {
-            StatusText = "Chá»n vá»‹ trÃ­ Ä‘á»ƒ di chuyá»ƒn tá»›i.";
+            StatusText = "Chọn vị trí để di chuyển tới.";
             return;
         }
 
@@ -388,7 +388,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         _appSetting.JogStepDegrees = JogStep;
         _appSetting.SpeedPercent = SpeedPercent;
         _appSettingService.Save(_appSetting);
-        StatusText = "ÄÃ£ lÆ°u cáº¥u hÃ¬nh (setting.json).";
+        StatusText = "Đã lưu cấu hình (setting.json).";
     }
 
     public void ReloadAppSettings()
@@ -399,17 +399,17 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         StepsPerDeg = _appSetting.StepsPerDeg;
         JogStep = _appSetting.JogStepDegrees;
         SpeedPercent = _appSetting.SpeedPercent;
-        StatusText = $"ÄÃ£ táº£i setting.json â€” COM={SerialPortName}, STEPS_PER_DEG={StepsPerDeg}.";
+        StatusText = $"Đã tải setting.json — COM={SerialPortName}, STEPS_PER_DEG={StepsPerDeg}.";
     }
 
-    /// <summary>Táº£i láº¡i danh sÃ¡ch vá»‹ trÃ­ teach tá»« Database (BL â†’ DL).</summary>
+    /// <summary>Tải lại danh sách vị trí teach từ Database (BL → DL).</summary>
     public void ReloadTeachPoints()
     {
         var selectedName = SelectedPoint?.Name;
 
         if (!_robotConfigService.TryLoadTeachPoints(out var dbPoints, out var error))
         {
-            StatusText = $"KhÃ´ng táº£i Ä‘Æ°á»£c Database: {error}";
+            StatusText = $"Không tải được Database: {error}";
             return;
         }
 
@@ -430,15 +430,15 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
               ?? TeachPoints.FirstOrDefault();
 
         StatusText = dbPoints.Count > 0
-            ? $"ÄÃ£ táº£i {dbPoints.Count} vá»‹ trÃ­ tá»« Database."
-            : "Database trá»‘ng â€” hiá»ƒn thá»‹ danh sÃ¡ch máº·c Ä‘á»‹nh (cháº¡y seed SQL).";
+            ? $"Đã tải {dbPoints.Count} vị trí từ Database."
+            : "Database trống — hiển thị danh sách mặc định (chạy seed SQL).";
     }
 
     public void ZeroAllJoints()
     {
         foreach (var joint in Joints)
             joint.Angle = 0;
-        StatusText = "ÄÃ£ Ä‘áº·t táº¥t cáº£ khá»›p vá» 0Â° trÃªn UI.";
+        StatusText = "Đã đặt tất cả khớp về 0° trên UI.";
     }
 
     public string GetJointSummary()
@@ -448,7 +448,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         => TeachPoints.FirstOrDefault(p =>
             p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Há»§y cÃ¡c lá»‡nh robot Ä‘ang thá»±c hiá»‡n trÃªn mÃ n hÃ¬nh nÃ y.</summary>
+    /// <summary>Hủy các lệnh robot đang thực hiện trên màn hình này.</summary>
     public void CancelPendingOperations()
         => _closing = true;
 
@@ -489,7 +489,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        StatusText = $"Go To \"{point.Name}\" â€” TX {moveCmd} + G @ {SpeedPercent}%";
+        StatusText = $"Go To \"{point.Name}\" — TX {moveCmd} + G @ {SpeedPercent}%";
     }
 
 
@@ -497,13 +497,13 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     {
         if (_closing || _disposed)
         {
-            error = "Äang Ä‘Ã³ng mÃ n hÃ¬nh â€” thao tÃ¡c bá»‹ há»§y.";
+            error = "Đang đóng màn hình — thao tác bị hủy.";
             return false;
         }
 
         if (!IsSerialConnected)
         {
-            error = "ChÆ°a káº¿t ná»‘i SerialPort â€” thao tÃ¡c chá»‰ cáº­p nháº­t UI.";
+            error = "Chưa kết nối SerialPort — thao tác chỉ cập nhật UI.";
             return false;
         }
 
@@ -524,8 +524,8 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     {
         var msg = line switch
         {
-            _ when line.StartsWith('A') => $"Robot báº¯t Ä‘áº§u homing trá»¥c {line[1..]}...",
-            _ when line.StartsWith('D') => $"Robot hoÃ n thÃ nh homing trá»¥c {line[1..]}.",
+            _ when line.StartsWith('A') => $"Robot bắt đầu homing trục {line[1..]}...",
+            _ when line.StartsWith('D') => $"Robot hoàn thành homing trục {line[1..]}.",
             _ => $"RX: {line}"
         };
 
