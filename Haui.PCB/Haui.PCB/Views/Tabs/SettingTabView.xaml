@@ -3,16 +3,48 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              Background="{DynamicResource MaterialDesignPaper}"
-             FontFamily="{DynamicResource MaterialDesignFont}">
+             FontFamily="{DynamicResource MaterialDesignFont}"
+             Loaded="UserControl_Loaded">
     <Grid Margin="24">
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="480">
-            <md:PackIcon Kind="CogSyncOutline" Width="64" Height="64" Foreground="#90A4AE"
-                         HorizontalAlignment="Center" Margin="0,0,0,16"/>
-            <TextBlock Text="Cài đặt hệ thống" FontSize="22" FontWeight="SemiBold"
-                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
-            <TextBlock TextWrapping="Wrap" TextAlignment="Center"
-                       FontSize="14" Foreground="#666666"
-                       Text="Cấu hình robot, camera và thư viện mẫu qua Config/setting.json. Màn hình cài đặt chi tiết sẽ bổ sung sau."/>
-        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel MaxWidth="520">
+                <TextBlock Text="Cài đặt hệ thống" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,16"/>
+
+                <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="13" Margin="0,0,0,20"
+                           Text="Robot, camera và thư viện mẫu vẫn cấu hình trong Config/setting.json. Các tùy chọn dưới đây được lưu vào cùng file."/>
+
+                <Border BorderBrush="#DDDDDD" BorderThickness="1" CornerRadius="6" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Chế độ phát triển" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="ChkDeveloperMode"
+                                  Content="Bật DeveloperMode (hiện nút tạo mẫu trên Dashboard)"
+                                  Margin="0,0,0,8"
+                                  Checked="ChkDeveloperMode_Changed"
+                                  Unchecked="ChkDeveloperMode_Changed"/>
+                        <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11"
+                                   Text="Mặc định tắt trên máy vận hành. Bật để tạo/sửa mẫu linh kiện và mẫu lỗ định vị."/>
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="PanelVirtualSerial" BorderBrush="#DDDDDD" BorderThickness="1"
+                        CornerRadius="6" Padding="16" Margin="0,0,0,16" Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="Serial ảo" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="ChkVirtualSerialPort"
+                                  Content="Virtual Serial Port (không cần kết nối cổng COM)"
+                                  Margin="0,0,0,8"/>
+                        <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11"
+                                   Text="Chỉ có hiệu lực khi DeveloperMode bật. Robot và warehouse chạy giả lập — khởi động lại ứng dụng sau khi lưu."/>
+                    </StackPanel>
+                </Border>
+
+                <Button x:Name="BtnSaveSettings" Content="Lưu cài đặt" Height="36" Width="140"
+                        HorizontalAlignment="Left" Click="BtnSaveSettings_Click"
+                        Style="{StaticResource MaterialDesignRaisedButton}"/>
+
+                <TextBlock x:Name="TxtSaveStatus" TextWrapping="Wrap" Margin="0,12,0,0"
+                           Foreground="#666666" FontSize="12"/>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </UserControl>

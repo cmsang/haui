@@ -107,6 +107,8 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
     public string SerialConnectButtonText => IsSerialConnected ? "Ngắt kết nối" : "Kết nối";
 
+    public bool IsVirtualSerial => _serialService.IsVirtual;
+
     public string SerialPortName
     {
         get => _serialPort;
@@ -178,21 +180,34 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         SyncConnectionState();
         if (IsSerialConnected)
         {
-            StatusText = $"Serial online — {SerialPortName} @ {BaudRate}.";
+            StatusText = _serialService.IsVirtual
+                ? "Serial ảo — không kết nối cổng COM thật."
+                : $"Serial online — {SerialPortName} @ {BaudRate}.";
             return true;
         }
 
         try
         {
-            if (string.IsNullOrWhiteSpace(SerialPortName))
+            var useVirtual = _appSettingService.Load().UseVirtualSerial();
+            if (!useVirtual && string.IsNullOrWhiteSpace(SerialPortName))
             {
                 StatusText = "Chưa cấu hình cổng COM trong setting.json.";
                 return false;
             }
 
-            _serialService.Connect(SerialPortName, BaudRate);
+            var port = useVirtual ? VirtualRobotSerialService.VirtualPortName : SerialPortName;
+            _serialService.Connect(port, BaudRate);
             IsSerialConnected = true;
-            StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
+            if (useVirtual)
+            {
+                SerialPortName = VirtualRobotSerialService.VirtualPortName;
+                StatusText = "Serial ảo — không kết nối cổng COM thật.";
+            }
+            else
+            {
+                StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
+            }
+
             return true;
         }
         catch (Exception ex)

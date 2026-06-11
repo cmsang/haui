@@ -15,7 +15,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 | `ComponentTemplates` | Library folder, `MinMatchSimilarityPercent`, `AllowedRegionNames`, `RequiredRegionCount` |
 | `FiducialHoles` | Fiducial template folder, `MinMatchScore`, `MaxMatchDimension` |
 | `CameraBasler` / `CameraCapture` | GenICam defaults, quick-capture save folder |
-| Robot | `com`, `DatabaseConnection`, … |
+| Robot | `com`, `warehouseCom`, `DatabaseConnection`, … |
+| Developer | `developerMode`, `virtualSerialPort` (serial simulation; requires dev mode) |
 
 Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_settings.json`) auto-migrate on load.
 
@@ -23,7 +24,7 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 
 1. **Calibrate defaults** — `camera_basler_defaults.json` for acA4600-7gc on real bench
 2. **Fiducial UI** — `MinMatchScore` / `MaxMatchDimension` in setting.json; no slider UI yet
-3. **Job History / Setting tabs** — placeholder content on MainWindow sidebar
+3. **Job History tab** — placeholder; **Setting tab** has DeveloperMode + Virtual Serial toggles (restart required)
 
 ## Entry files by task
 

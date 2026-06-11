@@ -19,7 +19,7 @@ public partial class MainWindow : Window
     private readonly MainViewModel _viewModel;
     private readonly IFiducialHoleTemplateService _fiducialTemplateService = FiducialHoleServices.TemplateService;
     private readonly RobotTeachViewModel _robotViewModel;
-    private readonly RobotSerialService _serialService = new();
+    private readonly IRobotSerialService _serialService;
     private readonly RobotStartupHandshakeService _startupHandshake;
     private readonly IMaterialTransferService _materialTransfer;
     private readonly Queue<string> _robotRxLog = new();
@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var appSettingService = new AppSettingService();
+        _serialService = RobotSerialServiceFactory.Create(appSettingService);
         _materialTransfer = new MaterialTransferService(
             new RobotConfigService(appSettingService),
             _serialService,
@@ -150,11 +151,18 @@ public partial class MainWindow : Window
     {
         _robotViewModel.ReloadAppSettings();
         _robotViewModel.RefreshAvailablePorts();
+
+        if (_serialService.IsVirtual && !_robotViewModel.IsSerialConnected)
+            _robotViewModel.SerialPortName = VirtualRobotSerialService.VirtualPortName;
+
         if (!_robotViewModel.EnsureSerialConnected())
         {
             _dashboardTab?.SetRobotSerialDetail(_robotViewModel.StatusText);
-            _dashboardTab?.AppendRobotRxLog(
-                $"Chưa mở được COM — kiểm tra Config/setting.json ({AppConfigPaths.SettingFile})");
+            if (!_serialService.IsVirtual)
+            {
+                _dashboardTab?.AppendRobotRxLog(
+                    $"Chưa mở được COM — kiểm tra Config/setting.json ({AppConfigPaths.SettingFile})");
+            }
         }
         else
         {
@@ -185,7 +193,8 @@ public partial class MainWindow : Window
     {
         _dashboardTab?.UpdateRobotSerialStatus(
             _robotViewModel.IsSerialConnected,
-            _robotViewModel.SerialPortName);
+            _robotViewModel.SerialPortName,
+            _serialService.IsVirtual);
 
         if (!string.IsNullOrWhiteSpace(_robotViewModel.StatusText)
             && _robotViewModel.StatusText.StartsWith("Serial", StringComparison.OrdinalIgnoreCase))

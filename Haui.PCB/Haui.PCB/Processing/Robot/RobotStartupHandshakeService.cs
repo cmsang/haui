@@ -31,6 +31,13 @@ public class RobotStartupHandshakeService
             return;
         }
 
+        if (_serialService.IsVirtual)
+        {
+            _completed = true;
+            reportStatus?.Invoke("Serial ảo — bỏ qua handshake (Rx/Y/H0).");
+            return;
+        }
+
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         IsRunning = true;
 

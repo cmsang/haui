@@ -46,7 +46,17 @@ public partial class TemplateViewerWindow : System.Windows.Window
             });
         };
 
-        Loaded += (_, _) => _viewModel.LoadTemplates();
+        Loaded += (_, _) =>
+        {
+            ApplyDeveloperModeUi();
+            _viewModel.LoadTemplates();
+        };
+    }
+
+    private void ApplyDeveloperModeUi()
+    {
+        var developerMode = new AppSettingService().Load().DeveloperMode;
+        BtnEditTemplate.Visibility = developerMode ? Visibility.Visible : Visibility.Collapsed;
     }
 
     // ──── Vẽ lại các hình chữ nhật vùng lên ảnh mẫu ─────────────────────────
@@ -120,6 +130,9 @@ public partial class TemplateViewerWindow : System.Windows.Window
 
     private void BtnEditTemplate_Click(object sender, RoutedEventArgs e)
     {
+        if (!new AppSettingService().Load().DeveloperMode)
+            return;
+
         if (TemplatesGrid.SelectedItem is not TemplateEntryItem item)
         {
             MessageBox.Show("Vui lòng chọn một ảnh mẫu để sửa.", "Thông báo",

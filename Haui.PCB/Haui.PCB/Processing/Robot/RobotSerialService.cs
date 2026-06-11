@@ -12,6 +12,8 @@ public class RobotSerialService : IRobotSerialService
     private readonly StringBuilder _rxLineBuffer = new();
     private bool _disposed;
 
+    public bool IsVirtual => false;
+
     public bool IsConnected => _port?.IsOpen == true;
 
 

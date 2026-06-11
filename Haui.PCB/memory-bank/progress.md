@@ -6,7 +6,8 @@
 - [x] Sidebar → `ContentControl` with tab views
 - [x] UI layers: `Views/Windows/`, `Views/Tabs/`, `Views/Controls/`
 - [x] Models / Processing domain subfolders + `GlobalUsings.cs`
-- [ ] Job History / Setting — detailed content (placeholder)
+- [x] Setting tab — `developerMode`, `virtualSerialPort` (restart to apply)
+- [ ] Job History — detailed content (placeholder)
 
 ## Working features
 
@@ -23,6 +24,8 @@
 - [x] Test pipeline — composite match by `AllowedRegionNames`; 180° retry; overlay green/red
 - [x] Region compare — 128×128, LAB-L + CLAHE + bilateral, threshold from `MinMatchSimilarityPercent`
 - [x] Unified config — `Config/setting.json` (`AppSettingService`)
+- [x] DeveloperMode — hides Tạo mẫu / Thêm mẫu lỗ on Dashboard; Sửa in template viewer
+- [x] Virtual Serial Port — `VirtualRobotSerialService` when dev + virtual enabled (no COM required)
 - [x] Sharpest-frame selection (Laplacian variance)
 
 ## Known limitations

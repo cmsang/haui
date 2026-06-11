@@ -1,4 +1,6 @@
 {
+  "developerMode": true,
+  "virtualSerialPort": true,
   "com": "COM20",
   "warehouseCom": "COM22",
   "baudRate": 115200,
@@ -7,10 +9,9 @@
   "speedPercent": 31,
   "DatabaseConnection": "Data Source=.\\SQLExpress;Initial Catalog=SmartWarehouse;Integrated Security=True;TrustServerCertificate=True",
   "ComponentTemplates": {
-    "CustomFolder": "../../../../pcb_templates",
-    "RequiredRegionCount": 18,
-    "MinMatchSimilarityPercent": 80,
-    "AllowedRegionNames": [
+    "customFolder": "../../../../pcb_templates",
+    "requiredRegionCount": 18,
+    "allowedRegionNames": [
       "KF1",
       "KF2",
       "KF3",
@@ -29,22 +30,23 @@
       "C1",
       "LM1",
       "C4"
-    ]
+    ],
+    "minMatchSimilarityPercent": 80
   },
   "FiducialHoles": {
-    "TemplateFolder": "../../../../fiducial_holes",
-    "MinMatchScore": 0.55,
-    "MaxMatchDimension": 1280
+    "templateFolder": "../../../../fiducial_holes",
+    "minMatchScore": 0.55,
+    "maxMatchDimension": 1280
   },
   "CameraBasler": {
-    "ExposureTimeUs": 20000,
-    "GainDb": 0,
-    "Gamma": 1.0,
-    "Width": 2304,
-    "Height": 1536,
-    "BalanceWhiteAuto": "Once"
+    "exposureTimeUs": 20000,
+    "gainDb": 0,
+    "gamma": 1,
+    "width": 2304,
+    "height": 1536,
+    "balanceWhiteAuto": "Once"
   },
   "CameraCapture": {
-    "SaveFolder": "../../../../captures"
+    "saveFolder": "../../../../captures"
   }
 }

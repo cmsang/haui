@@ -172,6 +172,12 @@ public class MaterialTransferService : IMaterialTransferService
         var setting = _appSettingService.Load();
         warehouseCom = setting.WarehouseCom?.Trim() ?? string.Empty;
 
+        if (setting.UseVirtualSerial())
+        {
+            warehouseCom = "VIRTUAL";
+            return true;
+        }
+
         if (string.IsNullOrWhiteSpace(warehouseCom))
         {
             error = "Chưa cấu hình warehouseCom trong setting.json.";
@@ -234,6 +240,22 @@ public class MaterialTransferService : IMaterialTransferService
             return true;
 
         var setting = _appSettingService.Load();
+
+        if (setting.UseVirtualSerial())
+        {
+            try
+            {
+                _serialService.Connect(VirtualRobotSerialService.VirtualPortName, setting.BaudRate);
+                reportStatus("Serial ảo — không kết nối cổng COM thật.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                reportStatus($"Serial ảo thất bại: {ex.Message}");
+                return false;
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(setting.Com))
         {
             reportStatus("Chưa cấu hình cổng COM trong setting.json.");

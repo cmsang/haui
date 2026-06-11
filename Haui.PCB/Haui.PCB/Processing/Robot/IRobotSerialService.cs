@@ -2,6 +2,9 @@
 
 public interface IRobotSerialService : IDisposable
 {
+    /// <summary>True when no physical COM port is used (developer simulation).</summary>
+    bool IsVirtual { get; }
+
     bool IsConnected { get; }
 
     IReadOnlyList<string> GetAvailablePorts();

@@ -38,7 +38,7 @@ public partial class RobotTeachingTabView : UserControl
         }
         else
         {
-            _serialService = new RobotSerialService();
+            _serialService = RobotSerialServiceFactory.Create(new AppSettingService());
             _ownsSerialService = true;
         }
 
@@ -108,6 +108,18 @@ public partial class RobotTeachingTabView : UserControl
     private void UpdateSerialStateUi()
     {
         if (_viewModel == null) return;
+
+        var serialControlsEnabled = !_viewModel.IsVirtualSerial;
+        CboComPort.IsEnabled = serialControlsEnabled;
+        CboBaudRate.IsEnabled = serialControlsEnabled;
+        BtnRefreshPorts.IsEnabled = serialControlsEnabled;
+
+        if (_viewModel.IsSerialConnected && _viewModel.IsVirtualSerial)
+        {
+            TxtSerialState.Text = "● Serial ảo";
+            TxtSerialState.Foreground = new SolidColorBrush(Color.FromRgb(0xE6, 0x7E, 0x22));
+            return;
+        }
 
         if (_viewModel.IsSerialConnected)
         {

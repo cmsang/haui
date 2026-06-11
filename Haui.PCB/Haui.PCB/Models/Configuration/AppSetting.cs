@@ -7,6 +7,14 @@ namespace Haui.PCB.Models.Configuration;
 /// </summary>
 public class AppSetting
 {
+    /// <summary>Enables developer UI (template creation, virtual serial settings).</summary>
+    [JsonPropertyName("developerMode")]
+    public bool DeveloperMode { get; set; }
+
+    /// <summary>Simulate robot serial without opening a COM port (requires <see cref="DeveloperMode"/>).</summary>
+    [JsonPropertyName("virtualSerialPort")]
+    public bool VirtualSerialPort { get; set; }
+
     /// <summary>Cổng COM robot (vd: COM3).</summary>
     public string Com { get; set; } = "COM3";
 
@@ -41,4 +49,7 @@ public class AppSetting
 
     [JsonPropertyName("CameraCapture")]
     public CameraCaptureSettings CameraCapture { get; set; } = new();
+
+    /// <summary>True when virtual serial simulation is active.</summary>
+    public bool UseVirtualSerial() => DeveloperMode && VirtualSerialPort;
 }

@@ -16,6 +16,8 @@ public partial class DashboardTabView : UserControl
     private readonly MainViewModel _viewModel;
     private readonly Window _owner;
     private readonly IFiducialHoleTemplateService _fiducialTemplateService;
+    private readonly IAppSettingService _appSettingService = new AppSettingService();
+    private bool _developerMode;
     private bool _syncingParamsFromViewModel;
     private bool _isSelectingRegion;
     private bool _isDragging;
@@ -113,8 +115,16 @@ public partial class DashboardTabView : UserControl
         UpdateFiducialTemplateUi();
     }
 
-    public void UpdateRobotSerialStatus(bool isConnected, string portName)
+    public void UpdateRobotSerialStatus(bool isConnected, string portName, bool isVirtual = false)
     {
+        if (isConnected && isVirtual)
+        {
+            RobotSerialText.Text = "● Robot Serial ảo";
+            RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0xE6, 0x7E, 0x22));
+            return;
+        }
+
         if (isConnected)
         {
             RobotSerialText.Text = $"● Robot {portName} Online";
@@ -126,6 +136,20 @@ public partial class DashboardTabView : UserControl
             RobotSerialText.Text = "● Robot Offline";
             RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
                 System.Windows.Media.Color.FromRgb(0xE7, 0x4C, 0x3C));
+        }
+    }
+
+    public void ApplyDeveloperModeUi()
+    {
+        _developerMode = _appSettingService.Load().DeveloperMode;
+        var visibility = _developerMode ? Visibility.Visible : Visibility.Collapsed;
+        BtnCreateTemplate.Visibility = visibility;
+        PanelFiducialDeveloper.Visibility = visibility;
+
+        if (!_developerMode)
+        {
+            BtnCreateTemplate.IsEnabled = false;
+            BtnCreateFiducialTemplates.IsEnabled = false;
         }
     }
 
@@ -153,8 +177,15 @@ public partial class DashboardTabView : UserControl
 
     private async void UserControl_Loaded(object sender, RoutedEventArgs e)
     {
+        ApplyDeveloperModeUi();
         if (CameraComboBox.Items.Count > 0) return;
         await LoadCamerasAsync();
+    }
+
+    private void UserControl_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (IsVisible)
+            ApplyDeveloperModeUi();
     }
 
     private async Task LoadCamerasAsync()
@@ -228,8 +259,11 @@ public partial class DashboardTabView : UserControl
             BtnTest.IsEnabled = true;
             BtnTest2.IsEnabled = true;
             BtnSelectRegion.IsEnabled = true;
-            BtnCreateTemplate.IsEnabled = true;
-            BtnCreateFiducialTemplates.IsEnabled = true;
+            if (_developerMode)
+            {
+                BtnCreateTemplate.IsEnabled = true;
+                BtnCreateFiducialTemplates.IsEnabled = true;
+            }
             BtnCapture.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
             UpdateCameraParametersUi();

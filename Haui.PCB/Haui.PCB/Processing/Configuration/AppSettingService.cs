@@ -115,6 +115,9 @@ public class AppSettingService : IAppSettingService
 
     private static void Normalize(AppSetting setting)
     {
+        if (!setting.DeveloperMode)
+            setting.VirtualSerialPort = false;
+
         setting.ComponentTemplates.MinMatchSimilarityPercent =
             NormalizeMatchThreshold(setting.ComponentTemplates.MinMatchSimilarityPercent);
     }

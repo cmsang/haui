@@ -106,7 +106,7 @@
                 <Button Grid.Column="6" x:Name="BtnSerialToggle" Content="Kết nối"
                         Style="{StaticResource PrimaryBtn}" Padding="12,6" Margin="0,0,8,0"
                         Click="BtnSerialToggle_Click"/>
-                <Button Grid.Column="7" Content="↻" ToolTip="Quét lại cổng COM"
+                <Button Grid.Column="7" x:Name="BtnRefreshPorts" Content="↻" ToolTip="Quét lại cổng COM"
                         Style="{StaticResource SecondaryBtn}" Padding="10,6"
                         Click="BtnRefreshPorts_Click"/>
             </Grid>
