@@ -11,7 +11,7 @@ Operators inspect PCB boards against a visual template: capture under camera, au
 
 ## UI language
 
-**Vietnamese** labels and status messages. Vietnamese comments OK for complex logic.
+**Vietnamese** labels and status messages (correct diacritics; `MaterialDesignFont` / `Segoe UI`). Source comments: **English only** — see `.cursor/rules/language-and-ui-text.mdc`.
 
 ## Primary workflow
 

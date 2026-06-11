@@ -4,6 +4,8 @@
 
 Stable layout: **Models** and **Processing** by domain subfolder; **Views** as `Windows/` · `Tabs/` · `Controls/`; config unified in **`Config/setting.json`**.
 
+Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments **English**; operator UI **Vietnamese** with `MaterialDesignFont` / `Segoe UI` (not Consolas for labels).
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:

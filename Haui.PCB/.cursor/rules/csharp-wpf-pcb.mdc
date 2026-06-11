@@ -23,7 +23,7 @@ using var mat = new Mat();
 
 ## Style
 
-File-scoped namespaces per folder (`GlobalUsings.cs`); `using var` for `IDisposable`; `_camelCase` private fields; Vietnamese comments for non-obvious vision logic. Full rules → `.github/copilot-instructions.md`.
+File-scoped namespaces per folder (`GlobalUsings.cs`); `using var` for `IDisposable`; `_camelCase` private fields; **English comments only**. UI text (Vietnamese) and font rules → `language-and-ui-text.mdc`. Full rules → `.github/copilot-instructions.md`.
 
 ## Async
 

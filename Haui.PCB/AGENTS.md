@@ -14,7 +14,7 @@ WPF desktop app for **PCB inspection**: camera → OpenCV segmentation → templ
 | UX / operator flows | [memory-bank/productContext.md](memory-bank/productContext.md) | Vietnamese UI, workflows |
 | Writing C# | [.github/copilot-instructions.md](.github/copilot-instructions.md) | SOLID, style, library policy |
 
-Cursor rules: [.cursor/rules/](.cursor/rules/) — bootstrap + glob rules for `*.cs`.
+Cursor rules: [.cursor/rules/](.cursor/rules/) — bootstrap, `language-and-ui-text` (English comments, Vietnamese UI/font), glob rules for `*.cs`.
 
 ## Build and run
 

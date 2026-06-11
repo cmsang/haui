@@ -22,7 +22,7 @@ Project context → `AGENTS.md` and `memory-bank/`. This file is **coding standa
 - PascalCase public members; `_camelCase` private fields; camelCase locals
 - `using var` for all `IDisposable` (especially `OpenCvSharp.Mat`)
 - Avoid magic numbers — use `const` / `readonly`
-- Vietnamese comments for complex vision logic
+- **Comments in English only** — operator UI strings stay Vietnamese (see `.cursor/rules/language-and-ui-text.mdc`)
 
 ## Libraries
 
