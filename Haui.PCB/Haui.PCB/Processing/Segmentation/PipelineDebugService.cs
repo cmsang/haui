@@ -45,7 +45,7 @@ public class PipelineDebugService : IPipelineDebugService
         {
             using var fiducialVis = new Mat();
             Cv2.CvtColor(pipeline.Closed, fiducialVis, ColorConversionCodes.GRAY2BGR);
-            DrawFiducialHoles(fiducialVis, pipeline.FiducialCenters, pipeline.Quad);
+            DrawFiducialHoles(fiducialVis, pipeline.FiducialCenters);
             steps.Add(MakeStep("Fiducial Matching", fiducialVis,
                 pipeline.FiducialDescription ?? "Template matching 4 lỗ trên ảnh Morphology Close"));
         }
@@ -55,27 +55,10 @@ public class PipelineDebugService : IPipelineDebugService
                 pipeline.FiducialDescription));
         }
 
-        using var contourVis = source.Clone();
-        if (pipeline.BestContour is not null)
+        if (pipeline.Warped is not null)
         {
-            Cv2.DrawContours(contourVis, pipeline.Contours, -1, new Scalar(0, 200, 0), 1);
-            Cv2.DrawContours(contourVis, [pipeline.BestContour], -1, new Scalar(0, 0, 255), 3);
-        }
-
-        steps.Add(MakeStep("Contour Detection", contourVis,
-            $"Tìm contour — xanh: tất cả, đỏ: lớn nhất ({(pipeline.BestContour is null ? "không tìm thấy" : $"area≈{pipeline.BestArea:F0}px²")})"));
-
-        if (pipeline.Quad is not null && pipeline.BoundingBoxDescription is not null)
-        {
-            using var boxVis = source.Clone();
-            DrawQuad(boxVis, pipeline.Quad, new Scalar(255, 128, 0));
-            steps.Add(MakeStep("Bounding Quad", boxVis, pipeline.BoundingBoxDescription));
-
-            if (pipeline.Warped is not null)
-            {
-                steps.Add(MakeStep("Warp Perspective", pipeline.Warped.Clone(),
-                    "Bo mạch sau khi căn thẳng bằng perspective transform"));
-            }
+            steps.Add(MakeStep("Warp Perspective", pipeline.Warped.Clone(),
+                "Bo mạch sau khi căn thẳng bằng perspective transform"));
         }
         else
         {
@@ -103,7 +86,7 @@ public class PipelineDebugService : IPipelineDebugService
         }
     }
 
-    private static void DrawFiducialHoles(Mat img, Point2f[] centers, Point2f[]? quad)
+    private static void DrawFiducialHoles(Mat img, Point2f[] centers)
     {
         for (int i = 0; i < centers.Length; i++)
         {
@@ -114,7 +97,6 @@ public class PipelineDebugService : IPipelineDebugService
                 HersheyFonts.HersheySimplex, 0.7, new Scalar(0, 255, 255), 2);
         }
 
-        if (quad is not null)
-            DrawQuad(img, quad, new Scalar(255, 128, 0));
+        DrawQuad(img, centers, new Scalar(255, 128, 0));
     }
 }

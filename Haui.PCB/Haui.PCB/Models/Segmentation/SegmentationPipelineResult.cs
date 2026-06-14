@@ -15,14 +15,6 @@ public sealed class SegmentationPipelineResult : IDisposable
     public required double CannyThreshold1 { get; init; }
     public required double CannyThreshold2 { get; init; }
 
-    public Point[][] Contours { get; init; } = [];
-    public Point[]? BestContour { get; init; }
-    public double BestArea { get; init; }
-
-    public Point2f[]? Quad { get; init; }
-    public string? BoundingBoxDescription { get; init; }
-
-    public bool UsedFiducialDetection { get; init; }
     public Point2f[]? FiducialCenters { get; init; }
     public string? FiducialDescription { get; init; }
 

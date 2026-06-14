@@ -7,7 +7,7 @@ Desktop WPF application for **PCB board inspection**: live camera capture, autom
 ## Goals
 
 - Capture frames from Basler cameras (pylon SDK)
-- Detect and straighten rotated rectangular PCBs (OpenCV contour + perspective warp)
+- Detect and straighten rotated rectangular PCBs (fiducial hole matching + perspective warp)
 - Let operators define named regions on a segmented board (relative 0..1 coordinates)
 - Compare new boards to a template using histogram correlation (threshold via `Config/setting.json` → `ComponentTemplates.MinMatchSimilarityPercent`, default 80%)
 - Support debug visualization of the segmentation pipeline step-by-step

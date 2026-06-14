@@ -3,9 +3,8 @@
 namespace Haui.PCB.Processing.Segmentation;
 
 /// <summary>
-/// Dịch vụ phân vùng và cắt bo mạch PCB từ ảnh nền bằng thuật toán phát hiện đường biên.
-/// Hỗ trợ bo mạch hình chữ nhật / vuông xoay 360° — sử dụng MinAreaRect để
-/// lấy hình chữ nhật nhỏ nhất bao quanh PCB, sau đó warp perspective căn thẳng.
+/// Segments and straightens a PCB board from the camera frame using fiducial hole template matching.
+/// Canny + morphology close prepare the search image; four matched hole centers define the warp quad.
 /// Implements <see cref="IPcbSegmentationService"/>.
 /// </summary>
 public class PcbSegmentationService : IPcbSegmentationService
@@ -35,7 +34,6 @@ public class PcbSegmentationService : IPcbSegmentationService
     }
 
     private const int MorphKernelSize = 5;
-    private const double MinAreaRatio = 0.01;
     private const int EdgePadding = 2;
 
     /// <inheritdoc />
@@ -71,7 +69,7 @@ public class PcbSegmentationService : IPcbSegmentationService
 
         Point2f[]? fiducialCenters = null;
         string? fiducialDescription = null;
-        bool usedFiducial = false;
+        Mat? warped = null;
 
         if (_fiducialTemplates?.HasTemplates() == true && _fiducialDetection is not null)
         {
@@ -89,7 +87,7 @@ public class PcbSegmentationService : IPcbSegmentationService
                 {
                     fiducialCenters = fiducialResult.Centers;
                     fiducialDescription = fiducialResult.Message;
-                    usedFiducial = true;
+                    warped = WarpPerspective(source, fiducialCenters);
                 }
                 else
                 {
@@ -102,66 +100,9 @@ public class PcbSegmentationService : IPcbSegmentationService
                     template.Dispose();
             }
         }
-
-        Point[][] contours = [];
-        Point[]? bestContour = null;
-        double bestArea = 0;
-
-        bool skipContour = usedFiducial && !includeDebugMats;
-        if (!skipContour)
+        else
         {
-            Cv2.FindContours(
-                closedWork,
-                out contours,
-                out _,
-                RetrievalModes.External,
-                ContourApproximationModes.ApproxSimple);
-
-            if (contours.Length > 0)
-            {
-                double imageArea = source.Rows * source.Cols;
-                double minArea = imageArea * MinAreaRatio;
-
-                foreach (var contour in contours)
-                {
-                    double area = Cv2.ContourArea(contour);
-                    if (area > minArea && area > bestArea)
-                    {
-                        bestArea = area;
-                        bestContour = contour;
-                    }
-                }
-            }
-        }
-
-        Point2f[]? quad = null;
-        string? boxDesc = null;
-        Mat? warped = null;
-
-        if (fiducialCenters is not null)
-        {
-            quad = fiducialCenters;
-            boxDesc = "4 lỗ tròn định vị (template matching)";
-            warped = WarpPerspective(source, quad);
-        }
-        else if (bestContour is not null)
-        {
-            double epsilon = 0.02 * Cv2.ArcLength(bestContour, true);
-            var approx = Cv2.ApproxPolyDP(bestContour, epsilon, true);
-
-            if (approx.Length == 4)
-            {
-                quad = approx.Select(p => new Point2f(p.X, p.Y)).ToArray();
-                boxDesc = "Xấp xỉ tứ giác (4 góc phát hiện rõ)";
-            }
-            else
-            {
-                var rotatedRect = Cv2.MinAreaRect(bestContour);
-                quad = Cv2.BoxPoints(rotatedRect);
-                boxDesc = $"MinAreaRect (góc xoay ≈ {rotatedRect.Angle:F1}°)";
-            }
-
-            warped = WarpPerspective(source, quad);
+            fiducialDescription = "Chưa có mẫu lỗ định vị.";
         }
 
         return new SegmentationPipelineResult
@@ -172,12 +113,6 @@ public class PcbSegmentationService : IPcbSegmentationService
             Closed = includeDebugMats ? closedWork.Clone() : new Mat(),
             CannyThreshold1 = t1,
             CannyThreshold2 = t2,
-            Contours = contours,
-            BestContour = bestContour,
-            BestArea = bestArea,
-            Quad = quad,
-            BoundingBoxDescription = boxDesc,
-            UsedFiducialDetection = usedFiducial,
             FiducialCenters = fiducialCenters,
             FiducialDescription = fiducialDescription,
             Warped = warped

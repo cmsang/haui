@@ -36,10 +36,9 @@ Runtime **working directory** = process CWD (typically `bin/Debug/net10.0-window
 |----------|-------|---------|
 | `CannyThreshold1/2` | 50 / 150 (default; chỉnh trên MainWindow) | Edge detection — `SegmentationSettings.Current` |
 | `MorphKernelSize` | 5 | Close gaps in edges |
-| `MinAreaRatio` | 0.01 | Min contour area vs image |
 | `EdgePadding` | 2 px | Crop padding |
 
-Pipeline: BGR→gray → GaussianBlur(5×5) → Canny → morphology close → largest external contour → `MinAreaRect` / quad → perspective warp → landscape normalize.
+Pipeline: BGR→gray → GaussianBlur(5×5) → Canny → morphology close → fiducial hole template matching (4 centers) → perspective warp → landscape normalize. Requires `fiducial_holes/hole_*.png` library.
 
 ## Comparison (`RegionComparisonService`)
 

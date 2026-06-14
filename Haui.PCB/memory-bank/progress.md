@@ -15,7 +15,7 @@
 - [x] Basler camera via pylon (`BaslerCameraService`, x64); defaults from `setting.json` → `CameraBasler`
 - [x] Quick capture → PNG in `CameraCapture.SaveFolder`
 - [x] Optional ROI on preview (`last_region.json`)
-- [x] PCB segmentation (rotated rect → perspective warp)
+- [x] PCB segmentation (fiducial holes → perspective warp; contour fallback removed 2026-06-14)
 - [x] Fiducial holes — `hole_*.png` library; downscale + RAM cache; fast Segment path
 - [x] Pipeline step debugger (`PipelineStepsWindow`)
 - [x] Create template — draw regions, save PNG + `*_regions.json`; names ∈ `AllowedRegionNames`

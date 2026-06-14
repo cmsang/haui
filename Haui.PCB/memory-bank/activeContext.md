@@ -12,6 +12,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Shell Monitor panel (2026-06-14):** Load/Unload + AGV gauges extracted to `Views/Controls/MonitorView` — sticky above `MainContentHost`; state in `MonitorViewModel` owned by `MainWindow.Monitor`. Tabs receive via `LineMonitor` / `Initialize(..., lineMonitor)`.
 
+**Segmentation fiducial-only (2026-06-14):** Removed contour / MinAreaRect fallback from `PcbSegmentationService`; warp requires 4 matched fiducial holes. Debug pipeline drops Contour Detection and Bounding Quad steps.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:

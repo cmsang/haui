@@ -39,7 +39,7 @@ Haui.PCB/                 # WPF app project
 |-----------|----------------|------|
 | `ICameraService` | `BaslerCameraService` | Basler pylon; frames as `Mat` |
 | `ICameraParameterService` | `BaslerCameraService` | GenICam Apply / Reset (Basler only) |
-| `IPcbSegmentationService` | `PcbSegmentationService` | Canny + contour + perspective warp → straight board |
+| `IPcbSegmentationService` | `PcbSegmentationService` | Canny + fiducial holes + perspective warp → straight board |
 | `ITemplateLibraryService` | `TemplateLibraryService` | Thư viện mẫu: quét `*.png` + `*_regions.json` |
 | `IRegionComparisonService` | `RegionComparisonService` | Per-region histogram compare |
 | `IPipelineDebugService` | `PipelineDebugService` | Wraps `RunPipeline()` → step images for PipelineStepsWindow (no duplicate CV logic) |
