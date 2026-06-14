@@ -1,6 +1,8 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Haui.PCB.Models;
+using Haui.PCB.Processing;
 using OpenCvSharp;
 
 namespace Haui.PCB.ViewModels;
@@ -77,7 +79,7 @@ public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            StatusText = $"Lá»—i: {ex.Message}";
+            StatusText = $"Lỗi: {ex.Message}";
         }
         finally
         {

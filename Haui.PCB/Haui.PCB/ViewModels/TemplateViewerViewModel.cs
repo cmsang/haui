@@ -3,6 +3,8 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Haui.PCB.Models;
+using Haui.PCB.Processing;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
 
@@ -49,7 +51,6 @@ public class TemplateRegionViewItem
 public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly ITemplateLibraryService _libraryService;
-    private readonly int _requiredRegionCount;
     private BitmapSource? _previewImage;
     private string _statusText = "Chọn một mẫu để xem chi tiết.";
     private Mat? _currentMat;
@@ -96,12 +97,9 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
 
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
-    public int RequiredRegionCount => _requiredRegionCount;
-
     public TemplateViewerViewModel(ITemplateLibraryService libraryService)
     {
         _libraryService = libraryService;
-        _requiredRegionCount = ComponentTemplateRegionNames.RequiredRegionCount;
     }
 
     // ──── Public API ─────────────────────────────────────────────────────────
@@ -156,9 +154,7 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
         SelectTemplate(item);
 
         HasUnsavedChanges = true;
-        StatusText = newRegions.Count == _requiredRegionCount
-            ? $"Đã cập nhật mẫu \"{item.Name}\" — đủ {_requiredRegionCount} vùng. Nhấn Lưu để ghi file."
-            : $"Mẫu \"{item.Name}\" có {newRegions.Count}/{_requiredRegionCount} vùng — cần đủ {_requiredRegionCount} trước khi lưu thư viện.";
+        StatusText = $"Đã cập nhật mẫu \"{item.Name}\" — {newRegions.Count} vùng. Nhấn Lưu để ghi file.";
     }
 
     /// <summary>Xóa mẫu khỏi danh sách. Chưa lưu file — cần gọi SaveLibrary.</summary>
@@ -179,28 +175,14 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
         StatusText = $"Đã xóa mẫu \"{item.Name}\". Nhấn Lưu để ghi file.";
     }
 
-    /// <summary>Ghi từng file *_regions.json (không dùng index.json).</summary>
-    public bool TrySaveLibrary(out string? errorMessage)
+    /// <summary>Lưu toàn bộ danh sách mẫu xuống file index.json.</summary>
+    public void SaveLibrary()
     {
-        var invalid = Templates
-            .Where(t => t.RegionCount != _requiredRegionCount)
-            .Select(t => t.Name)
-            .ToList();
-
-        if (invalid.Count > 0)
-        {
-            errorMessage =
-                $"Mỗi ảnh mẫu phải có đủ {_requiredRegionCount} vùng linh kiện. " +
-                $"Các mẫu chưa đạt: {string.Join(", ", invalid)}.";
-            return false;
-        }
-
+        // Đồng bộ _workingEntries với Templates (có thể đã được cập nhật từng phần)
         _workingEntries = Templates.Select(t => t.Source).ToList();
         _libraryService.SaveAll(_workingEntries);
         HasUnsavedChanges = false;
-        StatusText = $"Đã lưu thư viện — {Templates.Count} ảnh mẫu (mỗi mẫu {_requiredRegionCount} vùng).";
-        errorMessage = null;
-        return true;
+        StatusText = $"Đã lưu thư viện — {Templates.Count} ảnh mẫu.";
     }
 
     /// <summary>Chọn một mẫu để xem ảnh và danh sách vùng.</summary>
@@ -241,9 +223,7 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
             bitmap.Freeze();
             PreviewImage = bitmap;
             PreviewImageChanged?.Invoke(bitmap);
-            StatusText = item.RegionCount == _requiredRegionCount
-                ? $"Mẫu \"{item.Name}\" — đủ {_requiredRegionCount} vùng."
-                : $"Mẫu \"{item.Name}\" — {item.RegionCount}/{_requiredRegionCount} vùng (chưa đủ để lưu thư viện).";
+            StatusText = $"Mẫu \"{item.Name}\" — {item.RegionCount} vùng.";
         }
         else
         {

@@ -418,6 +418,3 @@ FodyWeavers.xsd
 *.msp
 
 *.png
-!**/fiducial_holes/*.png
-!**/pcb_templates/*.png
-!**/pcb_templates/*.json
