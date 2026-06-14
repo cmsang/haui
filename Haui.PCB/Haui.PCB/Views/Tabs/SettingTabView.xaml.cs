@@ -25,4 +25,6 @@ public partial class SettingTabView : UserControl
     }
 
     private void BtnSaveSettings_Click(object sender, RoutedEventArgs e) => _viewModel.Save();
+
+    private void BtnResetSettings_Click(object sender, RoutedEventArgs e) => _viewModel.Reset();
 }

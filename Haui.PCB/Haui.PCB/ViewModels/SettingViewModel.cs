@@ -203,6 +203,13 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         SaveStatusText = string.Empty;
     }
 
+    /// <summary>Reload last saved values from disk, discarding unsaved edits.</summary>
+    public void Reset()
+    {
+        Load();
+        SaveStatusText = "Đã đặt lại cài đặt đã lưu gần nhất từ Config/setting.json.";
+    }
+
     public void AddRegionName()
     {
         AllowedRegionNames.Add(new AllowedRegionNameItem
