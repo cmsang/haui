@@ -1,7 +1,9 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using Haui.PCB.Models;
+using Haui.PCB.Processing;
 
 namespace Haui.PCB.ViewModels;
 
@@ -107,8 +109,6 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
     public string SerialConnectButtonText => IsSerialConnected ? "Ngắt kết nối" : "Kết nối";
 
-    public bool IsVirtualSerial => _serialService.IsVirtual;
-
     public string SerialPortName
     {
         get => _serialPort;
@@ -180,34 +180,21 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         SyncConnectionState();
         if (IsSerialConnected)
         {
-            StatusText = _serialService.IsVirtual
-                ? "Serial ảo — không kết nối cổng COM thật."
-                : $"Serial online — {SerialPortName} @ {BaudRate}.";
+            StatusText = $"Serial online — {SerialPortName} @ {BaudRate}.";
             return true;
         }
 
         try
         {
-            var useVirtual = _appSettingService.Load().UseVirtualSerial();
-            if (!useVirtual && string.IsNullOrWhiteSpace(SerialPortName))
+            if (string.IsNullOrWhiteSpace(SerialPortName))
             {
                 StatusText = "Chưa cấu hình cổng COM trong setting.json.";
                 return false;
             }
 
-            var port = useVirtual ? VirtualRobotSerialService.VirtualPortName : SerialPortName;
-            _serialService.Connect(port, BaudRate);
+            _serialService.Connect(SerialPortName, BaudRate);
             IsSerialConnected = true;
-            if (useVirtual)
-            {
-                SerialPortName = VirtualRobotSerialService.VirtualPortName;
-                StatusText = "Serial ảo — không kết nối cổng COM thật.";
-            }
-            else
-            {
-                StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
-            }
-
+            StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
             return true;
         }
         catch (Exception ex)
@@ -430,7 +417,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            error = $"Lá»—i Serial: {ex.Message}";
+            error = $"Lỗi Serial: {ex.Message}";
             return false;
         }
     }
@@ -452,3 +439,4 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
+
