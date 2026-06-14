@@ -13,9 +13,12 @@ public partial class ManualControlTabView : UserControl
     private ManualControlViewModel? _viewModel;
     private IRobotSerialService? _serialService;
     private bool _ownsSerialService;
+    private MonitorViewModel? _lineMonitor;
     private bool _initialized;
 
     public event EventHandler? CloseRequested;
+
+    public MonitorViewModel? LineMonitor => _lineMonitor;
 
     public bool ShowCloseButton
     {
@@ -25,10 +28,11 @@ public partial class ManualControlTabView : UserControl
 
     public ManualControlTabView() => InitializeComponent();
 
-    public void Initialize(IRobotSerialService? sharedSerialService = null)
+    public void Initialize(IRobotSerialService? sharedSerialService = null, MonitorViewModel? lineMonitor = null)
     {
         if (_initialized) return;
         _initialized = true;
+        _lineMonitor = lineMonitor;
 
         if (sharedSerialService != null)
         {

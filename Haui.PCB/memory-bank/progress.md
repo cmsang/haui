@@ -5,6 +5,7 @@
 - [x] Vietnamese UI strings — mojibake fixed in ViewModels/windows code-behind; `MaterialDesignFont` on all operator windows/tabs
 - [x] Sidebar → `ContentControl` with tab views
 - [x] UI layers: `Views/Windows/`, `Views/Tabs/`, `Views/Controls/`
+- [x] Shell **Monitor** — sticky line-status panel (`MonitorView` + `MonitorViewModel`); Pass→Load++, Fail→Unload++
 - [x] Models / Processing domain subfolders + `GlobalUsings.cs`
 - [x] Setting tab — full `setting.json` editor; AllowedRegionNames DataGrid (STT + tên, thêm/sửa/xóa); DeveloperMode + Virtual Serial
 - [ ] Job History — detailed content (placeholder)

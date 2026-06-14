@@ -8,6 +8,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Main tab layout (2026-06-14):** `ContentControl` stretch + tab `RowDefinition` Auto/`*` — fixes broken UI after tab refactor.
 
+**Shell Monitor panel (2026-06-14):** Load/Unload + AGV gauges extracted to `Views/Controls/MonitorView` — sticky above `MainContentHost`; state in `MonitorViewModel` owned by `MainWindow.Monitor`. Tabs receive via `LineMonitor` / `Initialize(..., lineMonitor)`.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:

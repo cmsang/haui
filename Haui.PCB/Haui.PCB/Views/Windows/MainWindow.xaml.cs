@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private static readonly SolidColorBrush SidebarIdleBrush = new(Color.FromRgb(0x2E, 0x40, 0x53));
 
     private readonly MainViewModel _viewModel;
+    private readonly MonitorViewModel _monitor = new();
     private readonly RobotTeachViewModel _robotViewModel;
     private readonly IRobotSerialService _serialService;
     private readonly RobotStartupHandshakeService _startupHandshake;
@@ -30,9 +31,13 @@ public partial class MainWindow : Window
     private ManualControlTabView? _manualControlTab;
     private MainTabKind _currentTab = MainTabKind.Dashboard;
 
+    /// <summary>Shared line-status state bound to the shell Monitor panel.</summary>
+    public MonitorViewModel Monitor => _monitor;
+
     public MainWindow()
     {
         InitializeComponent();
+        MonitorPanel.DataContext = _monitor;
         var appSettingService = new AppSettingService();
         _serialService = RobotSerialServiceFactory.Create(appSettingService);
         _materialTransfer = new MaterialTransferService(
@@ -66,7 +71,7 @@ public partial class MainWindow : Window
     private UserControl GetOrCreateTab(MainTabKind kind) => kind switch
     {
         MainTabKind.Dashboard => _dashboardTab ??= new DashboardTabView(_viewModel, this),
-        MainTabKind.JobHistory => GetCachedTab(kind, () => new JobHistoryTabView()),
+        MainTabKind.JobHistory => GetCachedTab(kind, () => new JobHistoryTabView(_monitor)),
         MainTabKind.RobotTeaching => _robotTeachingTab ??= CreateRobotTeachingTab(),
         MainTabKind.ManualControl => _manualControlTab ??= CreateManualControlTab(),
         MainTabKind.Setting => GetCachedTab(kind, () => new SettingTabView()),
@@ -87,14 +92,14 @@ public partial class MainWindow : Window
     private RobotTeachingTabView CreateRobotTeachingTab()
     {
         var tab = new RobotTeachingTabView();
-        tab.Initialize(_serialService);
+        tab.Initialize(_serialService, _monitor);
         return tab;
     }
 
     private ManualControlTabView CreateManualControlTab()
     {
         var tab = new ManualControlTabView();
-        tab.Initialize(_serialService);
+        tab.Initialize(_serialService, _monitor);
         return tab;
     }
 
@@ -226,8 +231,15 @@ public partial class MainWindow : Window
         btnFail.IsEnabled = false;
         try
         {
+            var completed = false;
             await _materialTransfer.TransferPassAsync(msg =>
-                Dispatcher.InvokeAsync(() => _dashboardTab?.SetStatusMessage(msg)));
+            {
+                if (msg.Contains("hoàn tất", StringComparison.OrdinalIgnoreCase))
+                    completed = true;
+                Dispatcher.InvokeAsync(() => _dashboardTab?.SetStatusMessage(msg));
+            });
+            if (completed)
+                _monitor.IncrementLoad();
         }
         finally
         {
@@ -244,8 +256,15 @@ public partial class MainWindow : Window
         btnFail.IsEnabled = false;
         try
         {
+            var completed = false;
             await _materialTransfer.TransferFailAsync(msg =>
-                Dispatcher.InvokeAsync(() => _dashboardTab?.SetStatusMessage(msg)));
+            {
+                if (msg.Contains("hoàn tất", StringComparison.OrdinalIgnoreCase))
+                    completed = true;
+                Dispatcher.InvokeAsync(() => _dashboardTab?.SetStatusMessage(msg));
+            });
+            if (completed)
+                _monitor.IncrementUnload();
         }
         finally
         {
