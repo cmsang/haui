@@ -153,6 +153,10 @@
 
         </Grid>
 
-        <ContentControl x:Name="MainContentHost" Grid.Column="1" />
+        <ContentControl x:Name="MainContentHost" Grid.Column="1"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch" />
     </Grid>
 </Window>

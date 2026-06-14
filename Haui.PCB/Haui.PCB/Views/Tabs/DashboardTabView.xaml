@@ -4,6 +4,8 @@
              xmlns:controls="clr-namespace:Haui.PCB.Views.Controls"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              FontFamily="{DynamicResource MaterialDesignFont}"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch"
              Loaded="UserControl_Loaded"
              IsVisibleChanged="UserControl_IsVisibleChanged">
     <UserControl.Resources>
@@ -63,8 +65,8 @@
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="7*"/>
         </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Grid>

@@ -6,6 +6,8 @@ Stable layout: **Models** and **Processing** by domain subfolder; **Views** as `
 
 Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments **English**; operator UI **Vietnamese** with `MaterialDesignFont` / `Segoe UI` (not Consolas for labels). Mojibake in 13 ViewModel/code-behind `.cs` files fixed (2026-06); child windows/tabs now set `MaterialDesignFont` on root.
 
+**Main tab layout (2026-06-14):** `ContentControl` stretch + tab `RowDefinition` Auto/`*` — fixes broken UI after tab refactor.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:
