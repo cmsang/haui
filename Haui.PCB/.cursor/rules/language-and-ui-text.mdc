@@ -1,0 +1,46 @@
+---
+description: English comments; Vietnamese UI text with correct font and wording
+alwaysApply: true
+---
+
+# Language and UI Text
+
+## Comments and code docs — English only
+
+- All `//`, `///`, `/* */`, and `#region` labels in `.cs` files: **English**
+- XAML `<!-- comments -->`: **English**
+- Do not add Vietnamese in source comments, even for vision/robot logic
+
+```csharp
+// ✅ Segment PCB by contour area threshold
+// ❌ Phân đoạn PCB theo ngưỡng diện tích contour
+```
+
+Identifiers (types, methods, properties) stay **English** per existing conventions.
+
+## Operator-facing text — Vietnamese
+
+User-visible strings (XAML `Text`/`Content`/`Header`, `MessageBox`, status bar, tooltips) stay **Vietnamese** per `memory-bank/productContext.md`.
+
+- Use natural, concise operator language — not literal machine translation
+- Keep domain terms consistent: **giống** / **khác**, **Tạo mẫu**, **Xem mẫu**, **mẫu**, **vùng**, **độ tương đồng**
+- Prefer sentence case for labels; avoid mixing English UI words unless they are established product terms (e.g. ROI, FPS)
+
+## Font for Vietnamese
+
+Vietnamese UI must render full diacritics (ă, â, ê, ô, ơ, ư, đ).
+
+| Use | Font |
+|-----|------|
+| Labels, buttons, dialogs, status | `{DynamicResource MaterialDesignFont}` — inherit from `MainWindow` / tab root |
+| Numeric / joint / debug readouts only | `Consolas` or other monospace |
+
+- Do **not** set `FontFamily="Consolas"` (or other Latin-only fonts) on Vietnamese `TextBlock` / `Button` / `Label`
+- New windows and tabs: set `FontFamily="{DynamicResource MaterialDesignFont}"` on the root element (see `MainWindow.xaml`)
+- If a control overrides font, use `MaterialDesignFont` or `Segoe UI` — both support Vietnamese on Windows
+
+## When editing UI copy
+
+1. Read surrounding strings in the same view for tone and terminology
+2. Verify diacritics are present and spelled correctly (common fixes: *mẫu* not *mau*, *độ* not *do*)
+3. Run or visually check the screen if wording changed materially
