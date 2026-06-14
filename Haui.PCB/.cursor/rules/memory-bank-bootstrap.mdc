@@ -1,0 +1,31 @@
+---
+description: Load and maintain Haui.PCB Memory Bank context
+alwaysApply: true
+---
+
+# Memory Bank Bootstrap
+
+## Session start
+
+Read in order before non-trivial work:
+
+1. `memory-bank/projectbrief.md`
+2. `memory-bank/systemPatterns.md`
+3. `memory-bank/techContext.md`
+4. `memory-bank/activeContext.md`
+
+Use `memory-bank/progress.md` for feature status; `memory-bank/productContext.md` for UX/operator flows.
+
+## Standards
+
+Coding rules → `.github/copilot-instructions.md` only (SOLID, MVVM, C# style, OpenCV disposal). Do not duplicate here.
+
+## Gotcha
+
+**Test / Create / Viewer** → one template folder via `Config/setting.json` → `ComponentTemplates` (`ITemplateLibraryService`).
+
+## After tasks
+
+Update only `memory-bank/activeContext.md` and `memory-bank/progress.md` — incremental edits.
+
+Entry point: `AGENTS.md`.
