@@ -6,7 +6,7 @@ using OpenCvSharp;
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// ViewModel cho TestPipelineWindow — chứa toàn bộ logic xử lý ảnh và phân vùng PCB.
+/// ViewModel for PCB inspection — segmentation, template match, annotated result.
 /// Tách biệt hoàn toàn khỏi UI, tuân theo SOLID: SRP, DIP.
 /// </summary>
 public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable

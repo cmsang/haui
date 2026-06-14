@@ -57,8 +57,7 @@ Thư mục cấu hình (`templates/` hoặc tùy chỉnh qua `Config/setting.jso
 
 ```
 App → MainWindow (MainViewModel + CameraService)
-        ├─ TestPipelineWindow      (Owner=Main)
-        ├─ PipelineStepsWindow     (Owner=Main)
+        ├─ PipelineStepsWindow     (Owner=Main; DeveloperMode Test 2)
         ├─ CreateTemplateWindow    (Owner=Main or Viewer)
         └─ TemplateViewerWindow    (Owner=Main)
               └─ CreateTemplateWindow (edit mode via RegionsSaved)

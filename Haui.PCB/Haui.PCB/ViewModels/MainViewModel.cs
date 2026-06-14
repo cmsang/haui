@@ -41,7 +41,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     public event Action<System.Windows.Media.Imaging.BitmapSource>? FrameReady;
     public event Action<Mat>? TemplateFrameCaptured;
     public event Action<Mat>? FiducialTemplateFrameCaptured;
-    public event Action<Mat>? TestFrameCaptured;
     public event Action<Mat>? Test2FrameCaptured;
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -294,16 +293,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
 
         return CropToSelectedRegion(frame);
-    }
-
-    public async Task CaptureTestFrameAsync()
-    {
-        var frame = await CaptureFrameAsync();
-        if (frame is null)
-            return;
-
-        StatusText = "Đã mở Test Pipeline.";
-        TestFrameCaptured?.Invoke(frame);
     }
 
     public async Task CaptureTest2FrameAsync()
