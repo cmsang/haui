@@ -67,7 +67,7 @@
                 <Border Style="{StaticResource SectionBorder}">
                     <StackPanel>
                         <TextBlock Text="Chế độ phát triển" Style="{StaticResource SectionTitle}"/>
-                        <CheckBox Content="Bật DeveloperMode (hiện nút tạo mẫu trên Dashboard)"
+                        <CheckBox Content="Bật DeveloperMode (hiện nút tạo mẫu và thêm mẫu lỗ trên Dashboard)"
                                   IsChecked="{Binding DeveloperMode, Mode=TwoWay}"
                                   Margin="0,0,0,8"/>
                         <StackPanel Visibility="{Binding IsVirtualSerialVisible, Converter={StaticResource BoolToVis}}">
@@ -226,45 +226,6 @@
                             <TextBlock Grid.Row="2" Text="Max match dimension (px)" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
                                      Text="{Binding FiducialMaxMatchDimension, UpdateSourceTrigger=PropertyChanged}"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- Camera Basler -->
-                <Border Style="{StaticResource SectionBorder}">
-                    <StackPanel>
-                        <TextBlock Text="Camera Basler (mặc định)" Style="{StaticResource SectionTitle}"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Text="Exposure (µs)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding CameraExposureTimeUs, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="1" Text="Gain (dB)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding CameraGainDb, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="2" Text="Gamma" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding CameraGamma, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="3" Text="Width (px)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding CameraWidth, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="4" Text="Height (px)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding CameraHeight, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="5" Text="Balance white auto" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="5" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding CameraBalanceWhiteAuto, UpdateSourceTrigger=PropertyChanged}"/>
                         </Grid>
                     </StackPanel>
                 </Border>

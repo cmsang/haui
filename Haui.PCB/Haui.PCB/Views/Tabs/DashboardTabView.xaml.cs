@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,20 +14,17 @@ public partial class DashboardTabView : UserControl
 {
     private readonly MainViewModel _viewModel;
     private readonly Window _owner;
-    private readonly IFiducialHoleTemplateService _fiducialTemplateService;
     private readonly IAppSettingService _appSettingService = new AppSettingService();
     private bool _developerMode;
-    private bool _syncingParamsFromViewModel;
     private bool _isSelectingRegion;
     private bool _isDragging;
     private Point _dragStart;
     private bool _wired;
 
-    public DashboardTabView(MainViewModel viewModel, Window owner, IFiducialHoleTemplateService fiducialTemplateService)
+    public DashboardTabView(MainViewModel viewModel, Window owner)
     {
         _viewModel = viewModel;
         _owner = owner;
-        _fiducialTemplateService = fiducialTemplateService;
         DataContext = viewModel;
         InitializeComponent();
         WireViewModel();
@@ -49,14 +45,6 @@ public partial class DashboardTabView : UserControl
                     FpsText.Text = _viewModel.CurrentFps > 0 ? $"FPS: {_viewModel.CurrentFps}" : string.Empty);
             else if (e.PropertyName == nameof(MainViewModel.StatusText))
                 Dispatcher.InvokeAsync(() => StatusText.Text = _viewModel.StatusText);
-            else if (e.PropertyName is nameof(MainViewModel.CanEditCameraParameters)
-                     or nameof(MainViewModel.ExposureTimeUs)
-                     or nameof(MainViewModel.GainDb)
-                     or nameof(MainViewModel.Gamma))
-                Dispatcher.InvokeAsync(UpdateCameraParametersUi);
-            else if (e.PropertyName is nameof(MainViewModel.CannyThreshold1)
-                     or nameof(MainViewModel.CannyThreshold2))
-                Dispatcher.InvokeAsync(UpdatePipelineParametersUi);
         };
 
         _viewModel.TestFrameCaptured += frame =>
@@ -102,17 +90,13 @@ public partial class DashboardTabView : UserControl
         {
             Dispatcher.InvokeAsync(() =>
             {
-                var fiducialWindow = new FiducialTemplateWindow(_fiducialTemplateService) { Owner = _owner };
-                fiducialWindow.Closed += (_, _) => UpdateFiducialTemplateUi();
+                var fiducialWindow = new FiducialTemplateWindow { Owner = _owner };
+                fiducialWindow.Closed += (_, _) => _viewModel.RefreshFiducialTemplateStatus();
                 fiducialWindow.LoadFrame(frame);
                 frame.Dispose();
                 fiducialWindow.Show();
             });
         };
-
-        WireParameterControls();
-        UpdatePipelineParametersUi();
-        UpdateFiducialTemplateUi();
     }
 
     public void UpdateRobotSerialStatus(bool isConnected, string portName, bool isVirtual = false)
@@ -144,7 +128,7 @@ public partial class DashboardTabView : UserControl
         _developerMode = _appSettingService.Load().DeveloperMode;
         var visibility = _developerMode ? Visibility.Visible : Visibility.Collapsed;
         BtnCreateTemplate.Visibility = visibility;
-        PanelFiducialDeveloper.Visibility = visibility;
+        BtnCreateFiducialTemplates.Visibility = visibility;
 
         if (!_developerMode)
         {
@@ -158,22 +142,6 @@ public partial class DashboardTabView : UserControl
     public void AppendRobotRxLog(string text) => TxtRobotRxLog.Text = text;
 
     public void SetStatusMessage(string message) => StatusText.Text = message;
-
-    private void WireParameterControls()
-    {
-        ExposureSlider.ValueChanged += (_, _) => SyncExposureFromSlider();
-        GainSlider.ValueChanged += (_, _) => SyncGainFromSlider();
-        GammaSlider.ValueChanged += (_, _) => SyncGammaFromSlider();
-
-        ExposureTextBox.LostFocus += (_, _) => SyncExposureFromTextBox();
-        GainTextBox.LostFocus += (_, _) => SyncGainFromTextBox();
-        GammaTextBox.LostFocus += (_, _) => SyncGammaFromTextBox();
-
-        Canny1Slider.ValueChanged += (_, _) => SyncCanny1FromSlider();
-        Canny2Slider.ValueChanged += (_, _) => SyncCanny2FromSlider();
-        Canny1TextBox.LostFocus += (_, _) => SyncCanny1FromTextBox();
-        Canny2TextBox.LostFocus += (_, _) => SyncCanny2FromTextBox();
-    }
 
     private async void UserControl_Loaded(object sender, RoutedEventArgs e)
     {
@@ -266,7 +234,6 @@ public partial class DashboardTabView : UserControl
             }
             BtnCapture.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
-            UpdateCameraParametersUi();
         }
         catch (Exception ex)
         {
@@ -291,159 +258,6 @@ public partial class DashboardTabView : UserControl
         CameraImage.Source = null;
         CameraPlaceholder.Visibility = Visibility.Visible;
         FpsText.Text = string.Empty;
-        UpdateCameraParametersUi();
-    }
-
-    private void BtnApplyParams_Click(object sender, RoutedEventArgs e)
-    {
-        PushParameterEditsToViewModel();
-        _viewModel.ApplyCameraParameters();
-    }
-
-    private void BtnResetParams_Click(object sender, RoutedEventArgs e)
-        => _viewModel.ResetCameraParameters();
-
-    private void BtnResetCanny_Click(object sender, RoutedEventArgs e)
-        => _viewModel.ResetPipelineParameters();
-
-    private void UpdateCameraParametersUi()
-    {
-        CameraParamsPanel.Visibility = Visibility.Visible;
-
-        bool canEdit = _viewModel.CanEditCameraParameters;
-        ExposureSlider.IsEnabled = canEdit;
-        GainSlider.IsEnabled = canEdit;
-        GammaSlider.IsEnabled = canEdit;
-        ExposureTextBox.IsEnabled = canEdit;
-        GainTextBox.IsEnabled = canEdit;
-        GammaTextBox.IsEnabled = canEdit;
-        BtnApplyParams.IsEnabled = canEdit;
-        BtnResetParams.IsEnabled = true;
-
-        _syncingParamsFromViewModel = true;
-        try
-        {
-            ExposureSlider.Value = Clamp(ExposureSlider, _viewModel.ExposureTimeUs);
-            GainSlider.Value = Clamp(GainSlider, _viewModel.GainDb);
-            GammaSlider.Value = Clamp(GammaSlider, _viewModel.Gamma);
-
-            ExposureTextBox.Text = _viewModel.ExposureTimeUs.ToString("F0", CultureInfo.InvariantCulture);
-            GainTextBox.Text = _viewModel.GainDb.ToString("F1", CultureInfo.InvariantCulture);
-            GammaTextBox.Text = _viewModel.Gamma.ToString("F2", CultureInfo.InvariantCulture);
-        }
-        finally
-        {
-            _syncingParamsFromViewModel = false;
-        }
-    }
-
-    private void PushParameterEditsToViewModel()
-    {
-        if (double.TryParse(ExposureTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double exposure))
-            _viewModel.ExposureTimeUs = exposure;
-        if (double.TryParse(GainTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double gain))
-            _viewModel.GainDb = gain;
-        if (double.TryParse(GammaTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double gamma))
-            _viewModel.Gamma = gamma;
-    }
-
-    private void SyncExposureFromSlider()
-    {
-        if (_syncingParamsFromViewModel) return;
-        _viewModel.ExposureTimeUs = ExposureSlider.Value;
-        ExposureTextBox.Text = ExposureSlider.Value.ToString("F0", CultureInfo.InvariantCulture);
-    }
-
-    private void SyncGainFromSlider()
-    {
-        if (_syncingParamsFromViewModel) return;
-        _viewModel.GainDb = GainSlider.Value;
-        GainTextBox.Text = GainSlider.Value.ToString("F1", CultureInfo.InvariantCulture);
-    }
-
-    private void SyncGammaFromSlider()
-    {
-        if (_syncingParamsFromViewModel) return;
-        _viewModel.Gamma = GammaSlider.Value;
-        GammaTextBox.Text = GammaSlider.Value.ToString("F2", CultureInfo.InvariantCulture);
-    }
-
-    private void SyncExposureFromTextBox()
-    {
-        if (_syncingParamsFromViewModel) return;
-        if (!double.TryParse(ExposureTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-            return;
-        _viewModel.ExposureTimeUs = value;
-        ExposureSlider.Value = Clamp(ExposureSlider, value);
-    }
-
-    private void SyncGainFromTextBox()
-    {
-        if (_syncingParamsFromViewModel) return;
-        if (!double.TryParse(GainTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-            return;
-        _viewModel.GainDb = value;
-        GainSlider.Value = Clamp(GainSlider, value);
-    }
-
-    private void SyncGammaFromTextBox()
-    {
-        if (_syncingParamsFromViewModel) return;
-        if (!double.TryParse(GammaTextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-            return;
-        _viewModel.Gamma = value;
-        GammaSlider.Value = Clamp(GammaSlider, value);
-    }
-
-    private static double Clamp(Slider slider, double value)
-        => Math.Max(slider.Minimum, Math.Min(slider.Maximum, value));
-
-    private void UpdatePipelineParametersUi()
-    {
-        _syncingParamsFromViewModel = true;
-        try
-        {
-            Canny1Slider.Value = Clamp(Canny1Slider, _viewModel.CannyThreshold1);
-            Canny2Slider.Value = Clamp(Canny2Slider, _viewModel.CannyThreshold2);
-            Canny1TextBox.Text = _viewModel.CannyThreshold1.ToString("F0", CultureInfo.InvariantCulture);
-            Canny2TextBox.Text = _viewModel.CannyThreshold2.ToString("F0", CultureInfo.InvariantCulture);
-        }
-        finally
-        {
-            _syncingParamsFromViewModel = false;
-        }
-    }
-
-    private void SyncCanny1FromSlider()
-    {
-        if (_syncingParamsFromViewModel) return;
-        _viewModel.CannyThreshold1 = Canny1Slider.Value;
-        Canny1TextBox.Text = Canny1Slider.Value.ToString("F0", CultureInfo.InvariantCulture);
-    }
-
-    private void SyncCanny2FromSlider()
-    {
-        if (_syncingParamsFromViewModel) return;
-        _viewModel.CannyThreshold2 = Canny2Slider.Value;
-        Canny2TextBox.Text = Canny2Slider.Value.ToString("F0", CultureInfo.InvariantCulture);
-    }
-
-    private void SyncCanny1FromTextBox()
-    {
-        if (_syncingParamsFromViewModel) return;
-        if (!double.TryParse(Canny1TextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-            return;
-        _viewModel.CannyThreshold1 = value;
-        Canny1Slider.Value = Clamp(Canny1Slider, value);
-    }
-
-    private void SyncCanny2FromTextBox()
-    {
-        if (_syncingParamsFromViewModel) return;
-        if (!double.TryParse(Canny2TextBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-            return;
-        _viewModel.CannyThreshold2 = value;
-        Canny2Slider.Value = Clamp(Canny2Slider, value);
     }
 
     private async void BtnTest_Click(object sender, RoutedEventArgs e)
@@ -496,14 +310,6 @@ public partial class DashboardTabView : UserControl
         {
             BtnCreateFiducialTemplates.IsEnabled = _viewModel.IsRunning;
         }
-    }
-
-    private void UpdateFiducialTemplateUi()
-    {
-        _viewModel.RefreshFiducialTemplateStatus();
-        FiducialStatusText.Text = _viewModel.HasFiducialTemplates
-            ? $"Đã có {_fiducialTemplateService.ListTemplateFileNames().Count} mẫu lỗ — pipeline so khớp tất cả trên ảnh Close."
-            : "Chưa có mẫu lỗ — pipeline dùng contour như trước.";
     }
 
     private void BtnViewTemplates_Click(object sender, RoutedEventArgs e)

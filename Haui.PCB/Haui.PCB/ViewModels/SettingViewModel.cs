@@ -47,12 +47,6 @@ public sealed class SettingViewModel : INotifyPropertyChanged
     private string _fiducialTemplateFolder = FiducialHoleSettings.DefaultTemplateFolder;
     private double _fiducialMinMatchScore = FiducialHoleSettings.DefaultMinMatchScore;
     private int _fiducialMaxMatchDimension = FiducialHoleSettings.DefaultMaxMatchDimension;
-    private double _cameraExposureTimeUs = 15_000;
-    private double _cameraGainDb;
-    private double _cameraGamma = 1.0;
-    private int _cameraWidth = 1920;
-    private int _cameraHeight = 1200;
-    private string _cameraBalanceWhiteAuto = "Off";
     private string _cameraCaptureSaveFolder = string.Empty;
     private string _saveStatusText = string.Empty;
 
@@ -158,42 +152,6 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         set { _fiducialMaxMatchDimension = value; OnPropertyChanged(); }
     }
 
-    public double CameraExposureTimeUs
-    {
-        get => _cameraExposureTimeUs;
-        set { _cameraExposureTimeUs = value; OnPropertyChanged(); }
-    }
-
-    public double CameraGainDb
-    {
-        get => _cameraGainDb;
-        set { _cameraGainDb = value; OnPropertyChanged(); }
-    }
-
-    public double CameraGamma
-    {
-        get => _cameraGamma;
-        set { _cameraGamma = value; OnPropertyChanged(); }
-    }
-
-    public int CameraWidth
-    {
-        get => _cameraWidth;
-        set { _cameraWidth = value; OnPropertyChanged(); }
-    }
-
-    public int CameraHeight
-    {
-        get => _cameraHeight;
-        set { _cameraHeight = value; OnPropertyChanged(); }
-    }
-
-    public string CameraBalanceWhiteAuto
-    {
-        get => _cameraBalanceWhiteAuto;
-        set { _cameraBalanceWhiteAuto = value; OnPropertyChanged(); }
-    }
-
     public string CameraCaptureSaveFolder
     {
         get => _cameraCaptureSaveFolder;
@@ -240,12 +198,6 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         FiducialMinMatchScore = setting.FiducialHoles.MinMatchScore;
         FiducialMaxMatchDimension = setting.FiducialHoles.MaxMatchDimension;
 
-        CameraExposureTimeUs = setting.CameraBasler.ExposureTimeUs;
-        CameraGainDb = setting.CameraBasler.GainDb;
-        CameraGamma = setting.CameraBasler.Gamma;
-        CameraWidth = setting.CameraBasler.Width;
-        CameraHeight = setting.CameraBasler.Height;
-        CameraBalanceWhiteAuto = setting.CameraBasler.BalanceWhiteAuto;
         CameraCaptureSaveFolder = setting.CameraCapture.SaveFolder;
 
         SaveStatusText = string.Empty;
@@ -306,13 +258,6 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         setting.FiducialHoles.MinMatchScore = FiducialMinMatchScore;
         setting.FiducialHoles.MaxMatchDimension = Math.Max(1, FiducialMaxMatchDimension);
 
-        setting.CameraBasler.ExposureTimeUs = CameraExposureTimeUs;
-        setting.CameraBasler.GainDb = CameraGainDb;
-        setting.CameraBasler.Gamma = CameraGamma;
-        setting.CameraBasler.Width = Math.Max(1, CameraWidth);
-        setting.CameraBasler.Height = Math.Max(1, CameraHeight);
-        setting.CameraBasler.BalanceWhiteAuto = CameraBalanceWhiteAuto.Trim();
-
         setting.CameraCapture.SaveFolder = CameraCaptureSaveFolder.Trim();
 
         _appSettingService.Save(setting);
@@ -320,8 +265,6 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         MinMatchSimilarityPercent = setting.ComponentTemplates.MinMatchSimilarityPercent;
         SpeedPercent = setting.SpeedPercent;
         FiducialMaxMatchDimension = setting.FiducialHoles.MaxMatchDimension;
-        CameraWidth = setting.CameraBasler.Width;
-        CameraHeight = setting.CameraBasler.Height;
 
         AllowedRegionNames.Clear();
         for (var i = 0; i < trimmedNames.Count; i++)
@@ -336,7 +279,7 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         SaveStatusText = DeveloperMode && VirtualSerialPort
             ? "Đã lưu vào Config/setting.json. Serial ảo áp dụng ở lần kết nối tiếp theo."
             : DeveloperMode
-                ? "Đã lưu vào Config/setting.json. Làm mới Dashboard để thấy nút tạo mẫu."
+                ? "Đã lưu vào Config/setting.json. Làm mới Dashboard để thấy nút tạo mẫu và thêm mẫu lỗ."
                 : "Đã lưu vào Config/setting.json.";
     }
 

@@ -11,12 +11,10 @@
 
 ## Working features
 
-- [x] Basler camera via pylon (`BaslerCameraService`, x64)
-- [x] Basler parameter UI (Exposure, Gain, Gamma; Apply / Reset)
+- [x] Basler camera via pylon (`BaslerCameraService`, x64); defaults from `setting.json` → `CameraBasler`
 - [x] Quick capture → PNG in `CameraCapture.SaveFolder`
 - [x] Optional ROI on preview (`last_region.json`)
 - [x] PCB segmentation (rotated rect → perspective warp)
-- [x] Canny thresholds on MainWindow (shared by Test / Test 2 / Tạo mẫu)
 - [x] Fiducial holes — `hole_*.png` library; downscale + RAM cache; fast Segment path
 - [x] Pipeline step debugger (`PipelineStepsWindow`)
 - [x] Create template — draw regions, save PNG + `*_regions.json`; names ∈ `AllowedRegionNames`
@@ -24,14 +22,14 @@
 - [x] Test pipeline — composite match by `AllowedRegionNames`; 180° retry; overlay green/red
 - [x] Region compare — 128×128, LAB-L + CLAHE + bilateral, threshold from `MinMatchSimilarityPercent`
 - [x] Unified config — `Config/setting.json` (`AppSettingService`)
-- [x] DeveloperMode — hides Tạo mẫu / Thêm mẫu lỗ on Dashboard; Sửa in template viewer
+- [x] DeveloperMode — hides Tạo mẫu / Thêm mẫu lỗ on Dashboard toolbar; Sửa in template viewer
 - [x] Virtual Serial Port — `VirtualRobotSerialService` when dev + virtual enabled (no COM required)
 - [x] Sharpest-frame selection (Laplacian variance)
 
 ## Known limitations
 
 - Basler requires pylon x64; `PlatformTarget=x64`
-- Parameter sliders use fixed ranges (not camera min/max)
+- Parameter sliders use fixed ranges (not camera min/max) — removed from Dashboard; edit `CameraBasler` in `setting.json` if needed
 - Data paths relative to process CWD — different launch folder breaks saved files
 - No unit/integration tests
 - No comparison history export

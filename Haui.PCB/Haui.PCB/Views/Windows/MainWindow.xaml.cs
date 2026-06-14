@@ -17,7 +17,6 @@ public partial class MainWindow : Window
     private static readonly SolidColorBrush SidebarIdleBrush = new(Color.FromRgb(0x2E, 0x40, 0x53));
 
     private readonly MainViewModel _viewModel;
-    private readonly IFiducialHoleTemplateService _fiducialTemplateService = FiducialHoleServices.TemplateService;
     private readonly RobotTeachViewModel _robotViewModel;
     private readonly IRobotSerialService _serialService;
     private readonly RobotStartupHandshakeService _startupHandshake;
@@ -66,7 +65,7 @@ public partial class MainWindow : Window
 
     private UserControl GetOrCreateTab(MainTabKind kind) => kind switch
     {
-        MainTabKind.Dashboard => _dashboardTab ??= new DashboardTabView(_viewModel, this, _fiducialTemplateService),
+        MainTabKind.Dashboard => _dashboardTab ??= new DashboardTabView(_viewModel, this),
         MainTabKind.JobHistory => GetCachedTab(kind, () => new JobHistoryTabView()),
         MainTabKind.RobotTeaching => _robotTeachingTab ??= CreateRobotTeachingTab(),
         MainTabKind.ManualControl => _manualControlTab ??= CreateManualControlTab(),

@@ -24,7 +24,13 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 
 1. **Calibrate defaults** — `camera_basler_defaults.json` for acA4600-7gc on real bench
 2. **Fiducial UI** — `MinMatchScore` / `MaxMatchDimension` in setting.json; no slider UI yet
-3. **Job History tab** — placeholder; **Setting tab** edits full `Config/setting.json` (DeveloperMode, robot, DB, ComponentTemplates incl. AllowedRegionNames grid, Fiducial, Camera)
+3. **Job History tab** — placeholder; **Setting tab** edits `Config/setting.json` (DeveloperMode, robot, DB, ComponentTemplates incl. AllowedRegionNames grid, Fiducial, CameraCapture)
+
+## Recent UI (2026-06-13)
+
+- Removed Dashboard sidebar: Basler exposure/gain/gamma + Canny threshold sliders
+- Removed Camera Basler section from Setting tab (runtime defaults still in `setting.json` → `CameraBasler`)
+- **Thêm mẫu lỗ** toolbar button between **Tạo mẫu** and **Xem mẫu** — visible only when DeveloperMode on
 
 ## Entry files by task
 
@@ -33,6 +39,6 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 | Camera / capture | `ViewModels/MainViewModel.cs`, `Processing/Camera/BaslerCameraService.cs` |
 | Fiducial holes | `Processing/Fiducial/FiducialHoleDetectionService.cs`, `Views/Windows/FiducialTemplateWindow.xaml.cs` |
 | Segmentation | `Processing/Segmentation/PcbSegmentationService.cs` |
-| Basler parameters | `Processing/Camera/ICameraParameterService.cs`, `Config/setting.json` → `CameraBasler` |
+| Basler defaults (file only) | `Config/setting.json` → `CameraBasler`, `Processing/Camera/BaslerCameraService.cs` |
 | App config | `Processing/Configuration/AppSettingService.cs`, `ViewModels/SettingViewModel.cs`, `Views/Tabs/SettingTabView.xaml` |
 | Template library / test | `Processing/Templates/TemplateLibraryService.cs`, `ViewModels/TestPipelineViewModel.cs` |
