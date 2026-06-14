@@ -114,7 +114,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public void CancelMaterialTransfer() => _materialTransfer?.Cancel();
 
-    /// <summary>Pass — PickUp → ô OK (xoay vòng OK1–OK6).</summary>
+    /// <summary>Pass — PickUp → ô OK (xoay vòng OK1–OK4).</summary>
     public async Task TransferPassMaterial()
     {
         if (_materialTransfer == null)
@@ -129,10 +129,17 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        await _materialTransfer.TransferPassAsync(msg => StatusText = msg);
+        try
+        {
+            await _materialTransfer.TransferPassAsync(msg => StatusText = msg);
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(IsMaterialTransferRunning));
+        }
     }
 
-    /// <summary>Fail — PickUp → ô NG (xoay vòng NG1–NG6).</summary>
+    /// <summary>Fail — PickUp → ô NG (xoay vòng NG1–NG4).</summary>
     public async Task TransferFailMaterial()
     {
         if (_materialTransfer == null)
@@ -147,7 +154,14 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        await _materialTransfer.TransferFailAsync(msg => StatusText = msg);
+        try
+        {
+            await _materialTransfer.TransferFailAsync(msg => StatusText = msg);
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(IsMaterialTransferRunning));
+        }
     }
 
     // ──── Commands / Actions ──────────────────────────────────────────────────

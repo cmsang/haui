@@ -76,8 +76,12 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private double _jogStep = 1.0;
     private int _speedPercent = 50;
     private bool _isSerialConnected;
+    private bool _isAwaitingRobotDone;
+    private bool _isReturningHome;
     private bool _disposed;
     private bool _closing;
+    private CancellationTokenSource? _awaitDoneCts;
+    private static readonly TimeSpan AwaitDoneTimeout = TimeSpan.FromSeconds(120);
 
     public RobotTeachViewModel(
         IRobotConfigService robotConfigService,
@@ -107,7 +111,10 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
         RefreshAvailablePorts();
         if (_enableSerialEvents)
+        {
             _serialService.LineReceived += OnSerialLineReceived;
+            _serialService.DataReceived += OnSerialDataReceived;
+        }
         SyncConnectionState();
     }
 
@@ -143,10 +150,41 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             _isSerialConnected = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(SerialConnectButtonText));
+            OnPropertyChanged(nameof(CanOperateRobot));
+            OnPropertyChanged(nameof(CanAdjustJoints));
         }
     }
 
     public string SerialConnectButtonText => IsSerialConnected ? "Ngắt kết nối" : "Kết nối";
+
+    /// <summary>Đang chờ robot phản hồi Dx sau lệnh jog/move/home/gripper.</summary>
+    public bool IsAwaitingRobotDone
+    {
+        get => _isAwaitingRobotDone;
+        private set
+        {
+            if (_isAwaitingRobotDone == value) return;
+            _isAwaitingRobotDone = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanOperateRobot));
+            OnPropertyChanged(nameof(CanAdjustJoints));
+            OnPropertyChanged(nameof(CanCloseWindow));
+        }
+    }
+
+    /// <summary>Cho phép gửi lệnh điều khiển robot (jog, move, home, go to).</summary>
+    public bool CanOperateRobot =>
+        IsSerialConnected && CanAdjustJoints;
+
+    /// <summary>Cho phép thao tác khớp trên UI (jog/slider); khóa khi đang chờ Dx.</summary>
+    public bool CanAdjustJoints =>
+        !IsAwaitingRobotDone && !_isReturningHome && !_closing && !_disposed;
+
+    /// <summary>Đang chờ Dx sau lệnh robot — chưa hoàn thành chu trình.</summary>
+    public bool IsOperationInProgress => IsAwaitingRobotDone;
+
+    /// <summary>Cho phép nhấn nút Đóng (không đang chờ Dx, không đang về Home).</summary>
+    public bool CanCloseWindow => !IsAwaitingRobotDone && !_isReturningHome;
 
     public string SerialPortName
     {
@@ -271,6 +309,12 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        if (IsAwaitingRobotDone)
+        {
+            StatusText = "Đang chờ robot hoàn thành (Dx)...";
+            return;
+        }
+
         try
         {
             var axisName = joint.IsGripper
@@ -278,7 +322,8 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
                 : joint.AxisNumber.ToString(CultureInfo.InvariantCulture);
             var cmd = RobotSerialProtocol.JogCommand(axisName, direction > 0, JogStep);
             _serialService.SendAscii(cmd);
-            StatusText = $"TX {cmd} → {joint.AngleText}";
+            BeginAwaitDone();
+            StatusText = $"TX {cmd} → {joint.AngleText} — chờ Dx...";
         }
         catch (Exception ex)
         {
@@ -297,13 +342,13 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         if (!TrySend(() =>
         {
             _serialService.SendAscii(moveCmd);
-        }, out var err))
+        }, out var err, awaitDone: true))
         {
             StatusText = err;
             return;
         }
 
-        StatusText = $"TX {moveCmd}";
+        StatusText = $"TX {moveCmd} — chờ Dx...";
     }
 
     public void SendGripperOnly()
@@ -311,25 +356,25 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         if (Joints.Count < 6) return;
         var g = Joints[5];
 
-        if (!TrySend(() => _serialService.SendGripperAngle(g.Angle), out var err))
+        if (!TrySend(() => _serialService.SendGripperAngle(g.Angle), out var err, awaitDone: true))
         {
             StatusText = err;
             return;
         }
 
-        StatusText = $"G → {g.AngleText}";
+        StatusText = $"G → {g.AngleText} — chờ Dx...";
     }
 
     public void PerformHoming()
     {
         const string cmd = "H0";
-        if (!TrySend(() => _serialService.SendAscii(cmd), out var err))
+        if (!TrySend(() => _serialService.SendAscii(cmd), out var err, awaitDone: true))
         {
             StatusText = err;
             return;
         }
 
-        StatusText = $"TX {cmd} — Homing tất cả trục (3→2→1→4→5)...";
+        StatusText = $"TX {cmd} — Homing tất cả trục (3→2→1→4→5) — chờ Dx...";
     }
 
     /// <summary>Homing một trục J1–J5 — gửi "H1".."H5".</summary>
@@ -342,13 +387,13 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var cmd = RobotSerialProtocol.HomeCommand(joint.AxisNumber);
-        if (!TrySend(() => _serialService.SendAscii(cmd), out var err))
+        if (!TrySend(() => _serialService.SendAscii(cmd), out var err, awaitDone: true))
         {
             StatusText = err;
             return;
         }
 
-        StatusText = $"TX {cmd} — Homing {joint.Key}...";
+        StatusText = $"TX {cmd} — Homing {joint.Key} — chờ Dx...";
     }
 
     public void TeachSelectedPoint()
@@ -421,11 +466,15 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
         TeachPoints.Clear();
         foreach (var point in points)
+        {
+            if (point.Name.Equals("Home", StringComparison.OrdinalIgnoreCase))
+                continue;
             TeachPoints.Add(point);
+        }
 
         SelectedPoint = selectedName == null
             ? TeachPoints.FirstOrDefault(p =>
-                p.Name.Equals(RobotTeachPositions.Home, StringComparison.OrdinalIgnoreCase))
+                p.Name.Equals(RobotTeachPositions.PickUp, StringComparison.OrdinalIgnoreCase))
               ?? TeachPoints.FirstOrDefault()
             : TeachPoints.FirstOrDefault(p =>
                 p.Name.Equals(selectedName, StringComparison.OrdinalIgnoreCase))
@@ -450,16 +499,49 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         => TeachPoints.FirstOrDefault(p =>
             p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>Gửi H0x (homing firmware) và chờ Dx trước khi đóng màn hình.</summary>
+    public async Task ReturnToHomeAsync(CancellationToken ct = default)
+    {
+        SyncConnectionState();
+        if (!_serialService.IsConnected)
+            return;
+
+        SetReturningHome(true);
+        try
+        {
+            var executor = new RobotPickPlaceExecutor(_serialService);
+            await executor.HomeAllAxesAsync(msg => StatusText = msg, ct);
+        }
+        catch (TimeoutException ex)
+        {
+            StatusText = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Homing H0 khi đóng màn hình: {ex.Message}";
+        }
+        finally
+        {
+            SetReturningHome(false);
+        }
+    }
+
     /// <summary>Hủy các lệnh robot đang thực hiện trên màn hình này.</summary>
     public void CancelPendingOperations()
-        => _closing = true;
+    {
+        _closing = true;
+        CompleteAwaitDone();
+    }
 
     public void Release()
     {
         if (_disposed) return;
         CancelPendingOperations();
         if (_enableSerialEvents)
+        {
             _serialService.LineReceived -= OnSerialLineReceived;
+            _serialService.DataReceived -= OnSerialDataReceived;
+        }
     }
 
     public void Dispose()
@@ -468,7 +550,10 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         _disposed = true;
         CancelPendingOperations();
         if (_enableSerialEvents)
+        {
             _serialService.LineReceived -= OnSerialLineReceived;
+            _serialService.DataReceived -= OnSerialDataReceived;
+        }
 
         if (_disposeSerialService)
         {
@@ -485,21 +570,27 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         if (!TrySend(() =>
         {
             _serialService.SendAscii(moveCmd);
-        }, out var err))
+        }, out var err, awaitDone: true))
         {
             StatusText = err;
             return;
         }
 
-        StatusText = $"Go To \"{point.Name}\" — TX {moveCmd} + G @ {SpeedPercent}%";
+        StatusText = $"Go To \"{point.Name}\" — TX {moveCmd} — chờ Dx...";
     }
 
 
-    private bool TrySend(Action send, out string error)
+    private bool TrySend(Action send, out string error, bool awaitDone = false)
     {
         if (_closing || _disposed)
         {
             error = "Đang đóng màn hình — thao tác bị hủy.";
+            return false;
+        }
+
+        if (awaitDone && IsAwaitingRobotDone)
+        {
+            error = "Đang chờ robot hoàn thành (Dx)...";
             return false;
         }
 
@@ -512,6 +603,8 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             send();
+            if (awaitDone)
+                BeginAwaitDone();
             error = string.Empty;
             return true;
         }
@@ -522,16 +615,90 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private void BeginAwaitDone()
+    {
+        _awaitDoneCts?.Cancel();
+        _awaitDoneCts?.Dispose();
+        _awaitDoneCts = new CancellationTokenSource();
+        var cts = _awaitDoneCts;
+        IsAwaitingRobotDone = true;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(AwaitDoneTimeout, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            Application.Current?.Dispatcher.InvokeAsync(() =>
+            {
+                if (!IsAwaitingRobotDone || !ReferenceEquals(_awaitDoneCts, cts))
+                    return;
+
+                CompleteAwaitDone();
+                StatusText = "Timeout — không nhận được Dx từ robot.";
+            });
+        });
+    }
+
+    private void CompleteAwaitDone()
+    {
+        if (!IsAwaitingRobotDone && _awaitDoneCts == null)
+            return;
+
+        _awaitDoneCts?.Cancel();
+        _awaitDoneCts?.Dispose();
+        _awaitDoneCts = null;
+        IsAwaitingRobotDone = false;
+    }
+
+    private void SetReturningHome(bool value)
+    {
+        if (_isReturningHome == value) return;
+        _isReturningHome = value;
+        OnPropertyChanged(nameof(CanAdjustJoints));
+        OnPropertyChanged(nameof(CanOperateRobot));
+        OnPropertyChanged(nameof(CanCloseWindow));
+    }
+
     private void OnSerialLineReceived(string line)
     {
+        if (RobotPickPlaceExecutor.IsDoneSignal(line))
+        {
+            Application.Current?.Dispatcher.InvokeAsync(() =>
+            {
+                if (!IsAwaitingRobotDone) return;
+                CompleteAwaitDone();
+                StatusText = $"Robot hoàn thành — RX: {line}";
+            });
+            return;
+        }
+
         var msg = line switch
         {
             _ when line.StartsWith('A') => $"Robot bắt đầu homing trục {line[1..]}...",
-            _ when line.StartsWith('D') => $"Robot hoàn thành homing trục {line[1..]}.",
+            _ when line.StartsWith('D') => $"Robot hoàn thành — RX: {line}",
             _ => $"RX: {line}"
         };
 
         Application.Current?.Dispatcher.InvokeAsync(() => StatusText = msg);
+    }
+
+    private void OnSerialDataReceived(string chunk)
+    {
+        if (!IsAwaitingRobotDone || !RobotPickPlaceExecutor.IsDoneSignal(chunk))
+            return;
+
+        Application.Current?.Dispatcher.InvokeAsync(() =>
+        {
+            if (!IsAwaitingRobotDone) return;
+            CompleteAwaitDone();
+            StatusText = "Robot hoàn thành — nhận Dx.";
+        });
     }
 
     private void ApplyCurrentJointsToPoint(RobotTeachPoint point)

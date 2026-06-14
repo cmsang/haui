@@ -71,6 +71,8 @@ public partial class MainWindow : System.Windows.Window
                     FpsText.Text = _viewModel.CurrentFps > 0 ? $"FPS: {_viewModel.CurrentFps}" : string.Empty);
             else if (e.PropertyName == nameof(MainViewModel.StatusText))
                 Dispatcher.InvokeAsync(() => StatusText.Text = _viewModel.StatusText);
+            else if (e.PropertyName == nameof(MainViewModel.IsMaterialTransferRunning))
+                Dispatcher.InvokeAsync(UpdateRobotOperationButtons);
         };
 
         // Nhận frame test → mở TestPipelineWindow trên UI thread
@@ -423,6 +425,8 @@ public partial class MainWindow : System.Windows.Window
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        UpdateRobotOperationButtons();
+
         _robotViewModel.ReloadAppSettings();
         _robotViewModel.RefreshAvailablePorts();
         if (!_robotViewModel.EnsureSerialConnected())
@@ -433,10 +437,16 @@ public partial class MainWindow : System.Windows.Window
         else
         {
             await _startupHandshake.RunAsync(msg =>
-                Dispatcher.InvokeAsync(() => RobotSerialDetail.Text = msg));
+                Dispatcher.InvokeAsync(() =>
+                {
+                    RobotSerialDetail.Text = msg;
+                    UpdateRobotSerialStatus();
+                    UpdateRobotOperationButtons();
+                }));
         }
 
         UpdateRobotSerialStatus();
+        UpdateRobotOperationButtons();
     }
 
     /// <summary>
@@ -462,9 +472,24 @@ public partial class MainWindow : System.Windows.Window
     {
         if (_robotViewModel.IsSerialConnected)
         {
-            RobotSerialText.Text = $"● Robot {_robotViewModel.SerialPortName} Online";
-            RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(0x27, 0xAE, 0x60));
+            if (_startupHandshake.IsCompleted)
+            {
+                RobotSerialText.Text = $"● Robot {_robotViewModel.SerialPortName} — Sẵn sàng";
+                RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(0x27, 0xAE, 0x60));
+            }
+            else if (_startupHandshake.IsRunning)
+            {
+                RobotSerialText.Text = $"● Robot {_robotViewModel.SerialPortName} — Đang homing";
+                RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(0xF3, 0x9C, 0x12));
+            }
+            else
+            {
+                RobotSerialText.Text = $"● Robot {_robotViewModel.SerialPortName} — Chưa sẵn sàng";
+                RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(0xE7, 0x4C, 0x3C));
+            }
         }
         else
         {
@@ -476,6 +501,17 @@ public partial class MainWindow : System.Windows.Window
         if (!string.IsNullOrWhiteSpace(_robotViewModel.StatusText)
             && _robotViewModel.StatusText.StartsWith("Serial", StringComparison.OrdinalIgnoreCase))
             RobotSerialDetail.Text = _robotViewModel.StatusText;
+    }
+
+    private void UpdateRobotOperationButtons()
+    {
+        var ready = RobotConnectionHelper.IsRobotArmReady(_serialService, _startupHandshake);
+        var transferRunning = _viewModel.IsMaterialTransferRunning;
+
+        btnTeaching.IsEnabled = ready;
+        btnManualControl.IsEnabled = ready;
+        btnPass.IsEnabled = ready && !transferRunning;
+        btnFail.IsEnabled = ready && !transferRunning;
     }
 
     private void EnsureMainSerialDataReceiver()
@@ -491,6 +527,9 @@ public partial class MainWindow : System.Windows.Window
 
     private void btnManualControl_Click(object sender, RoutedEventArgs e)
     {
+        if (!RobotConnectionHelper.EnsureRobotArmReady(_serialService, _startupHandshake))
+            return;
+
         var win = new wdManualControl(_serialService) { Owner = this };
         win.ShowDialog();
         EnsureMainSerialDataReceiver();
@@ -515,6 +554,9 @@ public partial class MainWindow : System.Windows.Window
 
     private void btnTeaching_Click(object sender, RoutedEventArgs e)
     {
+        if (!RobotConnectionHelper.EnsureRobotArmReady(_serialService, _startupHandshake))
+            return;
+
         var win = new wdTeaching(_serialService) { Owner = this };
         win.ShowDialog();
         EnsureMainSerialDataReceiver();
@@ -525,6 +567,8 @@ public partial class MainWindow : System.Windows.Window
     private async void btnPass_Click(object sender, RoutedEventArgs e)
     {
         if (_viewModel.IsMaterialTransferRunning) return;
+        if (!RobotConnectionHelper.EnsureRobotArmReady(_serialService, _startupHandshake))
+            return;
 
         btnPass.IsEnabled = false;
         btnFail.IsEnabled = false;
@@ -534,8 +578,7 @@ public partial class MainWindow : System.Windows.Window
         }
         finally
         {
-            btnPass.IsEnabled = true;
-            btnFail.IsEnabled = true;
+            UpdateRobotOperationButtons();
             StatusText.Text = _viewModel.StatusText;
         }
     }
@@ -543,6 +586,8 @@ public partial class MainWindow : System.Windows.Window
     private async void btnFail_Click(object sender, RoutedEventArgs e)
     {
         if (_viewModel.IsMaterialTransferRunning) return;
+        if (!RobotConnectionHelper.EnsureRobotArmReady(_serialService, _startupHandshake))
+            return;
 
         btnPass.IsEnabled = false;
         btnFail.IsEnabled = false;
@@ -552,8 +597,7 @@ public partial class MainWindow : System.Windows.Window
         }
         finally
         {
-            btnPass.IsEnabled = true;
-            btnFail.IsEnabled = true;
+            UpdateRobotOperationButtons();
             StatusText.Text = _viewModel.StatusText;
         }
     }

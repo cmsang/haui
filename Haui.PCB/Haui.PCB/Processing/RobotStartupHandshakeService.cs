@@ -1,7 +1,8 @@
 namespace Haui.PCB.Processing;
 
 /// <summary>
-/// Handshake khi mở app: gửi Rx → chờ Yx → gửi H0x. Lặp Rx mỗi 1s nếu chưa nhận Yx.
+/// Khởi động app: Rx → Yx → H0x → chờ Dx (homing xong) mới sẵn sàng thao tác.
+/// Lặp Rx mỗi 1s nếu chưa nhận Yx.
 /// </summary>
 public class RobotStartupHandshakeService
 {
@@ -18,6 +19,7 @@ public class RobotStartupHandshakeService
 
     public bool IsRunning { get; private set; }
 
+    /// <summary>Đã nhận Yx và homing H0 hoàn tất (Dx).</summary>
     public bool IsCompleted => _completed;
 
     public async Task RunAsync(Action<string>? reportStatus = null, CancellationToken ct = default)
@@ -27,7 +29,7 @@ public class RobotStartupHandshakeService
 
         if (!_serialService.IsConnected)
         {
-            reportStatus?.Invoke("Handshake — chưa kết nối Serial.");
+            reportStatus?.Invoke("Chưa kết nối Serial — kiểm tra cổng COM.");
             return;
         }
 
@@ -55,26 +57,38 @@ public class RobotStartupHandshakeService
         {
             while (!_cts.Token.IsCancellationRequested)
             {
-                reportStatus?.Invoke("Handshake — TX Rx, chờ Yx...");
+                reportStatus?.Invoke("Đang kết nối robot — chờ phản hồi...");
                 _serialService.SendAscii(RobotSerialProtocol.StartupHandshake);
 
                 var delayTask = Task.Delay(RetryInterval, _cts.Token);
                 var completed = await Task.WhenAny(readyTcs.Task, delayTask);
 
-                if (completed == readyTcs.Task)
+                if (completed != readyTcs.Task)
+                    continue;
+
+                await readyTcs.Task;
+                _serialService.DataReceived -= OnData;
+                _serialService.LineReceived -= OnLine;
+
+                reportStatus?.Invoke("Robot phản hồi — đang homing (H0x)...");
+                try
                 {
-                    await readyTcs.Task;
-                    reportStatus?.Invoke("Handshake — nhận Yx, TX H0x...");
-                    _serialService.SendHome(0);
+                    var executor = new RobotPickPlaceExecutor(_serialService);
+                    await executor.HomeAllAxesAsync(reportStatus, _cts.Token);
                     _completed = true;
-                    reportStatus?.Invoke("Handshake hoàn tất — đã gửi H0x (homing tất cả trục).");
-                    return;
+                    reportStatus?.Invoke("Robot sẵn sàng — homing hoàn tất.");
                 }
+                catch (TimeoutException)
+                {
+                    reportStatus?.Invoke("Homing quá thời gian — robot chưa sẵn sàng.");
+                }
+
+                return;
             }
         }
         catch (OperationCanceledException)
         {
-            reportStatus?.Invoke("Handshake bị hủy.");
+            reportStatus?.Invoke("Kết nối robot bị hủy.");
         }
         finally
         {

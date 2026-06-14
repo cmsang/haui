@@ -15,6 +15,7 @@ public partial class wdTeaching : Window
     private readonly RobotTeachViewModel _viewModel;
     private readonly IRobotSerialService _serialService;
     private readonly bool _ownsSerialService;
+    private bool _allowClose;
 
     public wdTeaching(IRobotSerialService? sharedSerialService = null)
     {
@@ -222,19 +223,58 @@ public partial class wdTeaching : Window
     }
 
     private void BtnClose_Click(object sender, RoutedEventArgs e)
-        => Close();
+    {
+        if (!_viewModel.CanCloseWindow)
+        {
+            if (_viewModel.IsOperationInProgress)
+                RobotWindowCloseHelper.ShowBusyCloseWarning();
+            return;
+        }
+
+        Close();
+    }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
+        if (RobotWindowCloseHelper.TryBlockCloseIfBusy(_viewModel.IsOperationInProgress, e))
+            return;
+
+        if (!_allowClose)
+        {
+            e.Cancel = true;
+            _ = ReturnHomeAndCloseAsync();
+            return;
+        }
+
+        FinalizeClose();
+        base.OnClosing(e);
+    }
+
+    private async Task ReturnHomeAndCloseAsync()
+    {
+        try
+        {
+            await _viewModel.ReturnToHomeAsync();
+        }
+        catch
+        {
+            // Vẫn đóng màn hình nếu homing H0 thất bại.
+        }
+        finally
+        {
+            _allowClose = true;
+            await Dispatcher.InvokeAsync(Close);
+        }
+    }
+
+    private void FinalizeClose()
+    {
         _viewModel.SaveConfiguration();
-        _viewModel.CancelPendingOperations();
 
         if (_ownsSerialService)
             _viewModel.Dispose();
         else
             _viewModel.Release();
-
-        base.OnClosing(e);
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
