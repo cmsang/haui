@@ -220,12 +220,7 @@ sequenceDiagram
 
 ## 8. Điều kiện cho phép thao tác robot
 
-<<<<<<< HEAD
 **Điều kiện:** `RobotConnectionHelper.IsRobotArmReady` = COM online **và** `handshake.IsCompleted`.
-=======
-**Màn hình:** `RobotTeachingWindow` (hoặc tab `RobotTeachingTabView` trong MainWindow)  
-**ViewModel:** `RobotTeachViewModel`
->>>>>>> develop
 
 ### Các thao tác bị khóa khi chưa sẵn sàng
 
@@ -258,13 +253,7 @@ sequenceDiagram
 
 ## 9. Màn hình Teaching
 
-<<<<<<< HEAD
 **File:** `wdTeaching` · `RobotTeachViewModel`
-=======
-**Màn hình:** `ManualControlWindow` (hoặc tab `ManualControlTabView` trong MainWindow)  
-**ViewModel:** `ManualControlViewModel`  
-**Executor:** `RobotPickPlaceExecutor`
->>>>>>> develop
 
 ### Load & lưu dữ liệu
 
@@ -281,11 +270,8 @@ Sau mỗi lệnh **jog / move / gripper / homing / Go To**:
 - Nhận `Dx` → mở lại nút.
 - Timeout: **120 giây**.
 
-| Thuộc tính | Ý nghĩa |
-|------------|---------|
-| `CanAdjustJoints` | Cho phép jog/slider (khóa khi chờ Dx) |
-| `CanOperateRobot` | Cần Serial + không chờ Dx |
-| `CanCloseWindow` | Cho phép nút Đóng |
+**Màn hình:** `wdTeaching`  
+**ViewModel:** `RobotTeachViewModel`
 
 ### Đóng màn hình Teaching
 
@@ -305,7 +291,9 @@ Sau mỗi lệnh **jog / move / gripper / homing / Go To**:
 
 ## 10. Màn hình Manual Control
 
-**File:** `wdManualControl` · `ManualControlViewModel`
+**Màn hình:** `ManualControlWindow` (hoặc tab `ManualControlTabView` trong MainWindow)  
+**ViewModel:** `ManualControlViewModel`  
+**Executor:** `RobotPickPlaceExecutor`
 
 ### Chức năng
 
@@ -403,17 +391,14 @@ flowchart TB
         S1 --> S2 --> S3
     end
 
-<<<<<<< HEAD
-    subgraph Operator
-        T[Teaching — teach DB]
-        M[Manual Control — test]
-        P[Pass / Fail sản xuất]
-=======
     subgraph Teaching
         T1[RobotTeachingWindow]
         T2[Teach → Update DB J1-J5]
         T1 --> T2
->>>>>>> develop
+    subgraph Operator
+        T[Teaching — teach DB]
+        M[Manual Control — test]
+        P[Pass / Fail sản xuất]
     end
 
     subgraph RobotOps

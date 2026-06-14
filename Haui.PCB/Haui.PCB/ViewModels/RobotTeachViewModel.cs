@@ -1,8 +1,10 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using Haui.PCB.Models;
+using Haui.PCB.Processing;
 
 namespace Haui.PCB.ViewModels;
 
@@ -63,6 +65,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private readonly IRobotConfigService _robotConfigService;
     private readonly IRobotSerialService _serialService;
     private readonly IAppSettingService _appSettingService;
+    private readonly RobotPickPlaceExecutor _pickPlaceExecutor;
     private readonly bool _disposeSerialService;
     private readonly bool _enableSerialEvents;
     private AppSetting _appSetting;
@@ -91,6 +94,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         _robotConfigService = robotConfigService;
         _serialService = serialService;
         _appSettingService = appSettingService;
+        _pickPlaceExecutor = new RobotPickPlaceExecutor(serialService);
         _disposeSerialService = disposeSerialService;
         _enableSerialEvents = enableSerialEvents;
         _appSetting = appSettingService.Load();
@@ -155,7 +159,6 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
     public string SerialConnectButtonText => IsSerialConnected ? "Ngắt kết nối" : "Kết nối";
 
-<<<<<<< HEAD
     /// <summary>Đang chờ robot phản hồi Dx sau lệnh jog/move/home/gripper.</summary>
     public bool IsAwaitingRobotDone
     {
@@ -184,9 +187,6 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
     /// <summary>Cho phép nhấn nút Đóng (không đang chờ Dx, không đang về Home).</summary>
     public bool CanCloseWindow => !IsAwaitingRobotDone && !_isReturningHome;
-=======
-    public bool IsVirtualSerial => _serialService.IsVirtual;
->>>>>>> develop
 
     public string SerialPortName
     {
@@ -255,34 +255,21 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         SyncConnectionState();
         if (IsSerialConnected)
         {
-            StatusText = _serialService.IsVirtual
-                ? "Serial ảo — không kết nối cổng COM thật."
-                : $"Serial online — {SerialPortName} @ {BaudRate}.";
+            StatusText = $"Serial online — {SerialPortName} @ {BaudRate}.";
             return true;
         }
 
         try
         {
-            var useVirtual = _appSettingService.Load().UseVirtualSerial();
-            if (!useVirtual && string.IsNullOrWhiteSpace(SerialPortName))
+            if (string.IsNullOrWhiteSpace(SerialPortName))
             {
                 StatusText = "Chưa cấu hình cổng COM trong setting.json.";
                 return false;
             }
 
-            var port = useVirtual ? VirtualRobotSerialService.VirtualPortName : SerialPortName;
-            _serialService.Connect(port, BaudRate);
+            _serialService.Connect(SerialPortName, BaudRate);
             IsSerialConnected = true;
-            if (useVirtual)
-            {
-                SerialPortName = VirtualRobotSerialService.VirtualPortName;
-                StatusText = "Serial ảo — không kết nối cổng COM thật.";
-            }
-            else
-            {
-                StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
-            }
-
+            StatusText = $"Đã kết nối {SerialPortName} @ {BaudRate}.";
             return true;
         }
         catch (Exception ex)
@@ -342,7 +329,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            StatusText = $"Lá»—i Jog: {ex.Message}";
+            StatusText = $"Lỗi Jog: {ex.Message}";
         }
     }
 
@@ -524,8 +511,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         SetReturningHome(true);
         try
         {
-            var executor = new RobotPickPlaceExecutor(_serialService);
-            await executor.HomeAllAxesAsync(msg => StatusText = msg, ct);
+            await _pickPlaceExecutor.HomeAllAxesAsync(msg => StatusText = msg, ct);
         }
         catch (TimeoutException ex)
         {
@@ -625,7 +611,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            error = $"Lá»—i Serial: {ex.Message}";
+            error = $"Lỗi Serial: {ex.Message}";
             return false;
         }
     }

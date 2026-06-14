@@ -31,4 +31,23 @@ public static class RobotWindowCloseHelper
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
     }
+
+    /// <summary>Nút Đóng — trả về true nếu có thể gọi Window.Close().</summary>
+    public static bool CanInitiateClose(bool canCloseWindow, bool isOperationInProgress)
+    {
+        if (canCloseWindow) return true;
+        if (isOperationInProgress) ShowBusyCloseWarning();
+        return false;
+    }
+
+    /// <summary>H0x → Dx rồi đóng cửa sổ (gọi từ OnClosing sau khi e.Cancel = true).</summary>
+    public static async Task CloseAfterHomingAsync(
+        Window window,
+        Func<Task> returnToHomeAsync,
+        Action markAllowClose)
+    {
+        await returnToHomeAsync();
+        markAllowClose();
+        window.Close();
+    }
 }
