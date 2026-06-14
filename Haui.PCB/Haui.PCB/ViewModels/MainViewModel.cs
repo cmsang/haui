@@ -273,14 +273,15 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public async Task CaptureTestFrameAsync()
+    /// <summary>Grab one frame from the running camera (caller owns the returned <see cref="Mat"/>).</summary>
+    public async Task<Mat?> CaptureFrameAsync()
     {
         StatusText = "Đang chụp ảnh...";
 
         if (_cameraService is null)
         {
             StatusText = "Camera chưa khởi động.";
-            return;
+            return null;
         }
 
         var frame = await Task.Run(() => _cameraService.GrabFrame());
@@ -289,10 +290,18 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             frame?.Dispose();
             StatusText = "Không thể chụp ảnh từ camera.";
-            return;
+            return null;
         }
 
-        frame = CropToSelectedRegion(frame);
+        return CropToSelectedRegion(frame);
+    }
+
+    public async Task CaptureTestFrameAsync()
+    {
+        var frame = await CaptureFrameAsync();
+        if (frame is null)
+            return;
+
         StatusText = "Đã mở Test Pipeline.";
         TestFrameCaptured?.Invoke(frame);
     }

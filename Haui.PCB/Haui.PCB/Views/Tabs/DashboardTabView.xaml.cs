@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Shapes;
 using Haui.PCB.ViewModels;
 using Haui.PCB.Views.Windows;
@@ -8,11 +9,20 @@ using Haui.PCB.Views.Windows;
 namespace Haui.PCB.Views.Tabs;
 
 /// <summary>
-/// Tab Dashboard — đồng hồ AGV/buffer và màn hình camera kiểm tra PCB.
+/// Dashboard tab — live camera, inline inspection results, and pipeline step gallery.
 /// </summary>
 public partial class DashboardTabView : UserControl
 {
+    private static readonly SolidColorBrush PassBackgroundBrush = new(Color.FromRgb(0xE8, 0xF5, 0xE9));
+    private static readonly SolidColorBrush PassForegroundBrush = new(Color.FromRgb(0x00, 0x75, 0x2A));
+    private static readonly SolidColorBrush FailBackgroundBrush = new(Color.FromRgb(0xFF, 0xED, 0xED));
+    private static readonly SolidColorBrush FailForegroundBrush = new(Color.FromRgb(0xD1, 0x34, 0x38));
+    private static readonly SolidColorBrush IdleBackgroundBrush = new(Color.FromRgb(0xFA, 0xFA, 0xFA));
+    private static readonly SolidColorBrush IdleForegroundBrush = new(Color.FromRgb(0x88, 0x88, 0x88));
+
     private readonly MainViewModel _viewModel;
+    private readonly TestPipelineViewModel _inspectionViewModel;
+    private readonly PipelineStepsViewModel _pipelineStepsViewModel;
     private readonly Window _owner;
     private readonly IAppSettingService _appSettingService = new AppSettingService();
     private bool _developerMode;
@@ -25,9 +35,18 @@ public partial class DashboardTabView : UserControl
     {
         _viewModel = viewModel;
         _owner = owner;
-        DataContext = viewModel;
+
+        var libraryService = new TemplateLibraryService();
+        var comparisonService = new RegionComparisonService();
+        _inspectionViewModel = new TestPipelineViewModel(
+            new PcbSegmentationService(),
+            new CompositeTemplateMatchService(libraryService, comparisonService));
+        _pipelineStepsViewModel = new PipelineStepsViewModel(new PipelineDebugService());
+
+        DataContext = _viewModel;
         InitializeComponent();
         WireViewModel();
+        WireInspectionViewModel();
     }
 
     private void WireViewModel()
@@ -45,17 +64,6 @@ public partial class DashboardTabView : UserControl
                     FpsText.Text = _viewModel.CurrentFps > 0 ? $"FPS: {_viewModel.CurrentFps}" : string.Empty);
             else if (e.PropertyName == nameof(MainViewModel.StatusText))
                 Dispatcher.InvokeAsync(() => StatusText.Text = _viewModel.StatusText);
-        };
-
-        _viewModel.TestFrameCaptured += frame =>
-        {
-            Dispatcher.InvokeAsync(() =>
-            {
-                var testWindow = new TestPipelineWindow { Owner = _owner };
-                testWindow.LoadImage(frame);
-                frame.Dispose();
-                testWindow.Show();
-            });
         };
 
         _viewModel.Test2FrameCaptured += frame =>
@@ -99,27 +107,113 @@ public partial class DashboardTabView : UserControl
         };
     }
 
+    private void WireInspectionViewModel()
+    {
+        PipelineStepsPanel.ItemsSource = _pipelineStepsViewModel.Steps;
+        _pipelineStepsViewModel.Steps.CollectionChanged += (_, _) =>
+            Dispatcher.InvokeAsync(UpdatePipelineStepsPlaceholder);
+
+        _inspectionViewModel.ProcessedImageReady += bitmap =>
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                if (bitmap is null)
+                    return;
+
+                ResultImage.Source = bitmap;
+                ResultPlaceholder.Visibility = Visibility.Collapsed;
+            });
+        };
+
+        _inspectionViewModel.AnnotatedImageReady += bitmap =>
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                if (bitmap is null)
+                {
+                    ResultImage.Source = null;
+                    ResultPlaceholder.Visibility = Visibility.Visible;
+                    ResultPlaceholder.Text = "Không tìm thấy bo mạch";
+                    return;
+                }
+
+                ResultImage.Source = bitmap;
+                ResultPlaceholder.Visibility = Visibility.Collapsed;
+            });
+        };
+
+        _inspectionViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(TestPipelineViewModel.IsFullMatch))
+                Dispatcher.InvokeAsync(UpdatePassFailDisplay);
+            else if (e.PropertyName == nameof(TestPipelineViewModel.StatusText))
+                Dispatcher.InvokeAsync(() =>
+                {
+                    if (!string.IsNullOrWhiteSpace(_inspectionViewModel.StatusText))
+                        StatusText.Text = _inspectionViewModel.StatusText;
+                });
+        };
+    }
+
+    private void UpdatePassFailDisplay()
+    {
+        switch (_inspectionViewModel.IsFullMatch)
+        {
+            case true:
+                PassFailText.Text = "PASS";
+                PassFailPanel.Background = PassBackgroundBrush;
+                PassFailText.Foreground = PassForegroundBrush;
+                break;
+            case false:
+                PassFailText.Text = "FAIL";
+                PassFailPanel.Background = FailBackgroundBrush;
+                PassFailText.Foreground = FailForegroundBrush;
+                break;
+            default:
+                PassFailText.Text = "—";
+                PassFailPanel.Background = IdleBackgroundBrush;
+                PassFailText.Foreground = IdleForegroundBrush;
+                break;
+        }
+    }
+
+    private void UpdatePipelineStepsPlaceholder()
+    {
+        PipelineStepsPlaceholder.Visibility = _pipelineStepsViewModel.Steps.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void ResetInspectionDisplay()
+    {
+        ResultImage.Source = null;
+        ResultPlaceholder.Text = "Chưa kiểm tra";
+        ResultPlaceholder.Visibility = Visibility.Visible;
+        _pipelineStepsViewModel.Steps.Clear();
+        UpdatePipelineStepsPlaceholder();
+        PassFailText.Text = "—";
+        PassFailPanel.Background = IdleBackgroundBrush;
+        PassFailText.Foreground = IdleForegroundBrush;
+    }
+
     public void UpdateRobotSerialStatus(bool isConnected, string portName, bool isVirtual = false)
     {
         if (isConnected && isVirtual)
         {
             RobotSerialText.Text = "● Robot Serial ảo";
-            RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(0xE6, 0x7E, 0x22));
+            RobotSerialText.Foreground = new SolidColorBrush(Color.FromRgb(0xE6, 0x7E, 0x22));
             return;
         }
 
         if (isConnected)
         {
             RobotSerialText.Text = $"● Robot {portName} Online";
-            RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(0x27, 0xAE, 0x60));
+            RobotSerialText.Foreground = new SolidColorBrush(Color.FromRgb(0x27, 0xAE, 0x60));
         }
         else
         {
             RobotSerialText.Text = "● Robot Offline";
-            RobotSerialText.Foreground = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(0xE7, 0x4C, 0x3C));
+            RobotSerialText.Foreground = new SolidColorBrush(Color.FromRgb(0xE7, 0x4C, 0x3C));
         }
     }
 
@@ -129,6 +223,7 @@ public partial class DashboardTabView : UserControl
         var visibility = _developerMode ? Visibility.Visible : Visibility.Collapsed;
         BtnCreateTemplate.Visibility = visibility;
         BtnCreateFiducialTemplates.Visibility = visibility;
+        BtnTest2.Visibility = visibility;
 
         if (!_developerMode)
         {
@@ -146,6 +241,7 @@ public partial class DashboardTabView : UserControl
     private async void UserControl_Loaded(object sender, RoutedEventArgs e)
     {
         ApplyDeveloperModeUi();
+        UpdatePipelineStepsPlaceholder();
         if (CameraComboBox.Items.Count > 0) return;
         await LoadCamerasAsync();
     }
@@ -234,6 +330,7 @@ public partial class DashboardTabView : UserControl
             }
             BtnCapture.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
+            ResetInspectionDisplay();
         }
         catch (Exception ex)
         {
@@ -258,6 +355,7 @@ public partial class DashboardTabView : UserControl
         CameraImage.Source = null;
         CameraPlaceholder.Visibility = Visibility.Visible;
         FpsText.Text = string.Empty;
+        ResetInspectionDisplay();
     }
 
     private async void BtnTest_Click(object sender, RoutedEventArgs e)
@@ -265,7 +363,17 @@ public partial class DashboardTabView : UserControl
         BtnTest.IsEnabled = false;
         try
         {
-            await _viewModel.CaptureTestFrameAsync();
+            using var frame = await _viewModel.CaptureFrameAsync();
+            if (frame is null)
+                return;
+
+            ResetInspectionDisplay();
+            ResultPlaceholder.Text = "Đang xử lý...";
+            ResultPlaceholder.Visibility = Visibility.Visible;
+
+            using var stepsFrame = frame.Clone();
+            _pipelineStepsViewModel.LoadImage(stepsFrame);
+            await _inspectionViewModel.InspectAsync(frame);
         }
         finally
         {

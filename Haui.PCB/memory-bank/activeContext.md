@@ -8,6 +8,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Main tab layout (2026-06-14):** `ContentControl` stretch + tab `RowDefinition` Auto/`*` — fixes broken UI after tab refactor.
 
+**Dashboard inline inspection (2026-06-14):** Wireframe layout — camera (left), result + PASS/FAIL (right), pipeline steps gallery (bottom). **Test** chụp ảnh và kiểm tra tại chỗ (không mở `TestPipelineWindow`); PASS khi `IsFullMatch` (mọi vùng trong `AllowedRegionNames` đạt ngưỡng).
+
 **Shell Monitor panel (2026-06-14):** Load/Unload + AGV gauges extracted to `Views/Controls/MonitorView` — sticky above `MainContentHost`; state in `MonitorViewModel` owned by `MainWindow.Monitor`. Tabs receive via `LineMonitor` / `Initialize(..., lineMonitor)`.
 
 ## Configuration (single file)

@@ -19,6 +19,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     private bool _isBusy;
     private bool _disposed;
     private double _matchThresholdPercent = ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
+    private bool? _isFullMatch;
 
     // ──── Sự kiện ────────────────────────────────────────────────────────────
 
@@ -45,6 +46,13 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public bool HasSource => _sourceMat is not null && !_sourceMat.Empty();
+
+    /// <summary>True when every configured region is recognized; false on failure; null before first run.</summary>
+    public bool? IsFullMatch
+    {
+        get => _isFullMatch;
+        private set { _isFullMatch = value; OnPropertyChanged(); }
+    }
 
     /// <summary>Ngưỡng % từ <c>setting.json</c> (cập nhật mỗi lần so).</summary>
     public double MatchThresholdPercent => _matchThresholdPercent;
@@ -80,8 +88,19 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         _sourceMat?.Dispose();
         _sourceMat = mat.Clone();
         OnPropertyChanged(nameof(HasSource));
+        IsFullMatch = null;
 
         _ = RunSegmentationAsync();
+    }
+
+    /// <summary>Load a captured frame and await the full inspection pipeline.</summary>
+    public async Task InspectAsync(Mat mat)
+    {
+        _sourceMat?.Dispose();
+        _sourceMat = mat.Clone();
+        OnPropertyChanged(nameof(HasSource));
+        IsFullMatch = null;
+        await RunSegmentationAsync();
     }
 
     /// <summary>Nạp ảnh từ đường dẫn file.</summary>
@@ -126,8 +145,10 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
             if (newBoard is null)
             {
+                IsFullMatch = false;
                 StatusText = "Không phát hiện được bo mạch. Thử điều chỉnh ảnh.";
                 ProcessedImageReady?.Invoke(null);
+                AnnotatedImageReady?.Invoke(null);
                 return;
             }
 
@@ -139,8 +160,10 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            StatusText = $"Lá»—i: {ex.Message}";
+            IsFullMatch = false;
+            StatusText = $"Lỗi: {ex.Message}";
             ProcessedImageReady?.Invoke(null);
+            AnnotatedImageReady?.Invoke(null);
         }
         finally
         {
@@ -164,7 +187,9 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         if (match is null)
         {
             RefreshMatchThresholdFromConfig();
+            IsFullMatch = false;
             StatusText = "Bo mạch đã cắt. Chưa có mẫu nào trong thư viện (hoặc thiếu vùng/ảnh).";
+            PublishAnnotatedImage(newBoard, []);
             return;
         }
 
@@ -205,6 +230,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
         ApplyRegionResultsToGrids(match.RegionResults);
         PublishAnnotatedImage(boardForDisplay, match.RegionResults);
+        IsFullMatch = match.IsFullMatch;
 
         var thresholdText = FormatThresholdPercent(match.MatchThresholdPercent);
         var rotationNote = usedRotation ? " (đã xoay ảnh 180°)" : "";
