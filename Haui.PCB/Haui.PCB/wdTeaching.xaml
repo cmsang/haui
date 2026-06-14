@@ -6,7 +6,7 @@
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         Title="Cài đặt Robot — Teach vị trí"
-        Height="935" Width="1480"
+        Height="835" Width="1280"
         MinHeight="600" MinWidth="100"
         WindowStartupLocation="CenterOwner"
         Loaded="Window_Loaded"
@@ -72,6 +72,11 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="#0078D4"/>
                             </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#B0BEC5"/>
+                                <Setter Property="Foreground" Value="#888888"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -95,6 +100,11 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="#D35400"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#B0BEC5"/>
+                                <Setter Property="Foreground" Value="#888888"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -208,7 +218,7 @@
         <!-- Main content -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="580"/>
+                <ColumnDefinition Width="550"/>
                 <ColumnDefinition Width="12"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
@@ -267,6 +277,7 @@
                                                     Margin="0,0,10,0"
                                                     DataContext="{Binding}"
                                                     Tag="{Binding}"
+                                                    IsEnabled="{Binding DataContext.CanOperateRobot, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     Click="JointHome_Click">
                                                 <md:PackIcon Kind="Home" Width="20" Height="20"
                                                              IsHitTestVisible="False"/>
@@ -274,18 +285,23 @@
 
                                             <Button Grid.Column="2" Content="−" Style="{StaticResource JogBtn}"
                                                     Margin="0,0,12,0"
-                                                    Tag="{Binding}" Click="JogMinus_Click"/>
+                                                    Tag="{Binding}"
+                                                    IsEnabled="{Binding DataContext.CanAdjustJoints, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    Click="JogMinus_Click"/>
 
                                             <Slider Grid.Column="3" Margin="4,0"
                                                     VerticalAlignment="Center"
                                                     Minimum="{Binding MinAngle}"
                                                     Maximum="{Binding MaxAngle}"
+                                                    IsEnabled="{Binding DataContext.CanAdjustJoints, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     Value="{Binding Angle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                     PreviewMouseLeftButtonUp="JointSlider_Released"/>
 
                                             <Button Grid.Column="4" Content="+" Style="{StaticResource JogBtn}"
                                                     Margin="12,0,10,0"
-                                                    Tag="{Binding}" Click="JogPlus_Click"/>
+                                                    Tag="{Binding}"
+                                                    IsEnabled="{Binding DataContext.CanAdjustJoints, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    Click="JogPlus_Click"/>
 
                                             <Border Grid.Column="5" Style="{StaticResource AngleBadge}">
                                                 <TextBlock Text="{Binding AngleText}"
@@ -302,6 +318,7 @@
                     <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,12,0,0">
                         <Button Style="{StaticResource SecondaryBtn}" Margin="0,0,10,0"
                                 ToolTip="Gửi lệnh H+0 — homing firmware tất cả trục"
+                                IsEnabled="{Binding CanOperateRobot}"
                                 Click="BtnHoming_Click">
                             <StackPanel Orientation="Horizontal">
                                 <md:PackIcon Kind="Home" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
@@ -327,7 +344,7 @@
 
                     <StackPanel Grid.Row="0">
                         <TextBlock Text="Danh sách vị trí teach" Style="{StaticResource SectionHeader}"/>
-                        <TextBlock Text="PickUp · Home · Wait · OK1–6 · NG1–6"
+                        <TextBlock Text="PickUp · Wait · OK1–6 · NG1–6"
                                    FontSize="11" Foreground="#888" Margin="0,-6,0,0"/>
                     </StackPanel>
 
@@ -368,6 +385,7 @@
                     <!-- Actions -->
                     <WrapPanel Grid.Row="3" Margin="0,10,0,0">
                         <Button Content="Go To" Style="{StaticResource PrimaryBtn}" Margin="0,0,8,8"
+                                IsEnabled="{Binding CanOperateRobot}"
                                 Click="BtnGoTo_Click"/>
                         <Button Content="Teach vị trí" Style="{StaticResource PrimaryBtn}" Margin="0,0,8,8"
                                 Click="BtnTeach_Click"/>

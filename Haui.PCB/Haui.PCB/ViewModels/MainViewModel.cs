@@ -3,14 +3,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using OpenCvSharp;
 using Haui.PCB.Processing;
+using OpenCvSharp;
 
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// ViewModel cho MainWindow — chứa toàn bộ logic nghiệp vụ liên quan đến camera.
-/// Tách biệt hoàn toàn khỏi UI (WPF), tuân theo SOLID: SRP, DIP, OCP.
+/// ViewModel cho MainWindow — camera và pipeline chụp ảnh PCB.
 /// </summary>
 public class MainViewModel : INotifyPropertyChanged, IDisposable
 {
@@ -26,31 +25,17 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly Stopwatch _fpsStopwatch = Stopwatch.StartNew();
     private bool _disposed;
 
-    // Vùng nhận diện (tọa độ tương đối 0..1 so với kích thước frame thực)
     private OpenCvSharp.Rect? _selectedRegion;
     private const string RegionSettingsPath = "last_region.json";
 
-    // Kích thước frame thực tế mới nhất để tính toán vùng
     private int _lastFrameWidth;
     private int _lastFrameHeight;
 
-    // ──── Sự kiện ────────────────────────────────────────────────────────────
-
-    /// <summary>Phát khi có frame mới sẵn sàng để hiển thị (đã Freeze).</summary>
     public event Action<System.Windows.Media.Imaging.BitmapSource>? FrameReady;
-
-    /// <summary>Phát khi người dùng nhấn Tạo mẫu — truyền frame để mở CreateTemplateWindow.</summary>
     public event Action<Mat>? TemplateFrameCaptured;
-
-    /// <summary>Phát khi người dùng nhấn Test — truyền frame để mở TestPipelineWindow.</summary>
     public event Action<Mat>? TestFrameCaptured;
-
-    /// <summary>Phát khi người dùng nhấn Test 2 — truyền frame để mở PipelineStepsWindow.</summary>
     public event Action<Mat>? Test2FrameCaptured;
-
     public event PropertyChangedEventHandler? PropertyChanged;
-
-    // ──── Properties ─────────────────────────────────────────────────────────
 
     public IReadOnlyList<CameraInfo> Cameras
     {
@@ -84,7 +69,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsRunning => _cameraService.IsRunning;
 
-    /// <summary>Vùng nhận diện trên frame thực (pixel). Null = toàn bộ khung hình.</summary>
     public OpenCvSharp.Rect? SelectedRegion
     {
         get => _selectedRegion;
@@ -96,11 +80,10 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    /// <summary>Kích thước frame thực tế mới nhất (để View tính toán tỉ lệ).</summary>
     public int LastFrameWidth => _lastFrameWidth;
     public int LastFrameHeight => _lastFrameHeight;
 
-    // ──── Khởi tạo ───────────────────────────────────────────────────────────
+    public bool IsMaterialTransferRunning => _materialTransfer?.IsRunning ?? false;
 
     public MainViewModel(ICameraService cameraService, IMaterialTransferService? materialTransfer = null)
     {
@@ -110,11 +93,9 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         LoadRegion();
     }
 
-    public bool IsMaterialTransferRunning => _materialTransfer?.IsRunning ?? false;
-
     public void CancelMaterialTransfer() => _materialTransfer?.Cancel();
 
-    /// <summary>Pass — PickUp → ô OK (xoay vòng OK1–OK6).</summary>
+    /// <summary>Pass — PickUp → ô OK (xoay vòng OK1–OK4).</summary>
     public async Task TransferPassMaterial()
     {
         if (_materialTransfer == null)
@@ -129,10 +110,17 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        await _materialTransfer.TransferPassAsync(msg => StatusText = msg);
+        try
+        {
+            await _materialTransfer.TransferPassAsync(msg => StatusText = msg);
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(IsMaterialTransferRunning));
+        }
     }
 
-    /// <summary>Fail — PickUp → ô NG (xoay vòng NG1–NG6).</summary>
+    /// <summary>Fail — PickUp → ô NG (xoay vòng NG1–NG4).</summary>
     public async Task TransferFailMaterial()
     {
         if (_materialTransfer == null)
@@ -147,12 +135,16 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        await _materialTransfer.TransferFailAsync(msg => StatusText = msg);
+        try
+        {
+            await _materialTransfer.TransferFailAsync(msg => StatusText = msg);
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(IsMaterialTransferRunning));
+        }
     }
 
-    // ──── Commands / Actions ──────────────────────────────────────────────────
-
-    /// <summary>Dò tìm camera thực tế trên máy và nạp vào danh sách.</summary>
     public async Task RefreshCamerasAsync()
     {
         IsBusy = true;
@@ -163,19 +155,13 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         var cameras = await _cameraService.EnumerateCamerasAsync();
         Cameras = cameras;
 
-        if (cameras.Count == 0)
-        {
-            StatusText = "Không phát hiện camera nào.";
-        }
-        else
-        {
-            StatusText = $"Tìm thấy {cameras.Count} camera.";
-        }
+        StatusText = cameras.Count == 0
+            ? "Không phát hiện camera nào."
+            : $"Tìm thấy {cameras.Count} camera.";
 
         IsBusy = false;
     }
 
-    /// <summary>Tải độ phân giải hỗ trợ của camera được chọn.</summary>
     public async Task LoadResolutionsAsync(string monikerString)
     {
         IsBusy = true;
@@ -185,17 +171,13 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         var resolutions = await _cameraService.GetSupportedResolutionsAsync(monikerString);
         Resolutions = resolutions;
 
-        if (resolutions.Count == 0)
-            StatusText = "Camera không phản hồi độ phân giải.";
-        else
-            StatusText = $"Sẵn sàng. {resolutions.Count} độ phân giải hỗ trợ.";
+        StatusText = resolutions.Count == 0
+            ? "Camera không phản hồi độ phân giải."
+            : $"Sẵn sàng. {resolutions.Count} độ phân giải hỗ trợ.";
 
         IsBusy = false;
     }
 
-    /// <summary>
-    /// Tìm index mặc định ưu tiên 1280×720 cho danh sách độ phân giải hiện tại.
-    /// </summary>
     public int GetDefaultResolutionIndex()
     {
         int idx = Resolutions
@@ -204,7 +186,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         return idx >= 0 ? idx : Resolutions.Count / 2;
     }
 
-    /// <summary>Bắt đầu camera với camera và độ phân giải đã chọn.</summary>
     public void StartCamera(string monikerString, int width, int height)
     {
         _cameraService.Start(monikerString, width, height);
@@ -212,7 +193,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         StatusText = $"Camera đang chạy ({width}×{height})";
     }
 
-    /// <summary>Dừng camera.</summary>
     public void StopCamera()
     {
         _cameraService.Stop();
@@ -222,7 +202,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         StatusText = "Camera đã dừng.";
     }
 
-    /// <summary>Chụp frame hiện tại và phát sự kiện TestFrameCaptured.</summary>
     public async Task CaptureTestFrameAsync()
     {
         StatusText = "Đang chụp ảnh...";
@@ -236,24 +215,11 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        // Crop theo vùng đã chọn nếu có
-        if (_selectedRegion.HasValue)
-        {
-            var roi = ClampRect(_selectedRegion.Value, frame.Width, frame.Height);
-            if (roi.Width > 0 && roi.Height > 0)
-            {
-                var cropped = new Mat(frame, roi);
-                frame.Dispose();
-                frame = cropped.Clone();
-                cropped.Dispose();
-            }
-        }
-
+        frame = CropToSelectedRegion(frame);
         StatusText = "Đã mở Test Pipeline.";
         TestFrameCaptured?.Invoke(frame);
     }
 
-    /// <summary>Chụp frame từ vùng đã chọn và phát sự kiện Test2FrameCaptured để mở PipelineStepsWindow.</summary>
     public async Task CaptureTest2FrameAsync()
     {
         StatusText = "Đang chụp ảnh (Test 2)...";
@@ -267,24 +233,11 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        // Crop theo vùng đã chọn nếu có
-        if (_selectedRegion.HasValue)
-        {
-            var roi = ClampRect(_selectedRegion.Value, frame.Width, frame.Height);
-            if (roi.Width > 0 && roi.Height > 0)
-            {
-                var cropped = new Mat(frame, roi);
-                frame.Dispose();
-                frame = cropped.Clone();
-                cropped.Dispose();
-            }
-        }
-
+        frame = CropToSelectedRegion(frame);
         StatusText = "Đã mở Pipeline Debug.";
         Test2FrameCaptured?.Invoke(frame);
     }
 
-    /// <summary>Chụp frame hiện tại và phát sự kiện TemplateFrameCaptured để mở form tạo mẫu.</summary>
     public async Task CaptureTemplateFrameAsync()
     {
         StatusText = "Đang chụp ảnh để tạo mẫu...";
@@ -302,11 +255,24 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         TemplateFrameCaptured?.Invoke(frame);
     }
 
-    // ──── Xử lý frame ────────────────────────────────────────────────────────
+    private Mat CropToSelectedRegion(Mat frame)
+    {
+        if (!_selectedRegion.HasValue)
+            return frame;
+
+        var roi = ClampRect(_selectedRegion.Value, frame.Width, frame.Height);
+        if (roi.Width <= 0 || roi.Height <= 0)
+            return frame;
+
+        var cropped = new Mat(frame, roi);
+        frame.Dispose();
+        var result = cropped.Clone();
+        cropped.Dispose();
+        return result;
+    }
 
     private void OnFrameArrived(Mat frame)
     {
-        // Đo FPS
         _frameCount++;
         if (_fpsStopwatch.Elapsed.TotalSeconds >= 1.0)
         {
@@ -315,14 +281,12 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             _fpsStopwatch.Restart();
         }
 
-        // Lưu kích thước frame để View tính tỉ lệ
         if (frame.Width != _lastFrameWidth || frame.Height != _lastFrameHeight)
         {
             _lastFrameWidth = frame.Width;
             _lastFrameHeight = frame.Height;
         }
 
-        // Vẽ hình chữ nhật xanh cho vùng nhận diện
         if (_selectedRegion.HasValue)
         {
             var roi = ClampRect(_selectedRegion.Value, frame.Width, frame.Height);
@@ -330,7 +294,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
                 Cv2.Rectangle(frame, roi, new Scalar(0, 200, 0), 2);
         }
 
-        // Convert sang BitmapSource trên thread hiện tại (background), freeze để cross-thread an toàn
         var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(frame);
         bitmap.Freeze();
         FrameReady?.Invoke(bitmap);
@@ -381,12 +344,8 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         catch { /* bỏ qua lỗi đọc file */ }
     }
 
-    // ──── INotifyPropertyChanged ──────────────────────────────────────────────
-
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-
-    // ──── IDisposable ─────────────────────────────────────────────────────────
 
     public void Dispose()
     {

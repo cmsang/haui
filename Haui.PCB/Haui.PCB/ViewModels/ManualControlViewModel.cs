@@ -27,9 +27,12 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     private int _speedPercent = 50;
     private bool _isSerialConnected;
     private bool _isTestRunning;
+    private bool _isAwaitingRobotDone;
+    private bool _isReturningHome;
     private bool _disposed;
     private bool _closing;
     private CancellationTokenSource? _testCts;
+    private CancellationTokenSource? _commandCts;
 
     public ManualControlViewModel(
         IRobotConfigService robotConfigService,
@@ -54,6 +57,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
         RefreshAvailablePorts();
         _serialService.LineReceived += OnSerialLineReceived;
+        _serialService.DataReceived += OnSerialDataReceived;
         SyncConnectionState();
     }
 
@@ -67,11 +71,40 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         {
             _isTestRunning = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(CanRunTest));
+            NotifyControlStateChanged();
         }
     }
 
-    public bool CanRunTest => !IsTestRunning && HasSelectedDestination;
+    public bool IsAwaitingRobotDone
+    {
+        get => _isAwaitingRobotDone;
+        private set
+        {
+            if (_isAwaitingRobotDone == value) return;
+            _isAwaitingRobotDone = value;
+            OnPropertyChanged();
+            NotifyControlStateChanged();
+        }
+    }
+
+    /// <summary>Cho phép thao tác điều khiển robot trên màn hình.</summary>
+    public bool CanOperateControls =>
+        !IsAwaitingRobotDone && !IsTestRunning && !_isReturningHome && !_closing && !_disposed;
+
+    public bool CanRunTest =>
+        CanOperateControls && HasSelectedDestination && IsSerialConnected;
+
+    public bool CanGoToPickUp => CanOperateControls && IsSerialConnected;
+
+    public bool CanGoToDestination =>
+        CanOperateControls && HasSelectedDestination && IsSerialConnected;
+
+    /// <summary>Chu trình / lệnh đang chạy — chưa nhận Dx.</summary>
+    public bool IsOperationInProgress => IsTestRunning || IsAwaitingRobotDone;
+
+    /// <summary>Cho phép nhấn nút Đóng (không đang chờ Dx, không đang homing H0).</summary>
+    public bool CanCloseWindow =>
+        !IsTestRunning && !IsAwaitingRobotDone && !_isReturningHome;
 
     public RobotTeachPoint? SelectedDestination
     {
@@ -83,6 +116,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(HasSelectedDestination));
             OnPropertyChanged(nameof(SelectedDestinationSummary));
             OnPropertyChanged(nameof(CanRunTest));
+            OnPropertyChanged(nameof(CanGoToDestination));
         }
     }
 
@@ -104,6 +138,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             _isSerialConnected = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(SerialConnectButtonText));
+            NotifyControlStateChanged();
         }
     }
 
@@ -245,6 +280,16 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             _testCts = null;
         }
 
+        if (_commandCts != null)
+        {
+            try { _commandCts.Cancel(); }
+            catch (ObjectDisposedException) { }
+
+            _commandCts.Dispose();
+            _commandCts = null;
+        }
+
+        IsAwaitingRobotDone = false;
         IsTestRunning = false;
     }
 
@@ -257,9 +302,9 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         if (_closing || _disposed)
             return;
 
-        if (IsTestRunning)
+        if (IsTestRunning || IsAwaitingRobotDone)
         {
-            StatusText = "Chu trình test đang chạy.";
+            StatusText = "Đang chờ robot hoàn thành (Dx)...";
             return;
         }
 
@@ -321,8 +366,11 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public void GoToPickUp()
+    public async Task GoToPickUpAsync()
     {
+        if (!CanGoToPickUp)
+            return;
+
         var pickUp = GetTeachPoint(RobotTeachPositions.PickUp);
         if (pickUp == null)
         {
@@ -330,18 +378,92 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        SendMoveOnly(pickUp, "PickUp");
+        if (!EnsureSerialConnected())
+            return;
+
+        await RunMoveCommandAsync(pickUp, "PickUp");
     }
 
-    public void GoToSelectedDestination()
+    public async Task GoToSelectedDestinationAsync()
     {
+        if (!CanGoToDestination)
+            return;
+
         if (SelectedDestination == null)
         {
             StatusText = "Chọn vị trí đích trong bảng.";
             return;
         }
 
-        SendMoveOnly(SelectedDestination, SelectedDestination.Name);
+        if (!EnsureSerialConnected())
+            return;
+
+        await RunMoveCommandAsync(SelectedDestination, SelectedDestination.Name);
+    }
+
+    private async Task RunMoveCommandAsync(RobotTeachPoint point, string label)
+    {
+        _closing = false;
+        _commandCts?.Cancel();
+        _commandCts?.Dispose();
+        _commandCts = new CancellationTokenSource();
+        var cts = _commandCts;
+        IsAwaitingRobotDone = true;
+
+        try
+        {
+            await _pickPlaceExecutor.MoveToPointAsync(
+                point, msg => StatusText = msg, cts.Token);
+            StatusText = $"Đã tới {label}.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Đã hủy lệnh di chuyển.";
+        }
+        catch (TimeoutException ex)
+        {
+            StatusText = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Lỗi di chuyển → {label}: {ex.Message}";
+        }
+        finally
+        {
+            if (ReferenceEquals(_commandCts, cts))
+            {
+                _commandCts.Dispose();
+                _commandCts = null;
+            }
+
+            IsAwaitingRobotDone = false;
+        }
+    }
+
+    /// <summary>Gửi H0x (homing firmware) và chờ Dx trước khi đóng màn hình.</summary>
+    public async Task ReturnToHomeAsync(CancellationToken ct = default)
+    {
+        SyncConnectionState();
+        if (!_serialService.IsConnected)
+            return;
+
+        SetReturningHome(true);
+        try
+        {
+            await _pickPlaceExecutor.HomeAllAxesAsync(msg => StatusText = msg, ct);
+        }
+        catch (TimeoutException ex)
+        {
+            StatusText = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Homing H0 khi đóng màn hình: {ex.Message}";
+        }
+        finally
+        {
+            SetReturningHome(false);
+        }
     }
 
     public void Release()
@@ -349,6 +471,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed) return;
         CancelPendingOperations();
         _serialService.LineReceived -= OnSerialLineReceived;
+        _serialService.DataReceived -= OnSerialDataReceived;
     }
 
     public void Dispose()
@@ -357,6 +480,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         _disposed = true;
         CancelPendingOperations();
         _serialService.LineReceived -= OnSerialLineReceived;
+        _serialService.DataReceived -= OnSerialDataReceived;
 
         if (_disposeSerialService)
         {
@@ -382,49 +506,9 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             : RobotTeachPositions.CreateDefault();
     }
 
-    private void SendMoveOnly(RobotTeachPoint point, string label)
-    {
-        if (!TrySend(() =>
-        {
-            var cmd = RobotSerialProtocol.MoveCommand(
-                point.J1, point.J2, point.J3, point.J4, point.J5);
-            _serialService.SendAscii(cmd);
-        }, out var err))
-            StatusText = err;
-        else
-            StatusText = $"TX move → {label} (không chờ Dx)";
-    }
-
-    private bool TrySend(Action send, out string error)
-    {
-        if (_closing || _disposed)
-        {
-            error = "Đang đóng màn hình — thao tác bị hủy.";
-            return false;
-        }
-
-        if (!IsSerialConnected)
-        {
-            error = "Chưa kết nối SerialPort.";
-            return false;
-        }
-
-        try
-        {
-            send();
-            error = string.Empty;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            error = $"Lỗi Serial: {ex.Message}";
-            return false;
-        }
-    }
-
     private void OnSerialLineReceived(string line)
     {
-        if (IsTestRunning) return;
+        if (IsTestRunning || IsAwaitingRobotDone) return;
 
         var msg = line switch
         {
@@ -434,6 +518,32 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         };
 
         Application.Current?.Dispatcher.InvokeAsync(() => StatusText = msg);
+    }
+
+    private void OnSerialDataReceived(string chunk)
+    {
+        if (IsTestRunning || IsAwaitingRobotDone) return;
+        if (!RobotPickPlaceExecutor.IsDoneSignal(chunk)) return;
+
+        Application.Current?.Dispatcher.InvokeAsync(() =>
+            StatusText = "Robot hoàn thành — nhận Dx.");
+    }
+
+    private void SetReturningHome(bool value)
+    {
+        if (_isReturningHome == value) return;
+        _isReturningHome = value;
+        NotifyControlStateChanged();
+    }
+
+    private void NotifyControlStateChanged()
+    {
+        OnPropertyChanged(nameof(CanOperateControls));
+        OnPropertyChanged(nameof(CanRunTest));
+        OnPropertyChanged(nameof(CanGoToPickUp));
+        OnPropertyChanged(nameof(CanGoToDestination));
+        OnPropertyChanged(nameof(IsOperationInProgress));
+        OnPropertyChanged(nameof(CanCloseWindow));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)

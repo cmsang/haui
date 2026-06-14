@@ -19,6 +19,29 @@ public class RobotPickPlaceExecutor
         _serialService = serialService;
     }
 
+    /// <summary>Di chuyển tới một vị trí teach và chờ Dx.</summary>
+    public async Task MoveToPointAsync(
+        RobotTeachPoint point,
+        Action<string>? reportStatus,
+        CancellationToken ct)
+    {
+        reportStatus?.Invoke($"Di chuyển về {point.Name} — gửi lệnh...");
+        SendMove(point);
+        reportStatus?.Invoke($"Di chuyển về {point.Name} — chờ Dx...");
+        await WaitForDoneAsync(StepTimeout, ct);
+        reportStatus?.Invoke($"Đã tới {point.Name}.");
+    }
+
+    /// <summary>Homing tất cả trục (H0x) và chờ Dx.</summary>
+    public async Task HomeAllAxesAsync(Action<string>? reportStatus, CancellationToken ct)
+    {
+        reportStatus?.Invoke("Homing tất cả trục (H0x) — gửi lệnh...");
+        _serialService.SendHome(0);
+        reportStatus?.Invoke("Homing tất cả trục — chờ Dx...");
+        await WaitForDoneAsync(StepTimeout, ct);
+        reportStatus?.Invoke("Homing hoàn tất — nhận Dx.");
+    }
+
     public async Task RunPickUpToDestinationAsync(
         RobotTeachPoint pickUp,
         RobotTeachPoint wait,

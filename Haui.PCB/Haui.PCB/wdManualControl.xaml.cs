@@ -14,6 +14,7 @@ public partial class wdManualControl : Window
     private readonly ManualControlViewModel _viewModel;
     private readonly IRobotSerialService _serialService;
     private readonly bool _ownsSerialService;
+    private bool _allowClose;
 
     public wdManualControl(IRobotSerialService? sharedSerialService = null)
     {
@@ -57,8 +58,6 @@ public partial class wdManualControl : Window
                 BtnSerialToggle.Content = _viewModel.SerialConnectButtonText;
             else if (e.PropertyName is nameof(ManualControlViewModel.SelectedDestinationSummary))
                 TxtSelectedSummary.Text = _viewModel.SelectedDestinationSummary;
-            else if (e.PropertyName is nameof(ManualControlViewModel.CanRunTest))
-                BtnRunTest.IsEnabled = _viewModel.CanRunTest;
         };
 
         UpdateSerialStateUi();
@@ -103,43 +102,47 @@ public partial class wdManualControl : Window
         => _viewModel.ReloadDestinationPoints();
 
     private void DestinationGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (DestinationGrid.SelectedItem is RobotTeachPoint point)
-            _viewModel.SelectedDestination = point;
-    }
+        => _viewModel.SelectedDestination = DestinationGrid.SelectedItem as RobotTeachPoint;
 
     private async void BtnRunTest_Click(object sender, RoutedEventArgs e)
-    {
-        BtnRunTest.IsEnabled = false;
-        try
-        {
-            await _viewModel.RunPickUpToDestinationTestAsync();
-        }
-        finally
-        {
-            BtnRunTest.IsEnabled = _viewModel.CanRunTest;
-        }
-    }
+        => await _viewModel.RunPickUpToDestinationTestAsync();
 
-    private void BtnGoPickUp_Click(object sender, RoutedEventArgs e)
-        => _viewModel.GoToPickUp();
+    private async void BtnGoPickUp_Click(object sender, RoutedEventArgs e)
+        => await _viewModel.GoToPickUpAsync();
 
-    private void BtnGoDestination_Click(object sender, RoutedEventArgs e)
-        => _viewModel.GoToSelectedDestination();
+    private async void BtnGoDestination_Click(object sender, RoutedEventArgs e)
+        => await _viewModel.GoToSelectedDestinationAsync();
 
     private void BtnClose_Click(object sender, RoutedEventArgs e)
-        => Close();
+    {
+        if (!RobotWindowCloseHelper.CanInitiateClose(
+                _viewModel.CanCloseWindow, _viewModel.IsOperationInProgress))
+            return;
+
+        Close();
+    }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        _viewModel.CancelPendingOperations();
+        if (_allowClose)
+        {
+            _viewModel.CancelPendingOperations();
+            if (_ownsSerialService)
+                _viewModel.Dispose();
+            else
+                _viewModel.Release();
+            base.OnClosing(e);
+            return;
+        }
 
-        if (_ownsSerialService)
-            _viewModel.Dispose();
-        else
-            _viewModel.Release();
+        if (RobotWindowCloseHelper.TryBlockCloseIfBusy(_viewModel.IsOperationInProgress, e))
+            return;
 
-        base.OnClosing(e);
+        e.Cancel = true;
+        _ = RobotWindowCloseHelper.CloseAfterHomingAsync(
+            this,
+            () => _viewModel.ReturnToHomeAsync(),
+            () => _allowClose = true);
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e)

@@ -14,7 +14,6 @@ public class RobotJointLimits
         new() { Key = "J2", Label = "J2 — Shoulder (Vai)", MinAngle = -90, MaxAngle = 90 },
         new() { Key = "J3", Label = "J3 — Elbow (Khuỷu)", MinAngle = -135, MaxAngle = 135 },
         new() { Key = "J4", Label = "J4 — Wrist 1 (Cổ tay 1)", MinAngle = -180, MaxAngle = 180 },
-        new() { Key = "J5", Label = "J5 — Wrist 2 (Cổ tay 2)", MinAngle = -180, MaxAngle = 180 },
-        new() { Key = "G", Label = "Gripper (Góc xoay)", MinAngle = 0, MaxAngle = 180, IsGripper = true }
+        new() { Key = "J5", Label = "J5 — Wrist 2 (Cổ tay 2)", MinAngle = -180, MaxAngle = 180 }
     ];
 }

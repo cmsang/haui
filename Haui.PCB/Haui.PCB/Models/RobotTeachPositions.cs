@@ -6,28 +6,27 @@ namespace Haui.PCB.Models;
 public static class RobotTeachPositions
 {
     public const string PickUp = "PickUp";
-    public const string Home = "Home";
     public const string Wait = "Wait";
 
     public static readonly IReadOnlyList<string> StandardNames =
     [
-        PickUp, Home, Wait,
-        "OK1", "OK2", "OK3", "OK4", "OK5", "OK6",
-        "NG1", "NG2", "NG3", "NG4", "NG5", "NG6"
+        PickUp, Wait,
+        "OK1", "OK2", "OK3", "OK4",
+        "NG1", "NG2", "NG3", "NG4"
     ];
 
     public static readonly IReadOnlyList<string> OkSlotNames =
-        ["OK1", "OK2", "OK3", "OK4", "OK5", "OK6"];
+        ["OK1", "OK2", "OK3", "OK4"];
 
     public static readonly IReadOnlyList<string> NgSlotNames =
-        ["NG1", "NG2", "NG3", "NG4", "NG5", "NG6"];
+        ["NG1", "NG2", "NG3", "NG4"];
 
     public static bool IsStandard(string name)
         => StandardNames.Contains(name, StringComparer.OrdinalIgnoreCase);
 
     public static string GetGroup(string name) => name.ToUpperInvariant() switch
     {
-        "PICKUP" or "HOME" or "WAIT" => "Chung",
+        "PICKUP" or "WAIT" => "Chung",
         _ when name.StartsWith("OK", StringComparison.OrdinalIgnoreCase) => "OK",
         _ when name.StartsWith("NG", StringComparison.OrdinalIgnoreCase) => "NG",
         _ => "Khác"
