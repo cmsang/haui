@@ -20,7 +20,7 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **UI thread / preview perf (2026-06-15):** Camera preview resize + `ToBitmapSource` moved off pylon grab thread with frame drop; Dashboard coalesces `CameraImage` updates (`DispatcherPriority.Render`); Test runs inspection then pipeline steps sequentially; `TestPipelineViewModel` bitmap conversion on thread pool.
 
-**Unified Test pipeline (2026-06-15):** Dashboard Test uses one `RunPipeline` — `PipelineStepMapper` builds gallery from same result as PASS/FAIL (`TestPipelineViewModel.Steps`); `PipelineDebugService` delegates to mapper (Test 2 popup unchanged).
+**GigE connect speed (2026-06-15):** `CameraBasler.deviceIp` → announce + `ICameraInfo` connect (not `new Camera(ip)`); GigE-only enumerate; resolution probe cached per serial; `StartAsync` off UI thread. Fix: open by serial/`ICameraInfo`, restore `WidthMax`/`HeightMax` probe.
 
 ## Configuration (single file)
 

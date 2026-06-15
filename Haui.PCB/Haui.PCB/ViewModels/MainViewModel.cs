@@ -230,7 +230,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         OnCameraSelected(camera);
 
         using var probe = new BaslerCameraService();
-        Resolutions = await probe.GetSupportedResolutionsAsync(camera.DeviceId);
+        Resolutions = await probe.GetSupportedResolutionsAsync(camera);
 
         StatusText = Resolutions.Count == 0
             ? "Camera không phản hồi độ phân giải."
@@ -242,7 +242,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     public int GetDefaultResolutionIndex()
         => Resolutions.Count > 0 ? Resolutions.Count - 1 : 0;
 
-    public void StartCamera(CameraInfo camera, int width, int height)
+    public async Task StartCameraAsync(CameraInfo camera, int width, int height)
     {
         StopCameraInternal();
 
@@ -252,12 +252,29 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         _selectedCamera = camera;
 
         _cameraService.PrepareForStart(BuildParametersFromUi(width, height));
-        _cameraService.Start(camera.DeviceId, width, height);
-        SyncParametersFromCamera();
+        IsBusy = true;
+        StatusText = "Đang kết nối camera...";
 
-        OnPropertyChanged(nameof(IsRunning));
-        OnPropertyChanged(nameof(CanEditCameraParameters));
-        StatusText = $"Camera đang chạy ({width}×{height})";
+        try
+        {
+            await _cameraService.StartAsync(camera, width, height).ConfigureAwait(true);
+            SyncParametersFromCamera();
+
+            OnPropertyChanged(nameof(IsRunning));
+            OnPropertyChanged(nameof(CanEditCameraParameters));
+            StatusText = $"Camera đang chạy ({width}×{height})";
+        }
+        catch (Exception ex)
+        {
+            StopCameraInternal();
+            OnPropertyChanged(nameof(IsRunning));
+            StatusText = $"Lỗi kết nối camera: {ex.Message}";
+            throw;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     private void OnGrabStatusChanged(string message)

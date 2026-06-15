@@ -12,7 +12,7 @@
 
 ## Working features
 
-- [x] Basler camera via pylon (`BaslerCameraService`, x64); defaults from `setting.json` → `CameraBasler`
+- [x] GigE fast connect: `deviceIp` in `setting.json`, direct IP, no probe Open, async Start, deferred AWB
 - [x] Basler camera reference doc — `memory-bank/baslerCamera.md` (project + official/community samples)
 - [x] Quick capture → PNG in `CameraCapture.SaveFolder`
 - [x] Optional ROI on preview (`last_region.json`)

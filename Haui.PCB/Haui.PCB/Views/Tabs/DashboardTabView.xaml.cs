@@ -297,6 +297,11 @@ public partial class DashboardTabView : UserControl
 
     private void BtnStart_Click(object sender, RoutedEventArgs e)
     {
+        _ = StartCameraFromUiAsync();
+    }
+
+    private async Task StartCameraFromUiAsync()
+    {
         if (_viewModel.Cameras.Count == 0 || CameraComboBox.SelectedIndex < 0) return;
 
         var camera = _viewModel.Cameras[CameraComboBox.SelectedIndex];
@@ -305,11 +310,13 @@ public partial class DashboardTabView : UserControl
         if (parts is null || parts.Length != 2) return;
         if (!int.TryParse(parts[0], out int w) || !int.TryParse(parts[1], out int h)) return;
 
+        SetToolbarEnabled(false);
+        BtnStart.IsEnabled = false;
+
         try
         {
-            _viewModel.StartCamera(camera, w, h);
+            await _viewModel.StartCameraAsync(camera, w, h);
 
-            SetToolbarEnabled(false);
             BtnStop.IsEnabled = true;
             BtnTest.IsEnabled = true;
             BtnTest2.IsEnabled = true;
@@ -327,6 +334,7 @@ public partial class DashboardTabView : UserControl
         {
             StatusText.Text = $"Lỗi: {ex.Message}";
             SetToolbarEnabled(true);
+            BtnStart.IsEnabled = _viewModel.Cameras.Count > 0;
         }
     }
 

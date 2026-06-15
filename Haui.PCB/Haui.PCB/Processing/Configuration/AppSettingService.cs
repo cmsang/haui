@@ -27,6 +27,7 @@ public class AppSettingService : IAppSettingService
 
     private static readonly CameraParameters CameraFallback = new()
     {
+        DeviceIp = string.Empty,
         ExposureTimeUs = 15_000,
         GainDb = 0,
         Gamma = 1.0,
