@@ -59,6 +59,11 @@ public partial class TemplateViewerWindow : System.Windows.Window
         BtnEditTemplate.Visibility = developerMode ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void DataGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+    {
+        e.Row.Height = double.NaN;
+    }
+
     // ──── Vẽ lại các hình chữ nhật vùng lên ảnh mẫu ─────────────────────────
 
     private void RedrawRegionRects()

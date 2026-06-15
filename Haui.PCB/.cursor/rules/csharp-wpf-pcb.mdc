@@ -1,0 +1,30 @@
+---
+description: C# / WPF conventions for Haui.PCB source
+globs: Haui.PCB/**/*.cs
+alwaysApply: false
+---
+
+# Haui.PCB C# / WPF
+
+## Layering
+
+- **ViewModels** + **Processing** — business and vision logic
+- **Views** (`*.xaml.cs`) — UI events, `Dispatcher`, control updates only
+- Service list and wiring → `memory-bank/systemPatterns.md`
+
+## OpenCV
+
+```csharp
+using var mat = new Mat();
+// Caller disposes Mat passed between windows
+```
+
+`BitmapSourceConverter.ToBitmapSource(mat)` then `.Freeze()` for bindings.
+
+## Style
+
+File-scoped namespaces per folder (`GlobalUsings.cs`); `using var` for `IDisposable`; `_camelCase` private fields; **English comments only**. UI text (Vietnamese) and font rules → `language-and-ui-text.mdc`. Full rules → `.github/copilot-instructions.md`.
+
+## Async
+
+`async`/`await` for camera and I/O; marshal UI via `Dispatcher`.

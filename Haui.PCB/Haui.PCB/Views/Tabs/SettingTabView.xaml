@@ -32,29 +32,6 @@
             <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="Padding" Value="8,4"/>
         </Style>
-        <Style x:Key="DangerBtn" TargetType="Button">
-            <Setter Property="Background" Value="#D13438"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="6,3"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="3"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#A4262C"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
     <Grid Margin="24">
@@ -210,10 +187,14 @@
                                 <DataGridTemplateColumn Header="" Width="44">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Content="✕"
-                                                    Style="{StaticResource DangerBtn}"
+                                            <Button Style="{StaticResource DeleteIconButtonStyle}"
                                                     Click="BtnDeleteRegionName_Click"
-                                                    Tag="{Binding}"/>
+                                                    Tag="{Binding}"
+                                                    ToolTip="Xóa dòng"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center">
+                                                <md:PackIcon Kind="Delete" Width="18" Height="18"/>
+                                            </Button>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

@@ -5,7 +5,8 @@ using PylonCamera = Basler.Pylon.Camera;
 namespace Haui.PCB.Processing.Camera;
 
 /// <summary>
-/// Dịch vụ camera Basler qua pylon .NET SDK (GigE / USB3).
+/// Basler camera service via pylon .NET SDK (GigE / USB3).
+/// GigE fast path: announce + ICameraInfo connect; resolution probe cached per device.
 /// </summary>
 public class BaslerCameraService : ICameraService, ICameraParameterService
 {
@@ -18,7 +19,7 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
     private string? _lastGrabError;
     private int _grabFailCount;
 
-    /// <summary>Thông báo lỗi grab (hiển thị lên status bar).</summary>
+    /// <summary>Grab errors for the status bar.</summary>
     public event Action<string>? GrabStatusChanged;
 
     public bool IsRunning { get; private set; }
@@ -26,84 +27,155 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
     public event Action<Mat>? FrameArrived;
 
     public Task<IReadOnlyList<CameraInfo>> EnumerateCamerasAsync()
-        => Task.Run<IReadOnlyList<CameraInfo>>(() =>
+        => Task.Run<IReadOnlyList<CameraInfo>>(EnumerateCameras);
+
+    private static IReadOnlyList<CameraInfo> EnumerateCameras()
+    {
+        var result = new List<CameraInfo>();
+        try
         {
-            var result = new List<CameraInfo>();
-            try
+            var config = CameraDefaultsLoader.LoadRecommended();
+            string configuredIp = config.DeviceIp.Trim();
+            if (!string.IsNullOrEmpty(configuredIp))
             {
-                int i = 0;
-                foreach (var info in CameraFinder.Enumerate())
+                BaslerPylonRuntime.AnnounceIp(configuredIp);
+                ICameraInfo? found = BaslerPylonRuntime.FindGigEByIp(configuredIp);
+                if (found is not null)
                 {
-                    string name = info[CameraInfoKey.FriendlyName] ?? "Basler Camera";
-                    string serial = info[CameraInfoKey.SerialNumber] ?? string.Empty;
-                    if (string.IsNullOrEmpty(serial))
-                        continue;
-                    result.Add(new CameraInfo(i++, name, serial));
+                    string serial = found[CameraInfoKey.SerialNumber] ?? configuredIp;
+                    string name = found[CameraInfoKey.FriendlyName] ?? $"Basler GigE ({configuredIp})";
+                    result.Add(new CameraInfo(0, name, serial, configuredIp));
+                    return result;
                 }
+
+                result.Add(new CameraInfo(0, $"Basler GigE ({configuredIp})", configuredIp, configuredIp));
+                return result;
             }
-            catch
+
+            int index = 0;
+            foreach (var info in BaslerPylonRuntime.EnumerateGigE())
             {
-                // pylon chưa cài hoặc runtime không khả dụng
+                string name = info[CameraInfoKey.FriendlyName] ?? "Basler Camera";
+                string serial = info[CameraInfoKey.SerialNumber] ?? string.Empty;
+                if (string.IsNullOrEmpty(serial))
+                    continue;
+
+                string? ip = info[CameraInfoKey.DeviceIpAddress];
+                result.Add(new CameraInfo(index++, name, serial, ip));
             }
-
-            return result;
-        });
-
-    public Task<IReadOnlyList<ResolutionInfo>> GetSupportedResolutionsAsync(string serialNumber)
-        => Task.Run<IReadOnlyList<ResolutionInfo>>(() =>
+        }
+        catch
         {
-            var result = new List<ResolutionInfo>();
-            try
-            {
-                using var probe = new PylonCamera(serialNumber);
-                probe.Open();
+            // pylon not installed or runtime unavailable
+        }
 
-                long maxW = probe.Parameters[PLCamera.WidthMax].GetValue();
-                long maxH = probe.Parameters[PLCamera.HeightMax].GetValue();
-                result.Add(new ResolutionInfo((int)maxW, (int)maxH));
+        return result;
+    }
 
-                AddIfValid(result, (int)maxW, (int)maxH, 1536, 1024);
-                AddIfValid(result, (int)maxW, (int)maxH, 2304, 1536);
-                AddIfValid(result, (int)maxW, (int)maxH, 1280, 720);
-                AddIfValid(result, (int)maxW, (int)maxH, 1920, 1080);
-                AddIfValid(result, (int)maxW, (int)maxH, 1920, 1280);
+    public Task<IReadOnlyList<ResolutionInfo>> GetSupportedResolutionsAsync(CameraInfo camera)
+        => Task.Run(() => QueryResolutions(camera));
 
-                probe.Close();
-            }
-            catch
-            {
-                // Trả về defaults từ file cấu hình
-                var defaults = CameraDefaultsLoader.LoadRecommended();
-                result.Add(new ResolutionInfo(defaults.Width, defaults.Height));
-            }
+    private static IReadOnlyList<ResolutionInfo> QueryResolutions(CameraInfo camera)
+    {
+        string cacheKey = camera.DeviceId;
+        if (BaslerPylonRuntime.TryGetCachedResolution(cacheKey, out int cachedW, out int cachedH))
+            return BuildResolutionList(cachedW, cachedH);
 
-            result = result
-                .DistinctBy(r => (r.Width, r.Height))
-                .OrderBy(r => r.Width * r.Height)
-                .ToList();
-            return result;
-        });
+        try
+        {
+            using var probe = OpenCamera(camera);
+            int maxW = (int)probe.Parameters[PLCamera.WidthMax].GetValue();
+            int maxH = (int)probe.Parameters[PLCamera.HeightMax].GetValue();
+            BaslerPylonRuntime.CacheResolution(cacheKey, maxW, maxH);
+            probe.Close();
+            return BuildResolutionList(maxW, maxH);
+        }
+        catch
+        {
+            var defaults = CameraDefaultsLoader.LoadRecommended();
+            return BuildResolutionList(defaults.Width, defaults.Height);
+        }
+    }
 
-    public void Start(string serialNumber, int width, int height)
+    private static IReadOnlyList<ResolutionInfo> BuildResolutionList(int maxW, int maxH)
+    {
+        var defaults = CameraDefaultsLoader.LoadRecommended();
+        var result = new List<ResolutionInfo>();
+        AddIfValid(result, maxW, maxH, maxW, maxH);
+        AddIfValid(result, maxW, maxH, defaults.Width, defaults.Height);
+        AddIfValid(result, maxW, maxH, 2304, 1536);
+        AddIfValid(result, maxW, maxH, 1920, 1280);
+        AddIfValid(result, maxW, maxH, 1920, 1080);
+        AddIfValid(result, maxW, maxH, 1536, 1024);
+        AddIfValid(result, maxW, maxH, 1280, 720);
+
+        return result
+            .DistinctBy(r => (r.Width, r.Height))
+            .OrderBy(r => r.Width * r.Height)
+            .ToList();
+    }
+
+    public Task StartAsync(CameraInfo camera, int width, int height, CancellationToken cancellationToken = default)
+        => Task.Run(() => StartCore(camera, width, height), cancellationToken);
+
+    public void Start(CameraInfo camera, int width, int height)
+        => StartCore(camera, width, height);
+
+    private void StartCore(CameraInfo camera, int width, int height)
     {
         Stop();
 
-        _camera = new PylonCamera(serialNumber);
-        _camera.Open();
-        Basler.Pylon.Configuration.AcquireContinuous(_camera, null);
+        var opened = OpenCamera(camera);
+        _camera = opened;
+        Basler.Pylon.Configuration.AcquireContinuous(opened, null);
         ConfigureStream();
         TryConfigurePixelFormat();
 
         _pendingParameters.Width = width;
         _pendingParameters.Height = height;
         ConfigureRoi(width, height);
-        ApplyExposureParameters(_pendingParameters);
+        ApplyExposureParameters(_pendingParameters, includeAutoWhiteBalance: true);
 
-        _camera.StreamGrabber.ImageGrabbed += OnImageGrabbed;
-        _camera.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
+        opened.StreamGrabber.ImageGrabbed += OnImageGrabbed;
+        opened.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
         IsRunning = true;
         _grabFailCount = 0;
         _lastGrabError = null;
+    }
+
+    private static PylonCamera OpenCamera(CameraInfo camera)
+    {
+        if (BaslerPylonRuntime.TryGetCachedDevice(camera.DeviceId, out ICameraInfo deviceInfo)
+            || (!string.IsNullOrWhiteSpace(camera.IpAddress)
+                && BaslerPylonRuntime.TryGetCachedDevice(camera.IpAddress, out deviceInfo)))
+        {
+            var byInfo = new PylonCamera(deviceInfo);
+            byInfo.Open();
+            return byInfo;
+        }
+
+        string configuredIp = CameraDefaultsLoader.LoadRecommended().DeviceIp.Trim();
+        string? announceIp = !string.IsNullOrWhiteSpace(camera.IpAddress)
+            ? camera.IpAddress.Trim()
+            : string.Equals(camera.DeviceId, configuredIp, StringComparison.OrdinalIgnoreCase)
+                ? configuredIp
+                : null;
+
+        if (!string.IsNullOrEmpty(announceIp))
+        {
+            BaslerPylonRuntime.AnnounceIp(announceIp);
+            ICameraInfo? found = BaslerPylonRuntime.FindGigEByIp(announceIp);
+            if (found is not null)
+            {
+                var byIpInfo = new PylonCamera(found);
+                byIpInfo.Open();
+                return byIpInfo;
+            }
+        }
+
+        var bySerial = new PylonCamera(camera.DeviceId);
+        bySerial.Open();
+        return bySerial;
     }
 
     private void ConfigureStream()
@@ -214,7 +286,7 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
         }
         catch (OperationCanceledException)
         {
-            // Trả về frame tốt nhất đã thu thập
+            // Return best frame collected so far
         }
         finally
         {
@@ -240,7 +312,7 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
             }
             catch
             {
-                // Bỏ qua lỗi khi dừng grabber
+                // Ignore stop errors
             }
 
             try
@@ -250,7 +322,7 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
             }
             catch
             {
-                // Bỏ qua lỗi khi đóng camera
+                // Ignore close errors
             }
 
             _camera.Dispose();
@@ -318,18 +390,20 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
             _camera.StreamGrabber.Stop();
 
         ConfigureRoi(settings.Width, settings.Height);
-        ApplyExposureParameters(settings);
+        ApplyExposureParameters(settings, includeAutoWhiteBalance: true);
 
         if (restartGrabber && wasGrabbing && IsRunning)
             _camera.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
     }
 
-    private void ApplyExposureParameters(CameraParameters settings)
+    private void ApplyExposureParameters(CameraParameters settings, bool includeAutoWhiteBalance)
     {
         if (_camera is null || !_camera.IsOpen) return;
 
         var cameraParams = _camera.Parameters;
-        SetBalanceWhiteAuto(settings.BalanceWhiteAuto);
+        if (includeAutoWhiteBalance)
+            SetBalanceWhiteAuto(settings.BalanceWhiteAuto);
+
         SetDoubleParameter(cameraParams[PLCamera.ExposureTime], settings.ExposureTimeUs);
         SetDoubleParameter(cameraParams[PLCamera.Gain], settings.GainDb);
         SetDoubleParameter(cameraParams[PLCamera.Gamma], settings.Gamma);

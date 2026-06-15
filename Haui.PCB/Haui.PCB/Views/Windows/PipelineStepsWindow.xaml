@@ -13,7 +13,8 @@
         <DataTemplate x:Key="PipelineStepTemplate">
             <Border BorderBrush="#CCCCCC" BorderThickness="1"
                     CornerRadius="4" Background="#1E1E1E"
-                    Margin="6" Width="260">
+                    Margin="6" Width="260"
+                    ToolTip="{Binding Description}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -21,7 +22,6 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <!-- Tên bước -->
                     <Border Grid.Row="0" Background="#333333" CornerRadius="4,4,0,0" Padding="8,4">
                         <TextBlock Text="{Binding StepName}"
                                    FontWeight="SemiBold" FontSize="13"
@@ -29,18 +29,17 @@
                                    HorizontalAlignment="Center" />
                     </Border>
 
-                    <!-- Ảnh bước -->
                     <Image Grid.Row="1"
                            Source="{Binding Image}"
                            Stretch="Uniform"
                            Margin="4"
                            RenderOptions.BitmapScalingMode="HighQuality" />
 
-                    <!-- Mô tả -->
                     <Border Grid.Row="2" Background="#2A2A2A" CornerRadius="0,0,4,4" Padding="6,4">
-                        <TextBlock Text="{Binding Description}"
-                                   FontSize="11" Foreground="#AAAAAA"
-                                   TextWrapping="Wrap"
+                        <TextBlock Text="{Binding ElapsedText}"
+                                   FontFamily="Consolas"
+                                   FontSize="11"
+                                   Foreground="#88CC88"
                                    HorizontalAlignment="Center" />
                     </Border>
                 </Grid>

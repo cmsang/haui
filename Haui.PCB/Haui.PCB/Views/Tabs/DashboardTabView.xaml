@@ -69,7 +69,8 @@
         <DataTemplate x:Key="PipelineStepTemplate">
             <Border BorderBrush="#CCCCCC" BorderThickness="1"
                     CornerRadius="4" Background="#1E1E1E"
-                    Margin="4" Width="200">
+                    Margin="4" Width="200"
+                    ToolTip="{Binding Description}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -89,9 +90,10 @@
                            Margin="4"
                            RenderOptions.BitmapScalingMode="HighQuality" />
                     <Border Grid.Row="2" Background="#2A2A2A" CornerRadius="0,0,4,4" Padding="4,3">
-                        <TextBlock Text="{Binding Description}"
-                                   FontSize="10" Foreground="#AAAAAA"
-                                   TextWrapping="Wrap"
+                        <TextBlock Text="{Binding ElapsedText}"
+                                   FontFamily="Consolas"
+                                   FontSize="10"
+                                   Foreground="#88CC88"
                                    HorizontalAlignment="Center" />
                     </Border>
                 </Grid>
@@ -103,7 +105,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="220" />
+            <RowDefinition Height="248" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 

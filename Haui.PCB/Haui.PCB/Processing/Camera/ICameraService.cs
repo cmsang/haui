@@ -3,7 +3,7 @@
 namespace Haui.PCB.Processing.Camera;
 
 /// <summary>
-/// Giao diện trừu tượng cho dịch vụ camera Basler: dò tìm, kết nối, lấy frame.
+/// Abstraction for Basler camera: discover, connect, grab frames.
 /// </summary>
 public interface ICameraService : IDisposable
 {
@@ -13,9 +13,11 @@ public interface ICameraService : IDisposable
 
     Task<IReadOnlyList<CameraInfo>> EnumerateCamerasAsync();
 
-    Task<IReadOnlyList<ResolutionInfo>> GetSupportedResolutionsAsync(string serialNumber);
+    Task<IReadOnlyList<ResolutionInfo>> GetSupportedResolutionsAsync(CameraInfo camera);
 
-    void Start(string serialNumber, int width, int height);
+    Task StartAsync(CameraInfo camera, int width, int height, CancellationToken cancellationToken = default);
+
+    void Start(CameraInfo camera, int width, int height);
 
     void Stop();
 

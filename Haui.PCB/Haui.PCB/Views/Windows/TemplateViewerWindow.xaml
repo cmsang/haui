@@ -23,6 +23,31 @@
             <Setter Property="Foreground" Value="#1A3A6B"/>
         </Style>
 
+        <Style x:Key="DataGridCellTextStyle" TargetType="TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="TextTrimming" Value="None"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="4,2"/>
+        </Style>
+
+        <Style x:Key="DataGridNumericCellTextStyle" TargetType="TextBlock"
+               BasedOn="{StaticResource DataGridCellTextStyle}">
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+
+        <Style x:Key="DataGridSttCellTextStyle" TargetType="TextBlock"
+               BasedOn="{StaticResource DataGridCellTextStyle}">
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="DataGridColumnHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
         <Style x:Key="DataGridStyle" TargetType="DataGrid">
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="CanUserAddRows" Value="False"/>
@@ -33,7 +58,12 @@
             <Setter Property="GridLinesVisibility" Value="Horizontal"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="RowHeight" Value="26"/>
+            <Setter Property="RowHeight" Value="NaN"/>
+            <Setter Property="MinRowHeight" Value="30"/>
+            <Setter Property="CanUserResizeColumns" Value="True"/>
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ColumnHeaderStyle" Value="{StaticResource DataGridColumnHeaderStyle}"/>
         </Style>
     </Window.Resources>
 
@@ -47,7 +77,7 @@
         <Grid Grid.Row="0" Margin="8">
             <Grid.ColumnDefinitions>
                 <!-- Cột trái: 2 grid -->
-                <ColumnDefinition Width="340" MinWidth="240"/>
+                <ColumnDefinition Width="420" MinWidth="300"/>
                 <ColumnDefinition Width="6"/>
                 <ColumnDefinition Width="*" MinWidth="300"/>
             </Grid.ColumnDefinitions>
@@ -76,17 +106,23 @@
                         <DataGrid Grid.Row="1"
                                   x:Name="TemplatesGrid"
                                   Style="{StaticResource DataGridStyle}"
+                                  LoadingRow="DataGrid_LoadingRow"
                                   SelectionChanged="TemplatesGrid_SelectionChanged">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="STT"
                                                    Binding="{Binding Stt}"
-                                                   Width="40"/>
+                                                   Width="56"
+                                                   MinWidth="56"
+                                                   ElementStyle="{StaticResource DataGridSttCellTextStyle}"/>
                                 <DataGridTextColumn Header="Tên mẫu"
                                                    Binding="{Binding Name}"
-                                                   Width="*"/>
+                                                   Width="2*"
+                                                   MinWidth="100"
+                                                   ElementStyle="{StaticResource DataGridCellTextStyle}"/>
                                 <DataGridTextColumn Header="Số vùng"
                                                    Binding="{Binding RegionCount}"
-                                                   Width="60"/>
+                                                   Width="76"
+                                                   ElementStyle="{StaticResource DataGridSttCellTextStyle}"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
@@ -107,13 +143,16 @@
                         </Border>
                         <DataGrid Grid.Row="1"
                                   x:Name="RegionsGrid"
-                                  Style="{StaticResource DataGridStyle}">
+                                  Style="{StaticResource DataGridStyle}"
+                                  LoadingRow="DataGrid_LoadingRow">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="STT"
                                                    Binding="{Binding Stt}"
-                                                   Width="40"/>
+                                                   Width="56"
+                                                   MinWidth="56"
+                                                   ElementStyle="{StaticResource DataGridSttCellTextStyle}"/>
                                 <!-- Ô màu tương ứng với màu vùng trên ảnh mẫu -->
-                                <DataGridTemplateColumn Header="" Width="24" IsReadOnly="True">
+                                <DataGridTemplateColumn Header="" Width="22" IsReadOnly="True">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Border Width="14" Height="14"
@@ -126,13 +165,19 @@
                                 </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="Tên vùng"
                                                    Binding="{Binding Name}"
-                                                   Width="*"/>
+                                                   Width="2*"
+                                                   MinWidth="72"
+                                                   ElementStyle="{StaticResource DataGridCellTextStyle}"/>
                                 <DataGridTextColumn Header="Vị trí"
                                                    Binding="{Binding Position}"
-                                                   Width="90"/>
+                                                   Width="1.2*"
+                                                   MinWidth="96"
+                                                   ElementStyle="{StaticResource DataGridNumericCellTextStyle}"/>
                                 <DataGridTextColumn Header="Kích thước"
                                                    Binding="{Binding Size}"
-                                                   Width="90"/>
+                                                   Width="1.2*"
+                                                   MinWidth="96"
+                                                   ElementStyle="{StaticResource DataGridNumericCellTextStyle}"/>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>

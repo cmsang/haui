@@ -21,6 +21,10 @@ public sealed class SegmentationPipelineResult : IDisposable
     /// <summary>Ảnh bo mạch đã warp; null nếu không phát hiện được.</summary>
     public Mat? Warped { get; init; }
 
+    /// <summary>Per-step elapsed time; keys from <see cref="SegmentationPipelineSteps"/>.</summary>
+    public IReadOnlyDictionary<string, TimeSpan> StepTimings { get; init; }
+        = new Dictionary<string, TimeSpan>();
+
     public void Dispose()
     {
         Gray.Dispose();

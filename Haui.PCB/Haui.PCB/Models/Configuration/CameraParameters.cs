@@ -5,6 +5,9 @@
 /// </summary>
 public class CameraParameters
 {
+    /// <summary>Static GigE IP — skips broadcast discovery and connects directly when set.</summary>
+    public string DeviceIp { get; set; } = string.Empty;
+
     public double ExposureTimeUs { get; set; } = 15_000;
     public double GainDb { get; set; }
     public double Gamma { get; set; } = 1.0;
@@ -14,6 +17,7 @@ public class CameraParameters
 
     public CameraParameters Clone() => new()
     {
+        DeviceIp = DeviceIp,
         ExposureTimeUs = ExposureTimeUs,
         GainDb = GainDb,
         Gamma = Gamma,

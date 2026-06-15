@@ -3,7 +3,7 @@
 /// <summary>
 /// Thông tin camera Basler phát hiện được qua pylon.
 /// </summary>
-public record CameraInfo(int Index, string Name, string DeviceId)
+public record CameraInfo(int Index, string Name, string DeviceId, string? IpAddress = null)
 {
     public string DisplayName => Name;
 }

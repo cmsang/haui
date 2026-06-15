@@ -38,6 +38,7 @@
     "maxMatchDimension": 1280
   },
   "CameraBasler": {
+    "deviceIp": "",
     "exposureTimeUs": 20000,
     "gainDb": 0,
     "gamma": 1,

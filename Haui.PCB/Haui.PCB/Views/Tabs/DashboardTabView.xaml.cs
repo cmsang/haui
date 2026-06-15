@@ -1,8 +1,11 @@
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using Haui.PCB.ViewModels;
 using Haui.PCB.Views.Windows;
 
@@ -22,7 +25,6 @@ public partial class DashboardTabView : UserControl
 
     private readonly MainViewModel _viewModel;
     private readonly TestPipelineViewModel _inspectionViewModel;
-    private readonly PipelineStepsViewModel _pipelineStepsViewModel;
     private readonly Window _owner;
     private readonly IAppSettingService _appSettingService = new AppSettingService();
     private bool _developerMode;
@@ -30,6 +32,8 @@ public partial class DashboardTabView : UserControl
     private bool _isDragging;
     private Point _dragStart;
     private bool _wired;
+    private BitmapSource? _latestCameraFrame;
+    private int _cameraFrameDispatchQueued;
 
     public DashboardTabView(MainViewModel viewModel, Window owner)
     {
@@ -41,7 +45,6 @@ public partial class DashboardTabView : UserControl
         _inspectionViewModel = new TestPipelineViewModel(
             new PcbSegmentationService(),
             new CompositeTemplateMatchService(libraryService, comparisonService));
-        _pipelineStepsViewModel = new PipelineStepsViewModel(new PipelineDebugService());
 
         DataContext = _viewModel;
         InitializeComponent();
@@ -54,8 +57,7 @@ public partial class DashboardTabView : UserControl
         if (_wired) return;
         _wired = true;
 
-        _viewModel.FrameReady += bitmap =>
-            Dispatcher.InvokeAsync(() => CameraImage.Source = bitmap);
+        _viewModel.FrameReady += ScheduleCameraFrameUpdate;
 
         _viewModel.PropertyChanged += (_, e) =>
         {
@@ -109,9 +111,7 @@ public partial class DashboardTabView : UserControl
 
     private void WireInspectionViewModel()
     {
-        PipelineStepsPanel.ItemsSource = _pipelineStepsViewModel.Steps;
-        _pipelineStepsViewModel.Steps.CollectionChanged += (_, _) =>
-            Dispatcher.InvokeAsync(UpdatePipelineStepsPlaceholder);
+        PipelineStepsPanel.ItemsSource = _inspectionViewModel.Steps;
 
         _inspectionViewModel.ProcessedImageReady += bitmap =>
         {
@@ -146,6 +146,8 @@ public partial class DashboardTabView : UserControl
         {
             if (e.PropertyName == nameof(TestPipelineViewModel.IsFullMatch))
                 Dispatcher.InvokeAsync(UpdatePassFailDisplay);
+            else if (e.PropertyName is nameof(TestPipelineViewModel.IsBusy) or nameof(TestPipelineViewModel.HasPipelineSteps))
+                Dispatcher.InvokeAsync(UpdatePipelineStepsPlaceholder, DispatcherPriority.Background);
             else if (e.PropertyName == nameof(TestPipelineViewModel.StatusText))
                 Dispatcher.InvokeAsync(() =>
                 {
@@ -177,9 +179,23 @@ public partial class DashboardTabView : UserControl
         }
     }
 
+    private void ScheduleCameraFrameUpdate(BitmapSource bitmap)
+    {
+        _latestCameraFrame = bitmap;
+        if (Interlocked.CompareExchange(ref _cameraFrameDispatchQueued, 1, 0) != 0)
+            return;
+
+        Dispatcher.InvokeAsync(() =>
+        {
+            if (_latestCameraFrame is not null)
+                CameraImage.Source = _latestCameraFrame;
+            Interlocked.Exchange(ref _cameraFrameDispatchQueued, 0);
+        }, DispatcherPriority.Render);
+    }
+
     private void UpdatePipelineStepsPlaceholder()
     {
-        PipelineStepsPlaceholder.Visibility = _pipelineStepsViewModel.Steps.Count == 0
+        PipelineStepsPlaceholder.Visibility = _inspectionViewModel.Steps.Count == 0
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
@@ -189,7 +205,7 @@ public partial class DashboardTabView : UserControl
         ResultImage.Source = null;
         ResultPlaceholder.Text = "Chưa kiểm tra";
         ResultPlaceholder.Visibility = Visibility.Visible;
-        _pipelineStepsViewModel.Steps.Clear();
+        _inspectionViewModel.ClearPipelineSteps();
         UpdatePipelineStepsPlaceholder();
         PassFailText.Text = "—";
         PassFailPanel.Background = IdleBackgroundBrush;
@@ -281,6 +297,11 @@ public partial class DashboardTabView : UserControl
 
     private void BtnStart_Click(object sender, RoutedEventArgs e)
     {
+        _ = StartCameraFromUiAsync();
+    }
+
+    private async Task StartCameraFromUiAsync()
+    {
         if (_viewModel.Cameras.Count == 0 || CameraComboBox.SelectedIndex < 0) return;
 
         var camera = _viewModel.Cameras[CameraComboBox.SelectedIndex];
@@ -289,11 +310,13 @@ public partial class DashboardTabView : UserControl
         if (parts is null || parts.Length != 2) return;
         if (!int.TryParse(parts[0], out int w) || !int.TryParse(parts[1], out int h)) return;
 
+        SetToolbarEnabled(false);
+        BtnStart.IsEnabled = false;
+
         try
         {
-            _viewModel.StartCamera(camera, w, h);
+            await _viewModel.StartCameraAsync(camera, w, h);
 
-            SetToolbarEnabled(false);
             BtnStop.IsEnabled = true;
             BtnTest.IsEnabled = true;
             BtnTest2.IsEnabled = true;
@@ -311,6 +334,7 @@ public partial class DashboardTabView : UserControl
         {
             StatusText.Text = $"Lỗi: {ex.Message}";
             SetToolbarEnabled(true);
+            BtnStart.IsEnabled = _viewModel.Cameras.Count > 0;
         }
     }
 
@@ -346,8 +370,6 @@ public partial class DashboardTabView : UserControl
             ResultPlaceholder.Text = "Đang xử lý...";
             ResultPlaceholder.Visibility = Visibility.Visible;
 
-            using var stepsFrame = frame.Clone();
-            _pipelineStepsViewModel.LoadImage(stepsFrame);
             await _inspectionViewModel.InspectAsync(frame);
         }
         finally
