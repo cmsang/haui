@@ -18,6 +18,10 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Pipeline step timing (2026-06-15):** Dashboard gallery + `PipelineStepsWindow` show per-step elapsed ms (`Stopwatch` in `PcbSegmentationService` → `SegmentationPipelineResult.StepTimings`); description moved to tooltip.
 
+**UI thread / preview perf (2026-06-15):** Camera preview resize + `ToBitmapSource` moved off pylon grab thread with frame drop; Dashboard coalesces `CameraImage` updates (`DispatcherPriority.Render`); Test runs inspection then pipeline steps sequentially; `TestPipelineViewModel` bitmap conversion on thread pool.
+
+**Unified Test pipeline (2026-06-15):** Dashboard Test uses one `RunPipeline` — `PipelineStepMapper` builds gallery from same result as PASS/FAIL (`TestPipelineViewModel.Steps`); `PipelineDebugService` delegates to mapper (Test 2 popup unchanged).
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:

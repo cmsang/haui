@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Haui.PCB.ViewModels.Pipeline;
 using OpenCvSharp;
 
 namespace Haui.PCB.ViewModels;
@@ -69,6 +70,11 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Các vùng dưới ngưỡng cấu hình (khác nhau).</summary>
     public ObservableCollection<RegionComparisonResult> DifferentRegions { get; } = [];
 
+    /// <summary>Debug gallery — populated from the same RunPipeline call as PASS/FAIL.</summary>
+    public ObservableCollection<PipelineStep> Steps { get; } = [];
+
+    public bool HasPipelineSteps => Steps.Count > 0;
+
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
     public TestPipelineViewModel(
@@ -135,13 +141,17 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         StatusText = "Đang xử lý...";
         MatchedRegions.Clear();
         DifferentRegions.Clear();
+        Steps.Clear();
+        OnPropertyChanged(nameof(HasPipelineSteps));
 
         using var source = _sourceMat!.Clone();
         Mat? newBoard = null;
 
         try
         {
-            newBoard = await Task.Run(() => _segmentation.Segment(source));
+            var runResult = await Task.Run(() => RunSegmentationPipeline(source));
+            ReplaceSteps(runResult.Steps);
+            newBoard = runResult.Warped;
 
             if (newBoard is null)
             {
@@ -152,8 +162,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(newBoard);
-            bitmap.Freeze();
+            var bitmap = await ToFrozenBitmapAsync(newBoard);
             ProcessedImageReady?.Invoke(bitmap);
 
             await CompareWithTemplatesAsync(newBoard);
@@ -189,7 +198,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             RefreshMatchThresholdFromConfig();
             IsFullMatch = false;
             StatusText = "Bo mạch đã cắt. Chưa có mẫu nào trong thư viện (hoặc thiếu vùng/ảnh).";
-            PublishAnnotatedImage(newBoard, []);
+            await PublishAnnotatedImageAsync(newBoard, []);
             return;
         }
 
@@ -223,13 +232,12 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
         if (usedRotation)
         {
-            var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(boardForDisplay);
-            bitmap.Freeze();
+            var bitmap = await ToFrozenBitmapAsync(boardForDisplay);
             ProcessedImageReady?.Invoke(bitmap);
         }
 
         ApplyRegionResultsToGrids(match.RegionResults);
-        PublishAnnotatedImage(boardForDisplay, match.RegionResults);
+        await PublishAnnotatedImageAsync(boardForDisplay, match.RegionResults);
         IsFullMatch = match.IsFullMatch;
 
         var thresholdText = FormatThresholdPercent(match.MatchThresholdPercent);
@@ -240,6 +248,26 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
         rotatedBoard?.Dispose();
     }
+
+    private SegmentationRunResult RunSegmentationPipeline(Mat source)
+    {
+        using var pipeline = _segmentation.RunPipeline(source);
+        var steps = PipelineStepMapper.MapSteps(pipeline, source);
+        Mat? warped = pipeline.Warped is not null && !pipeline.Warped.Empty()
+            ? pipeline.Warped.Clone()
+            : null;
+        return new SegmentationRunResult(steps, warped);
+    }
+
+    private void ReplaceSteps(IReadOnlyList<PipelineStep> steps)
+    {
+        Steps.Clear();
+        foreach (var step in steps)
+            Steps.Add(step);
+        OnPropertyChanged(nameof(HasPipelineSteps));
+    }
+
+    private sealed record SegmentationRunResult(IReadOnlyList<PipelineStep> Steps, Mat? Warped);
 
     private void RefreshMatchThresholdFromConfig()
         => RefreshMatchThreshold(AppSettingsStore.LoadMatchThresholdPercent());
@@ -275,12 +303,24 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>
     /// Vẽ hình chữ nhật lên ảnh bo mạch: xanh lá = giống, đỏ = khác.
     /// </summary>
-    public void PublishAnnotatedImage(Mat board, IReadOnlyList<RegionComparisonResult> results)
+    public async Task PublishAnnotatedImageAsync(Mat board, IReadOnlyList<RegionComparisonResult> results)
     {
-        var annotated = DrawAnnotations(board, results);
+        var annotated = await DrawAnnotationsAsync(board, results);
         if (annotated is not null)
             AnnotatedImageReady?.Invoke(annotated);
     }
+
+    private static Task<System.Windows.Media.Imaging.BitmapSource?> DrawAnnotationsAsync(
+        Mat board, IReadOnlyList<RegionComparisonResult> results)
+        => Task.Run(() => DrawAnnotations(board, results));
+
+    private static Task<System.Windows.Media.Imaging.BitmapSource> ToFrozenBitmapAsync(Mat mat)
+        => Task.Run(() =>
+        {
+            var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(mat);
+            bitmap.Freeze();
+            return bitmap;
+        });
 
     private static System.Windows.Media.Imaging.BitmapSource? DrawAnnotations(
         Mat board, IReadOnlyList<RegionComparisonResult> results)
@@ -312,6 +352,12 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         {
             return null;
         }
+    }
+
+    public void ClearPipelineSteps()
+    {
+        Steps.Clear();
+        OnPropertyChanged(nameof(HasPipelineSteps));
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)

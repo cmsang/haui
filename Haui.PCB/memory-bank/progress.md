@@ -23,6 +23,8 @@
 - [x] Template library — scan `*.png` + `*_regions.json` (no `index.json`); folder via `ComponentTemplates.CustomFolder`
 - [x] Test pipeline — composite match by `AllowedRegionNames`; 180° retry; overlay green/red
 - [x] Dashboard inline test — result image, PASS/FAIL panel, pipeline steps gallery on tab (no popup on Test)
+- [x] Preview perf — off-thread Mat→BitmapSource, frame drop, coalesced Dispatcher updates (2026-06-15)
+- [x] Unified Test — single `RunPipeline` feeds PASS/FAIL + step gallery via `PipelineStepMapper` (2026-06-15)
 - [x] Region compare — 128×128, LAB-L + CLAHE + bilateral, threshold from `MinMatchSimilarityPercent`
 - [x] Unified config — `Config/setting.json` (`AppSettingService`)
 - [x] DeveloperMode — hides Tạo mẫu / Thêm mẫu lỗ on Dashboard toolbar; Sửa in template viewer
