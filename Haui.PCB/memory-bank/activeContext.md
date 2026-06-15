@@ -16,6 +16,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Memory bank (2026-06-15):** Restored from `cmsang/pcb` + added **`memory-bank/baslerCamera.md`** (Haui.PCB implementation + official/community pylon samples).
 
+**Template data (2026-06-15):** `pcb_templates/` (11 mẫu) và `fiducial_holes/` (128 ảnh) checkout từ `cmsang/pcb` → nhánh `cmsang/pcb-new` (staged, chưa commit).
+
 **Pipeline step timing (2026-06-15):** Dashboard gallery + `PipelineStepsWindow` show per-step elapsed ms (`Stopwatch` in `PcbSegmentationService` → `SegmentationPipelineResult.StepTimings`); description moved to tooltip. Dashboard gallery row height **248px** (was 220) so elapsed-time footer is not clipped when horizontal scrollbar shows.
 
 **UI thread / preview perf (2026-06-15):** Camera preview resize + `ToBitmapSource` moved off pylon grab thread with frame drop; Dashboard coalesces `CameraImage` updates (`DispatcherPriority.Render`); Test runs inspection then pipeline steps sequentially; `TestPipelineViewModel` bitmap conversion on thread pool.
