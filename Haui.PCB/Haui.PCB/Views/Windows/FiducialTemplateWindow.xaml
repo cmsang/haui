@@ -1,6 +1,7 @@
 <Window x:Class="Haui.PCB.Views.Windows.FiducialTemplateWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Thư viện mẫu lỗ tròn định vị"
         Height="650" Width="1000"
         MinHeight="480" MinWidth="700"
@@ -44,29 +45,6 @@
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-        <Style x:Key="DangerBtn" TargetType="Button">
-            <Setter Property="Background" Value="#D13438"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="6,3"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="3"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#A4262C"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
         </Style>
     </Window.Resources>
 
@@ -159,10 +137,13 @@
                                                Text="{Binding Label}"
                                                VerticalAlignment="Center"/>
                                     <Button Grid.Column="1"
-                                            Content="Xóa"
-                                            Style="{StaticResource DangerBtn}"
+                                            Style="{StaticResource DeleteIconButtonStyle}"
                                             Click="BtnRemovePendingRegion_Click"
-                                            Tag="{Binding}"/>
+                                            Tag="{Binding}"
+                                            ToolTip="Xóa vùng"
+                                            VerticalAlignment="Center">
+                                        <md:PackIcon Kind="Delete" Width="18" Height="18"/>
+                                    </Button>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -204,10 +185,13 @@
                                                VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis"/>
                                     <Button Grid.Column="1"
-                                            Content="Xóa"
-                                            Style="{StaticResource DangerBtn}"
+                                            Style="{StaticResource DeleteIconButtonStyle}"
                                             Click="BtnDeleteTemplate_Click"
-                                            Tag="{Binding}"/>
+                                            Tag="{Binding}"
+                                            ToolTip="Xóa mẫu"
+                                            VerticalAlignment="Center">
+                                        <md:PackIcon Kind="Delete" Width="18" Height="18"/>
+                                    </Button>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
