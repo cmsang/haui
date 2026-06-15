@@ -664,17 +664,16 @@
                                            TextTrimming="CharacterEllipsis"
                                            Margin="0,0,12,0"/>
                             </StackPanel>
-                            <TextBox Grid.Row="2" x:Name="TxtRobotRxLog"
-                                     Margin="0,4,0,0"
-                                     Height="54"
-                                     IsReadOnly="True"
-                                     TextWrapping="Wrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     FontFamily="Consolas"
-                                     FontSize="10"
-                                     Background="#FAFAFA"
-                                     BorderBrush="#DDDDDD"
-                                     ToolTip="Nhật ký Serial RX (Serial_DataReceived)"/>
+                            <RichTextBox Grid.Row="2" x:Name="TxtRobotRxLog"
+                                         Margin="0,4,0,0"
+                                         Height="54"
+                                         IsReadOnly="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         FontFamily="Consolas"
+                                         FontSize="10"
+                                         Background="#FAFAFA"
+                                         BorderBrush="#DDDDDD"
+                                         ToolTip="Nhật ký Serial — S: gửi (tím) / R: nhận frame ghép (đen)"/>
                         </Grid>
                     </Border>
                 </Grid>

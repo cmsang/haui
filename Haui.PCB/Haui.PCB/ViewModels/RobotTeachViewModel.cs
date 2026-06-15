@@ -114,8 +114,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         RefreshAvailablePorts();
         if (_enableSerialEvents)
         {
-            _serialService.LineReceived += OnSerialLineReceived;
-            _serialService.DataReceived += OnSerialDataReceived;
+            _serialService.FrameReceived += OnSerialFrameReceived;
         }
         SyncConnectionState();
     }
@@ -539,10 +538,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed) return;
         CancelPendingOperations();
         if (_enableSerialEvents)
-        {
-            _serialService.LineReceived -= OnSerialLineReceived;
-            _serialService.DataReceived -= OnSerialDataReceived;
-        }
+            _serialService.FrameReceived -= OnSerialFrameReceived;
     }
 
     public void Dispose()
@@ -551,10 +547,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         _disposed = true;
         CancelPendingOperations();
         if (_enableSerialEvents)
-        {
-            _serialService.LineReceived -= OnSerialLineReceived;
-            _serialService.DataReceived -= OnSerialDataReceived;
-        }
+            _serialService.FrameReceived -= OnSerialFrameReceived;
 
         if (_disposeSerialService)
         {
@@ -666,40 +659,29 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(CanCloseWindow));
     }
 
-    private void OnSerialLineReceived(string line)
+    private void OnSerialFrameReceived(string frame)
     {
-        if (RobotPickPlaceExecutor.IsDoneSignal(line))
+        if (RobotPickPlaceExecutor.IsDoneSignal(frame))
         {
             Application.Current?.Dispatcher.InvokeAsync(() =>
             {
                 if (!IsAwaitingRobotDone) return;
                 CompleteAwaitDone();
-                StatusText = $"Robot hoàn thành — RX: {line}";
+                StatusText = $"Robot hoàn thành — R: {frame}";
             });
             return;
         }
 
-        var msg = line switch
+        if (IsAwaitingRobotDone) return;
+
+        var msg = frame switch
         {
-            _ when line.StartsWith('A') => $"Robot bắt đầu homing trục {line[1..]}...",
-            _ when line.StartsWith('D') => $"Robot hoàn thành — RX: {line}",
-            _ => $"RX: {line}"
+            _ when frame.StartsWith('A') => $"Robot bắt đầu homing trục {frame[1..^1]}...",
+            _ when frame.StartsWith('D') => $"Robot hoàn thành — R: {frame}",
+            _ => $"R: {frame}"
         };
 
         Application.Current?.Dispatcher.InvokeAsync(() => StatusText = msg);
-    }
-
-    private void OnSerialDataReceived(string chunk)
-    {
-        if (!IsAwaitingRobotDone || !RobotPickPlaceExecutor.IsDoneSignal(chunk))
-            return;
-
-        Application.Current?.Dispatcher.InvokeAsync(() =>
-        {
-            if (!IsAwaitingRobotDone) return;
-            CompleteAwaitDone();
-            StatusText = "Robot hoàn thành — nhận Dx.";
-        });
     }
 
     private void ApplyCurrentJointsToPoint(RobotTeachPoint point)
