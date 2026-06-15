@@ -1,4 +1,5 @@
-﻿using OpenCvSharp;
+﻿using System.Diagnostics;
+using OpenCvSharp;
 
 namespace Haui.PCB.Processing.Segmentation;
 
@@ -51,6 +52,9 @@ public class PcbSegmentationService : IPcbSegmentationService
 
     private SegmentationPipelineResult RunPipelineCore(Mat source, bool includeDebugMats)
     {
+        var timings = includeDebugMats ? new Dictionary<string, TimeSpan>() : null;
+        var sw = new Stopwatch();
+
         using var grayWork = new Mat();
         using var blurredWork = new Mat();
         using var edgesWork = new Mat();
@@ -59,13 +63,24 @@ public class PcbSegmentationService : IPcbSegmentationService
             MorphShapes.Rect,
             new Size(MorphKernelSize, MorphKernelSize));
 
+        sw.Restart();
         Cv2.CvtColor(source, grayWork, ColorConversionCodes.BGR2GRAY);
+        RecordTiming(timings, SegmentationPipelineSteps.Grayscale, sw.Elapsed);
+
+        sw.Restart();
         Cv2.GaussianBlur(grayWork, blurredWork, new Size(5, 5), 0);
+        RecordTiming(timings, SegmentationPipelineSteps.GaussianBlur, sw.Elapsed);
 
         double t1 = _parameters.CannyThreshold1;
         double t2 = _parameters.CannyThreshold2;
+
+        sw.Restart();
         Cv2.Canny(blurredWork, edgesWork, t1, t2);
+        RecordTiming(timings, SegmentationPipelineSteps.Canny, sw.Elapsed);
+
+        sw.Restart();
         Cv2.MorphologyEx(edgesWork, closedWork, MorphTypes.Close, kernel, iterations: 3);
+        RecordTiming(timings, SegmentationPipelineSteps.MorphologyClose, sw.Elapsed);
 
         Point2f[]? fiducialCenters = null;
         string? fiducialDescription = null;
@@ -77,17 +92,22 @@ public class PcbSegmentationService : IPcbSegmentationService
             var templates = _fiducialTemplates.LoadTemplates();
             try
             {
+                sw.Restart();
                 var fiducialResult = _fiducialDetection.Detect(
                     closedWork,
                     templates,
                     settings.MinMatchScore,
                     settings.MaxMatchDimension);
+                RecordTiming(timings, SegmentationPipelineSteps.Fiducial, sw.Elapsed);
 
                 if (fiducialResult.Success && fiducialResult.Centers is not null)
                 {
                     fiducialCenters = fiducialResult.Centers;
                     fiducialDescription = fiducialResult.Message;
+
+                    sw.Restart();
                     warped = WarpPerspective(source, fiducialCenters);
+                    RecordTiming(timings, SegmentationPipelineSteps.Warp, sw.Elapsed);
                 }
                 else
                 {
@@ -103,6 +123,7 @@ public class PcbSegmentationService : IPcbSegmentationService
         else
         {
             fiducialDescription = "Chưa có mẫu lỗ định vị.";
+            RecordTiming(timings, SegmentationPipelineSteps.Fiducial, TimeSpan.Zero);
         }
 
         return new SegmentationPipelineResult
@@ -115,8 +136,18 @@ public class PcbSegmentationService : IPcbSegmentationService
             CannyThreshold2 = t2,
             FiducialCenters = fiducialCenters,
             FiducialDescription = fiducialDescription,
-            Warped = warped
+            Warped = warped,
+            StepTimings = timings ?? new Dictionary<string, TimeSpan>()
         };
+    }
+
+    private static void RecordTiming(
+        Dictionary<string, TimeSpan>? timings,
+        string key,
+        TimeSpan elapsed)
+    {
+        if (timings is not null)
+            timings[key] = elapsed;
     }
 
     private static Mat WarpPerspective(Mat source, Point2f[] quad)

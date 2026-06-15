@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Haui.PCB.ViewModels.Pipeline;
 using OpenCvSharp;
 
 namespace Haui.PCB.ViewModels;
@@ -73,11 +74,12 @@ public class PipelineStepsViewModel : INotifyPropertyChanged, IDisposable
             foreach (var step in results)
                 Steps.Add(step);
 
-            StatusText = $"Hoàn thành — {Steps.Count} bước xử lý.";
+            var totalMs = results.Sum(s => s.ElapsedMs);
+            StatusText = $"Hoàn thành — {Steps.Count} bước, tổng {PipelineStep.FormatElapsed(totalMs)}.";
         }
         catch (Exception ex)
         {
-            StatusText = $"Lá»—i: {ex.Message}";
+            StatusText = $"Lỗi: {ex.Message}";
         }
         finally
         {

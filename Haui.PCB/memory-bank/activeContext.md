@@ -16,6 +16,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Memory bank (2026-06-15):** Restored from `cmsang/pcb` + added **`memory-bank/baslerCamera.md`** (Haui.PCB implementation + official/community pylon samples).
 
+**Pipeline step timing (2026-06-15):** Dashboard gallery + `PipelineStepsWindow` show per-step elapsed ms (`Stopwatch` in `PcbSegmentationService` → `SegmentationPipelineResult.StepTimings`); description moved to tooltip.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:
