@@ -40,6 +40,15 @@ public class RobotJointItem : INotifyPropertyChanged
 
     public string AngleText => $"{Angle:F1}°";
 
+    /// <summary>Gán góc và luôn báo UI (dùng sau Go To / chọn điểm teach).</summary>
+    public void SetAngleSilently(double value)
+    {
+        var clamped = Math.Clamp(Math.Round(value, 2), MinAngle, MaxAngle);
+        _angle = clamped;
+        OnPropertyChanged(nameof(Angle));
+        OnPropertyChanged(nameof(AngleText));
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public void OnPropertyChanged([CallerMemberName] string? name = null)
@@ -82,6 +91,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private bool _disposed;
     private bool _closing;
     private CancellationTokenSource? _awaitDoneCts;
+    private RobotTeachPoint? _goToTargetPoint;
     private static readonly TimeSpan AwaitDoneTimeout = TimeSpan.FromSeconds(120);
 
     public RobotTeachViewModel(
@@ -318,9 +328,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
         try
         {
-            var axisName = joint.IsGripper
-                ? joint.Key
-                : joint.AxisNumber.ToString(CultureInfo.InvariantCulture);
+            var axisName = joint.AxisNumber.ToString(CultureInfo.InvariantCulture);
             var cmd = RobotSerialProtocol.JogCommand(axisName, direction > 0, JogStep);
             _serialService.SendAscii(cmd);
             BeginAwaitDone();
@@ -334,7 +342,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
     public void SendMoveCurrentJoints()
     {
-        if (Joints.Count < 6) return;
+        if (Joints.Count < 5) return;
 
         var moveCmd = RobotSerialProtocol.MoveCommand(
             Joints[0].Angle, Joints[1].Angle, Joints[2].Angle,
@@ -352,20 +360,6 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         StatusText = $"TX {moveCmd} — chờ Dx...";
     }
 
-    public void SendGripperOnly()
-    {
-        if (Joints.Count < 6) return;
-        var g = Joints[5];
-
-        if (!TrySend(() => _serialService.SendGripperAngle(g.Angle), out var err, awaitDone: true))
-        {
-            StatusText = err;
-            return;
-        }
-
-        StatusText = $"G → {g.AngleText} — chờ Dx...";
-    }
-
     public void PerformHoming()
     {
         const string cmd = "H0";
@@ -381,12 +375,6 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Homing một trục J1–J5 — gửi "H1".."H5".</summary>
     public void PerformHomingAxis(RobotJointItem joint)
     {
-        if (joint.IsGripper)
-        {
-            StatusText = "Gripper không dùng lệnh H — dùng G hoặc jog.";
-            return;
-        }
-
         var cmd = RobotSerialProtocol.HomeCommand(joint.AxisNumber);
         if (!TrySend(() => _serialService.SendAscii(cmd), out var err, awaitDone: true))
         {
@@ -425,6 +413,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        _goToTargetPoint = SelectedPoint;
         SendMoveToPoint(SelectedPoint);
     }
 
@@ -530,6 +519,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     public void CancelPendingOperations()
     {
         _closing = true;
+        _goToTargetPoint = null;
         CompleteAwaitDone();
     }
 
@@ -635,11 +625,12 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
                 CompleteAwaitDone();
                 StatusText = "Timeout — không nhận được Dx từ robot.";
+                _goToTargetPoint = null;
             });
         });
     }
 
-    private void CompleteAwaitDone()
+    private void CompleteAwaitDone(bool applyGoToJoints = false)
     {
         if (!IsAwaitingRobotDone && _awaitDoneCts == null)
             return;
@@ -648,6 +639,16 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         _awaitDoneCts?.Dispose();
         _awaitDoneCts = null;
         IsAwaitingRobotDone = false;
+
+        if (applyGoToJoints && _goToTargetPoint is { } target)
+        {
+            var point = TeachPoints.FirstOrDefault(p =>
+                p.Name.Equals(target.Name, StringComparison.OrdinalIgnoreCase)) ?? target;
+            SelectedPoint = point;
+            StatusText = $"Đã tới \"{point.Name}\" — cập nhật góc khớp trên UI.";
+        }
+
+        _goToTargetPoint = null;
     }
 
     private void SetReturningHome(bool value)
@@ -666,8 +667,10 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             Application.Current?.Dispatcher.InvokeAsync(() =>
             {
                 if (!IsAwaitingRobotDone) return;
-                CompleteAwaitDone();
-                StatusText = $"Robot hoàn thành — R: {frame}";
+                var hadGoTo = _goToTargetPoint != null;
+                CompleteAwaitDone(applyGoToJoints: hadGoTo);
+                if (!hadGoTo)
+                    StatusText = $"Robot hoàn thành — R: {frame}";
             });
             return;
         }
@@ -686,23 +689,24 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
     private void ApplyCurrentJointsToPoint(RobotTeachPoint point)
     {
+        if (Joints.Count < 5) return;
+
         point.J1 = Joints[0].Angle;
         point.J2 = Joints[1].Angle;
         point.J3 = Joints[2].Angle;
         point.J4 = Joints[3].Angle;
         point.J5 = Joints[4].Angle;
-        point.GripperAngle = Joints[5].Angle;
     }
 
     private void ApplyPointToJoints(RobotTeachPoint point)
     {
-        if (Joints.Count < 6) return;
-        Joints[0].Angle = point.J1;
-        Joints[1].Angle = point.J2;
-        Joints[2].Angle = point.J3;
-        Joints[3].Angle = point.J4;
-        Joints[4].Angle = point.J5;
-        Joints[5].Angle = point.GripperAngle;
+        if (Joints.Count < 5) return;
+
+        Joints[0].SetAngleSilently(point.J1);
+        Joints[1].SetAngleSilently(point.J2);
+        Joints[2].SetAngleSilently(point.J3);
+        Joints[3].SetAngleSilently(point.J4);
+        Joints[4].SetAngleSilently(point.J5);
     }
 
     private void RefreshTeachPointBinding()
