@@ -1,0 +1,11 @@
+global using Haui.PCB.Models.Camera;
+global using Haui.PCB.Models.Configuration;
+global using Haui.PCB.Models.Segmentation;
+global using Haui.PCB.Models.Templates;
+global using Haui.PCB.Processing;
+global using Haui.PCB.Processing.Camera;
+global using Haui.PCB.Processing.Configuration;
+global using Haui.PCB.Processing.Fiducial;
+global using Haui.PCB.Processing.Segmentation;
+global using Haui.PCB.Processing.Templates;
+global using Haui.PCB.ViewModels.Pipeline;

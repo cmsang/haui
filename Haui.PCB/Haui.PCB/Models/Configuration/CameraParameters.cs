@@ -1,0 +1,24 @@
+﻿namespace Haui.PCB.Models.Configuration;
+
+/// <summary>
+/// Tham số camera Basler — section <c>CameraBasler</c> trong <c>setting.json</c>; UI chính có thể chỉnh tạm thời.
+/// </summary>
+public class CameraParameters
+{
+    public double ExposureTimeUs { get; set; } = 15_000;
+    public double GainDb { get; set; }
+    public double Gamma { get; set; } = 1.0;
+    public int Width { get; set; } = 1920;
+    public int Height { get; set; } = 1200;
+    public string BalanceWhiteAuto { get; set; } = "Off";
+
+    public CameraParameters Clone() => new()
+    {
+        ExposureTimeUs = ExposureTimeUs,
+        GainDb = GainDb,
+        Gamma = Gamma,
+        Width = Width,
+        Height = Height,
+        BalanceWhiteAuto = BalanceWhiteAuto
+    };
+}
