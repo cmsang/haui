@@ -56,8 +56,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         ReloadDestinationPoints();
 
         RefreshAvailablePorts();
-        _serialService.LineReceived += OnSerialLineReceived;
-        _serialService.DataReceived += OnSerialDataReceived;
+        _serialService.FrameReceived += OnSerialFrameReceived;
         SyncConnectionState();
     }
 
@@ -470,8 +469,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     {
         if (_disposed) return;
         CancelPendingOperations();
-        _serialService.LineReceived -= OnSerialLineReceived;
-        _serialService.DataReceived -= OnSerialDataReceived;
+        _serialService.FrameReceived -= OnSerialFrameReceived;
     }
 
     public void Dispose()
@@ -479,8 +477,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed) return;
         _disposed = true;
         CancelPendingOperations();
-        _serialService.LineReceived -= OnSerialLineReceived;
-        _serialService.DataReceived -= OnSerialDataReceived;
+        _serialService.FrameReceived -= OnSerialFrameReceived;
 
         if (_disposeSerialService)
         {
@@ -506,27 +503,27 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             : RobotTeachPositions.CreateDefault();
     }
 
-    private void OnSerialLineReceived(string line)
+    private void OnSerialFrameReceived(string frame)
     {
-        if (IsTestRunning || IsAwaitingRobotDone) return;
-
-        var msg = line switch
+        if (IsTestRunning || IsAwaitingRobotDone)
         {
-            _ when line.StartsWith('A') => $"Robot bắt đầu homing trục {line[1..]}...",
-            _ when line.StartsWith('D') => $"Robot hoàn thành trục {line[1..]}.",
-            _ => $"RX: {line}"
+            if (IsAwaitingRobotDone && RobotPickPlaceExecutor.IsDoneSignal(frame))
+            {
+                Application.Current?.Dispatcher.InvokeAsync(() =>
+                    StatusText = $"Robot hoàn thành — R: {frame}");
+            }
+
+            return;
+        }
+
+        var msg = frame switch
+        {
+            _ when frame.StartsWith('A') => $"Robot bắt đầu homing trục {frame[1..^1]}...",
+            _ when frame.StartsWith('D') => $"Robot hoàn thành trục {frame[1..^1]}.",
+            _ => $"R: {frame}"
         };
 
         Application.Current?.Dispatcher.InvokeAsync(() => StatusText = msg);
-    }
-
-    private void OnSerialDataReceived(string chunk)
-    {
-        if (IsTestRunning || IsAwaitingRobotDone) return;
-        if (!RobotPickPlaceExecutor.IsDoneSignal(chunk)) return;
-
-        Application.Current?.Dispatcher.InvokeAsync(() =>
-            StatusText = "Robot hoàn thành — nhận Dx.");
     }
 
     private void SetReturningHome(bool value)

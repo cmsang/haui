@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -21,8 +22,10 @@ public partial class MainWindow : System.Windows.Window
     private readonly RobotSerialService _serialService = new();
     private readonly RobotStartupHandshakeService _startupHandshake;
 
-    private readonly Queue<string> _robotRxLog = new();
-    private const int MaxRobotRxLines = 30;
+    private readonly Queue<(string Line, Brush Brush)> _robotSerialLog = new();
+    private const int MaxRobotSerialLogLines = 30;
+    private static readonly Brush TxLogBrush = new SolidColorBrush(Color.FromRgb(0x7B, 0x1F, 0xA2));
+    private static readonly Brush RxLogBrush = Brushes.Black;
 
     // Trạng thái kéo thả chọn vùng
     private bool _isSelectingRegion;
@@ -46,7 +49,8 @@ public partial class MainWindow : System.Windows.Window
             enableSerialEvents: false);
         DataContext = _viewModel;
 
-        _serialService.DataReceived += Serial_DataReceived;
+        _serialService.FrameReceived += Serial_FrameReceived;
+        _serialService.DataSent += Serial_DataSent;
         _startupHandshake = new RobotStartupHandshakeService(_serialService);
 
         _robotViewModel.PropertyChanged += (_, e) =>
@@ -396,7 +400,8 @@ public partial class MainWindow : System.Windows.Window
     private void Window_Closed(object sender, EventArgs e)
     {
         _startupHandshake.Cancel();
-        _serialService.DataReceived -= Serial_DataReceived;
+        _serialService.FrameReceived -= Serial_FrameReceived;
+        _serialService.DataSent -= Serial_DataSent;
         _robotViewModel.Dispose();
         _serialService.Dispose();
         _viewModel.Dispose();
@@ -430,7 +435,9 @@ public partial class MainWindow : System.Windows.Window
         if (!_robotViewModel.EnsureSerialConnected())
         {
             RobotSerialDetail.Text = _robotViewModel.StatusText;
-            TxtRobotRxLog.Text = $"Chưa mở được COM — kiểm tra Config/setting.json ({Processing.AppConfigPaths.SettingFile})";
+            AppendRobotSerialLog(
+                $"Chưa mở được COM — kiểm tra Config/setting.json ({Processing.AppConfigPaths.SettingFile})",
+                RxLogBrush);
         }
         else
         {
@@ -459,23 +466,55 @@ public partial class MainWindow : System.Windows.Window
         btnFail.IsEnabled = ready && !busy;
     }
 
-    /// <summary>
-    /// Gọi mỗi khi SerialPort.DataReceived có byte mới (RobotSerialService.Port_DataReceived).
-    /// </summary>
-    private void Serial_DataReceived(string chunk)
+    private void Serial_FrameReceived(string frame)
     {
         Dispatcher.InvokeAsync(() =>
         {
-            var visible = chunk.Replace("\r", "\\r").Replace("\n", "\\n");
-            var hex = BitConverter.ToString(Encoding.ASCII.GetBytes(chunk));
-            var entry = $"{DateTime.Now:HH:mm:ss}  RX: {visible}  [{hex}]";
-            _robotRxLog.Enqueue(entry);
-            while (_robotRxLog.Count > MaxRobotRxLines)
-                _robotRxLog.Dequeue();
-
-            TxtRobotRxLog.Text = string.Join(Environment.NewLine, _robotRxLog);
-            RobotSerialDetail.Text = $"RX: {visible}";
+            var visible = EscapeSerialText(frame);
+            AppendRobotSerialLog(FormatSerialLogEntry("R", visible, frame), RxLogBrush);
+            RobotSerialDetail.Text = $"R: {visible}";
         });
+    }
+
+    private void Serial_DataSent(string chunk)
+    {
+        Dispatcher.InvokeAsync(() =>
+        {
+            var visible = EscapeSerialText(chunk);
+            AppendRobotSerialLog(FormatSerialLogEntry("S", visible, chunk), TxLogBrush);
+            RobotSerialDetail.Text = $"S: {visible}";
+        });
+    }
+
+    private void AppendRobotSerialLog(string line, Brush brush)
+    {
+        _robotSerialLog.Enqueue((line, brush));
+        while (_robotSerialLog.Count > MaxRobotSerialLogLines)
+            _robotSerialLog.Dequeue();
+
+        var doc = new FlowDocument
+        {
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 10,
+            PagePadding = new Thickness(4, 2, 4, 2)
+        };
+        var paragraph = new Paragraph { Margin = new Thickness(0) };
+
+        foreach (var (entry, entryBrush) in _robotSerialLog)
+            paragraph.Inlines.Add(new Run(entry + Environment.NewLine) { Foreground = entryBrush });
+
+        doc.Blocks.Add(paragraph);
+        TxtRobotRxLog.Document = doc;
+        TxtRobotRxLog.ScrollToEnd();
+    }
+
+    private static string EscapeSerialText(string text)
+        => text.Replace("\r", "\\r").Replace("\n", "\\n");
+
+    private static string FormatSerialLogEntry(string direction, string visible, string raw)
+    {
+        var hex = BitConverter.ToString(Encoding.ASCII.GetBytes(raw));
+        return $"{DateTime.Now:HH:mm:ss}  {direction}: {visible}  [{hex}]";
     }
 
     private void UpdateRobotSerialStatus()
@@ -513,8 +552,10 @@ public partial class MainWindow : System.Windows.Window
 
     private void EnsureMainSerialDataReceiver()
     {
-        _serialService.DataReceived -= Serial_DataReceived;
-        _serialService.DataReceived += Serial_DataReceived;
+        _serialService.FrameReceived -= Serial_FrameReceived;
+        _serialService.DataSent -= Serial_DataSent;
+        _serialService.FrameReceived += Serial_FrameReceived;
+        _serialService.DataSent += Serial_DataSent;
     }
 
     private void btnDashboard_Click(object sender, RoutedEventArgs e)

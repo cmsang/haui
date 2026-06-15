@@ -1,3 +1,4 @@
+using System.IO;
 using System.IO.Ports;
 using System.Text;
 
@@ -5,26 +6,20 @@ namespace Haui.PCB.Processing;
 
 /// <summary>
 /// Gửi/nhận lệnh M/J/H/S/G tới firmware robot qua SerialPort.
+/// RX: đọc frame bằng <see cref="SerialPort.ReadLine"/> (NewLine = "x") — tương đương ReadTo("x").
 /// </summary>
 public class RobotSerialService : IRobotSerialService
 {
     private SerialPort? _port;
-    private readonly StringBuilder _rxLineBuffer = new();
+    private Thread? _readThread;
+    private volatile bool _reading;
     private bool _disposed;
 
     public bool IsConnected => _port?.IsOpen == true;
 
+    public event Action<string>? FrameReceived;
 
-
-    /// <summary>Mỗi lần có byte vào COM — kể cả không có ký tự xuống dòng.</summary>
-
-    public event Action<string>? DataReceived;
-
-
-
-    /// <summary>Một dòng text hoàn chỉnh (kết thúc bằng CR/LF).</summary>
-
-    public event Action<string>? LineReceived;
+    public event Action<string>? DataSent;
 
     public IReadOnlyList<string> GetAvailablePorts()
         => SerialPort.GetPortNames().OrderBy(p => p).ToList();
@@ -39,38 +34,48 @@ public class RobotSerialService : IRobotSerialService
             throw new InvalidOperationException(
                 $"Không tìm thấy cổng {portName}. Hiện có: {(ports.Count > 0 ? string.Join(", ", ports) : "(trống)")}");
         }
+
         _port = new SerialPort(portName, baudRate)
         {
-            ReadTimeout = 500,
+            ReadTimeout = SerialPort.InfiniteTimeout,
             WriteTimeout = 500,
-            NewLine = "\n",
+            NewLine = RobotSerialProtocol.FrameTerminator,
             Encoding = Encoding.ASCII,
-            ReceivedBytesThreshold = 1,
             DtrEnable = true,
             RtsEnable = true
         };
-        _port.DataReceived += Port_DataReceived;
         _port.Open();
-        _rxLineBuffer.Clear();
+
+        _reading = true;
+        _readThread = new Thread(ReadFramesLoop)
+        {
+            IsBackground = true,
+            Name = "RobotSerialReadToX"
+        };
+        _readThread.Start();
     }
 
     public void Disconnect()
     {
-        if (_port == null) return;
+        _reading = false;
+
+        if (_port == null)
+            return;
+
         try
         {
             if (_port.IsOpen)
-            {
-                _port.DataReceived -= Port_DataReceived;
                 _port.Close();
-            }
         }
         catch { /* bỏ qua */ }
         finally
         {
+            try { _readThread?.Join(1000); }
+            catch { /* bỏ qua */ }
+
+            _readThread = null;
             _port.Dispose();
             _port = null;
-            _rxLineBuffer.Clear();
         }
     }
 
@@ -80,10 +85,11 @@ public class RobotSerialService : IRobotSerialService
             throw new InvalidOperationException("SerialPort chưa kết nối.");
 
         _port.Write(packet, 0, packet.Length);
+        DataSent?.Invoke(Encoding.ASCII.GetString(packet, 0, packet.Length));
     }
 
     public void SendAscii(string command)
-        => SendRaw(Encoding.ASCII.GetBytes(command + "x"));
+        => SendRaw(Encoding.ASCII.GetBytes(command + RobotSerialProtocol.FrameTerminator));
 
     public void SendJog(string axisName, bool positive, double stepDegrees)
         => SendAscii(RobotSerialProtocol.JogCommand(axisName, positive, stepDegrees));
@@ -105,50 +111,42 @@ public class RobotSerialService : IRobotSerialService
             SendRaw(RobotSerialProtocol.BuildTuning(axis, velocity, acceleration));
     }
 
-    private void Port_DataReceived(object sender, SerialDataReceivedEventArgs e)
+    /// <summary>Đọc liên tục ReadTo("x") — chờ đủ frame dù STM32 HAL gửi từng byte.</summary>
+    private void ReadFramesLoop()
     {
-        try
+        while (_reading)
         {
-            if (_port?.IsOpen != true) return;
+            var port = _port;
+            if (port is not { IsOpen: true })
+                break;
 
-            while (_port.BytesToRead > 0)
+            try
             {
-                var count = _port.BytesToRead;
-                var buf = new byte[count];
-                var read = _port.Read(buf, 0, count);
-                if (read <= 0) break;
-                var chunk = Encoding.ASCII.GetString(buf, 0, read);
-                DataReceived?.Invoke(chunk);
-                _rxLineBuffer.Append(chunk);
+                var body = port.ReadLine();
+                if (string.IsNullOrEmpty(body))
+                    continue;
 
-                FlushLines();
+                var frame = body + RobotSerialProtocol.FrameTerminator;
+                FrameReceived?.Invoke(frame);
             }
-        }
-        catch (Exception ex)
-        {
-            DataReceived?.Invoke($"[Lỗi đọc Serial] {ex.Message}");
-        }
-    }
-
-    private void FlushLines()
-    {
-        while (true)
-        {
-            var text = _rxLineBuffer.ToString();
-
-            var idx = text.IndexOfAny(['\r', '\n']);
-            if (idx < 0) break;
-
-            var line = text[..idx].Trim();
-            var skip = idx + 1;
-            if (skip < text.Length && text[idx] == '\r' && text[skip] == '\n')
-                skip++;
-
-            _rxLineBuffer.Clear();
-            _rxLineBuffer.Append(text[skip..]);
-
-            if (line.Length > 0)
-                LineReceived?.Invoke(line);
+            catch (TimeoutException)
+            {
+                if (!_reading) break;
+            }
+            catch (IOException)
+            {
+                break;
+            }
+            catch (InvalidOperationException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                if (_reading)
+                    FrameReceived?.Invoke($"[Lỗi đọc Serial] {ex.Message}");
+                break;
+            }
         }
     }
 

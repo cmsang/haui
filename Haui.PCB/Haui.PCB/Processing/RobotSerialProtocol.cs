@@ -19,6 +19,10 @@ public static class RobotSerialProtocol
     public const string WarehouseOkBufferFull = "C1";
     public const string WarehouseNgBufferFull = "C2";
 
+    /// <summary>Ký tự kết thúc frame lệnh/phản hồi (PC gửi thêm khi TX, RX đọc tới 'x').</summary>
+    public const string FrameTerminator = "x";
+    public const char FrameTerminatorChar = 'x';
+
     /// <summary>Khởi động: gửi Rx, robot trả Yx → gửi H0x.</summary>
     public const string StartupHandshake = "R";
     public const char StartupReadyResponse = 'Y';

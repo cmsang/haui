@@ -77,16 +77,8 @@ public class RobotPickPlaceExecutor
     public static bool IsDoneSignal(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return false;
-
-        foreach (var segment in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            var s = segment.Trim();
-            if (s.Length >= 2 && s[0] == 'D')
-                return true;
-        }
-
-        var trimmed = text.Trim();
-        return trimmed.Length >= 2 && trimmed[0] == 'D';
+        var s = text.Trim();
+        return s.Length >= 2 && s[0] == 'D' && s[^1] == 'x';
     }
 
     private void SendGripper(int angleDegrees)
@@ -119,20 +111,13 @@ public class RobotPickPlaceExecutor
     {
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        void OnLine(string line)
+        void OnFrame(string frame)
         {
-            if (IsDoneSignal(line))
+            if (IsDoneSignal(frame))
                 tcs.TrySetResult();
         }
 
-        void OnData(string chunk)
-        {
-            if (IsDoneSignal(chunk))
-                tcs.TrySetResult();
-        }
-
-        _serialService.LineReceived += OnLine;
-        _serialService.DataReceived += OnData;
+        _serialService.FrameReceived += OnFrame;
 
         try
         {
@@ -155,8 +140,7 @@ public class RobotPickPlaceExecutor
         }
         finally
         {
-            _serialService.LineReceived -= OnLine;
-            _serialService.DataReceived -= OnData;
+            _serialService.FrameReceived -= OnFrame;
         }
     }
 }

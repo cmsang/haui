@@ -24,9 +24,9 @@ public interface IRobotSerialService : IDisposable
 
     void SendTuningForAllAxes(int speedPercent, int stepsPerDeg, ushort acceleration = RobotSerialProtocol.DefaultAcceleration);
 
-    /// <summary>Byte/chuỗi thô vừa đọc từ COM (mọi lần có dữ liệu).</summary>
-    event Action<string>? DataReceived;
+    /// <summary>Frame hoàn chỉnh từ robot (đọc ReadTo "x").</summary>
+    event Action<string>? FrameReceived;
 
-    /// <summary>Một dòng hoàn chỉnh (CR/LF).</summary>
-    event Action<string>? LineReceived;
+    /// <summary>Byte/chuỗi thô vừa ghi ra COM.</summary>
+    event Action<string>? DataSent;
 }

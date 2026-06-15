@@ -38,20 +38,13 @@ public class RobotStartupHandshakeService
 
         var readyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        void OnData(string chunk)
+        void OnFrame(string frame)
         {
-            if (IsReadySignal(chunk))
+            if (IsReadySignal(frame))
                 readyTcs.TrySetResult();
         }
 
-        void OnLine(string line)
-        {
-            if (IsReadySignal(line))
-                readyTcs.TrySetResult();
-        }
-
-        _serialService.DataReceived += OnData;
-        _serialService.LineReceived += OnLine;
+        _serialService.FrameReceived += OnFrame;
 
         try
         {
@@ -67,8 +60,7 @@ public class RobotStartupHandshakeService
                     continue;
 
                 await readyTcs.Task;
-                _serialService.DataReceived -= OnData;
-                _serialService.LineReceived -= OnLine;
+                _serialService.FrameReceived -= OnFrame;
 
                 reportStatus?.Invoke("Robot phản hồi — đang homing (H0x)...");
                 try
@@ -92,8 +84,7 @@ public class RobotStartupHandshakeService
         }
         finally
         {
-            _serialService.DataReceived -= OnData;
-            _serialService.LineReceived -= OnLine;
+            _serialService.FrameReceived -= OnFrame;
             IsRunning = false;
             _cts?.Dispose();
             _cts = null;
@@ -109,15 +100,9 @@ public class RobotStartupHandshakeService
     public static bool IsReadySignal(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return false;
-
-        foreach (var segment in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
-        {
-            var s = segment.Trim();
-            if (s.Length >= 1 && s[0] == RobotSerialProtocol.StartupReadyResponse)
-                return true;
-        }
-
-        var trimmed = text.Trim();
-        return trimmed.Length >= 1 && trimmed[0] == RobotSerialProtocol.StartupReadyResponse;
+        var s = text.Trim();
+        return s.Length >= 2
+               && s[0] == RobotSerialProtocol.StartupReadyResponse
+               && s[^1] == 'x';
     }
 }
