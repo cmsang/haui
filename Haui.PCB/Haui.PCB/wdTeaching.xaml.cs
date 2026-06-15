@@ -65,6 +65,8 @@ public partial class wdTeaching : Window
                 UpdateSerialStateUi();
             else if (e.PropertyName is nameof(RobotTeachViewModel.SerialConnectButtonText))
                 BtnSerialToggle.Content = _viewModel.SerialConnectButtonText;
+            else if (e.PropertyName is nameof(RobotTeachViewModel.SelectedPoint))
+                UpdateJointSummary();
         };
 
         foreach (var joint in _viewModel.Joints)
@@ -173,11 +175,7 @@ public partial class wdTeaching : Window
     {
         if (sender is not Slider { DataContext: RobotJointItem joint }) return;
 
-        if (joint.IsGripper)
-            _viewModel.SendGripperOnly();
-        else
-            _viewModel.SendMoveCurrentJoints();
-
+        _viewModel.SendMoveCurrentJoints();
         UpdateJointSummary();
     }
 
@@ -206,10 +204,7 @@ public partial class wdTeaching : Window
     }
 
     private void BtnGoTo_Click(object sender, RoutedEventArgs e)
-    {
-        _viewModel.GoToSelectedPoint();
-        UpdateJointSummary();
-    }
+        => _viewModel.GoToSelectedPoint();
 
     private void BtnSave_Click(object sender, RoutedEventArgs e)
     {

@@ -110,11 +110,6 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsGripper}" Value="True">
-                    <Setter Property="Visibility" Value="Collapsed"/>
-                </DataTrigger>
-            </Style.Triggers>
         </Style>
 
         <Style x:Key="JointRowBorder" TargetType="Border">
@@ -166,12 +161,12 @@
                     <md:PackIcon Kind="RobotIndustrial" Width="32" Height="32" Foreground="White" Margin="0,0,12,0"/>
                     <StackPanel>
                         <TextBlock Text="Teach vị trí cánh tay Robot" FontSize="18" FontWeight="SemiBold" Foreground="White"/>
-                        <TextBlock Text="Cấu hình 5 khớp quay (RRRRR) + Gripper theo góc xoay" FontSize="12" Foreground="#BDC3C7" Margin="0,2,0,0"/>
+                        <TextBlock Text="Cấu hình 5 khớp quay (RRRRR) theo góc xoay" FontSize="12" Foreground="#BDC3C7" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
                 <Border HorizontalAlignment="Right" VerticalAlignment="Center"
                         Background="#1ABC9C" CornerRadius="4" Padding="10,4">
-                    <TextBlock Text="RRRRR + Gripper" Foreground="White" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBlock Text="RRRRR" Foreground="White" FontWeight="SemiBold" FontSize="12"/>
                 </Border>
             </Grid>
         </Border>
@@ -365,8 +360,7 @@
                             <DataGridTextColumn Header="J2" Binding="{Binding J2, StringFormat=F1}" Width="75"/>
                             <DataGridTextColumn Header="J3" Binding="{Binding J3, StringFormat=F1}" Width="75"/>
                             <DataGridTextColumn Header="J4" Binding="{Binding J4, StringFormat=F1}" Width="75"/>
-                            <DataGridTextColumn Header="J5" Binding="{Binding J5, StringFormat=F1}" Width="75"/>
-                            <DataGridTextColumn Header="Gripper" Binding="{Binding GripperAngle, StringFormat=F1}" Width="*"/>
+                            <DataGridTextColumn Header="J5" Binding="{Binding J5, StringFormat=F1}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
@@ -378,7 +372,7 @@
                             <Run FontWeight="SemiBold">Go To</Run>
                             <Run>→ điều chỉnh khớp bên trái → bấm </Run>
                             <Run FontWeight="SemiBold">Teach vị trí</Run>
-                            <Run> để lưu góc J1–J5 và Gripper.</Run>
+                            <Run> để lưu góc J1–J5.</Run>
                         </TextBlock>
                     </Border>
 
