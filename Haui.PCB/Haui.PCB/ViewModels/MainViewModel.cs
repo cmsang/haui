@@ -9,21 +9,30 @@ using OpenCvSharp;
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// ViewModel cho MainWindow — camera và pipeline chụp ảnh PCB.
+/// ViewModel cho MainWindow — camera Basler và pipeline chụp ảnh PCB.
 /// </summary>
 public class MainViewModel : INotifyPropertyChanged, IDisposable
 {
-    private readonly ICameraService _cameraService;
     private readonly IMaterialTransferService? _materialTransfer;
+    private BaslerCameraService? _cameraService;
 
     private IReadOnlyList<CameraInfo> _cameras = [];
     private IReadOnlyList<ResolutionInfo> _resolutions = [];
+    private CameraInfo? _selectedCamera;
     private string _statusText = string.Empty;
     private bool _isBusy;
     private int _frameCount;
     private int _currentFps;
     private readonly Stopwatch _fpsStopwatch = Stopwatch.StartNew();
     private bool _disposed;
+
+    private double _exposureTimeUs = 15_000;
+    private double _gainDb;
+    private double _gamma = 1.0;
+
+    private readonly SegmentationParameters _pipelineParameters = SegmentationSettings.Current;
+    private readonly IFiducialHoleTemplateService _fiducialTemplateService = FiducialHoleServices.TemplateService;
+    private readonly CameraCaptureService _cameraCaptureService = new();
 
     private OpenCvSharp.Rect? _selectedRegion;
     private const string RegionSettingsPath = "last_region.json";
@@ -33,7 +42,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public event Action<System.Windows.Media.Imaging.BitmapSource>? FrameReady;
     public event Action<Mat>? TemplateFrameCaptured;
-    public event Action<Mat>? TestFrameCaptured;
+    public event Action<Mat>? FiducialTemplateFrameCaptured;
     public event Action<Mat>? Test2FrameCaptured;
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -67,7 +76,47 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         private set { _currentFps = value; OnPropertyChanged(); }
     }
 
-    public bool IsRunning => _cameraService.IsRunning;
+    public bool IsRunning => _cameraService?.IsRunning ?? false;
+
+    public bool CanEditCameraParameters => IsRunning && _cameraService is not null;
+
+    public double ExposureTimeUs
+    {
+        get => _exposureTimeUs;
+        set { _exposureTimeUs = value; OnPropertyChanged(); }
+    }
+
+    public double GainDb
+    {
+        get => _gainDb;
+        set { _gainDb = value; OnPropertyChanged(); }
+    }
+
+    public double Gamma
+    {
+        get => _gamma;
+        set { _gamma = value; OnPropertyChanged(); }
+    }
+
+    public double CannyThreshold1
+    {
+        get => _pipelineParameters.CannyThreshold1;
+        set
+        {
+            _pipelineParameters.CannyThreshold1 = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public double CannyThreshold2
+    {
+        get => _pipelineParameters.CannyThreshold2;
+        set
+        {
+            _pipelineParameters.CannyThreshold2 = value;
+            OnPropertyChanged();
+        }
+    }
 
     public OpenCvSharp.Rect? SelectedRegion
     {
@@ -83,14 +132,15 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     public int LastFrameWidth => _lastFrameWidth;
     public int LastFrameHeight => _lastFrameHeight;
 
+    public bool HasFiducialTemplates => _fiducialTemplateService.HasTemplates();
+
     public bool IsMaterialTransferRunning => _materialTransfer?.IsRunning ?? false;
 
-    public MainViewModel(ICameraService cameraService, IMaterialTransferService? materialTransfer = null)
+    public MainViewModel(IMaterialTransferService? materialTransfer = null)
     {
-        _cameraService = cameraService;
         _materialTransfer = materialTransfer;
-        _cameraService.FrameArrived += OnFrameArrived;
         LoadRegion();
+        LoadRecommendedParametersToUi();
     }
 
     public void CancelMaterialTransfer() => _materialTransfer?.Cancel();
@@ -145,66 +195,150 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    public void OnCameraSelected(CameraInfo? camera)
+    {
+        _selectedCamera = camera;
+        OnPropertyChanged(nameof(CanEditCameraParameters));
+        if (camera is not null)
+            LoadRecommendedParametersToUi();
+    }
+
     public async Task RefreshCamerasAsync()
     {
         IsBusy = true;
-        StatusText = "Đang dò tìm camera...";
+        StatusText = "Đang dò tìm camera Basler...";
         Cameras = [];
         Resolutions = [];
 
-        var cameras = await _cameraService.EnumerateCamerasAsync();
-        Cameras = cameras;
+        using var discovery = new BaslerCameraService();
+        Cameras = await discovery.EnumerateCamerasAsync();
 
-        StatusText = cameras.Count == 0
-            ? "Không phát hiện camera nào."
-            : $"Tìm thấy {cameras.Count} camera.";
+        StatusText = Cameras.Count == 0
+            ? "Không phát hiện camera Basler nào."
+            : $"Tìm thấy {Cameras.Count} camera Basler.";
 
         IsBusy = false;
     }
 
-    public async Task LoadResolutionsAsync(string monikerString)
+    public async Task LoadResolutionsAsync(CameraInfo camera)
     {
         IsBusy = true;
         Resolutions = [];
         StatusText = "Đang đọc độ phân giải...";
+        OnCameraSelected(camera);
 
-        var resolutions = await _cameraService.GetSupportedResolutionsAsync(monikerString);
-        Resolutions = resolutions;
+        using var probe = new BaslerCameraService();
+        Resolutions = await probe.GetSupportedResolutionsAsync(camera.DeviceId);
 
-        StatusText = resolutions.Count == 0
+        StatusText = Resolutions.Count == 0
             ? "Camera không phản hồi độ phân giải."
-            : $"Sẵn sàng. {resolutions.Count} độ phân giải hỗ trợ.";
+            : $"Sẵn sàng. {Resolutions.Count} độ phân giải hỗ trợ.";
 
         IsBusy = false;
     }
 
     public int GetDefaultResolutionIndex()
-    {
-        int idx = Resolutions
-            .Select((r, i) => (r, i))
-            .FirstOrDefault(t => t.r.Width == 1280 && t.r.Height == 720, (null!, -1)).i;
-        return idx >= 0 ? idx : Resolutions.Count / 2;
-    }
+        => Resolutions.Count > 0 ? Resolutions.Count - 1 : 0;
 
-    public void StartCamera(string monikerString, int width, int height)
+    public void StartCamera(CameraInfo camera, int width, int height)
     {
-        _cameraService.Start(monikerString, width, height);
+        StopCameraInternal();
+
+        _cameraService = new BaslerCameraService();
+        _cameraService.FrameArrived += OnFrameArrived;
+        _cameraService.GrabStatusChanged += OnGrabStatusChanged;
+        _selectedCamera = camera;
+
+        _cameraService.PrepareForStart(BuildParametersFromUi(width, height));
+        _cameraService.Start(camera.DeviceId, width, height);
+        SyncParametersFromCamera();
+
         OnPropertyChanged(nameof(IsRunning));
+        OnPropertyChanged(nameof(CanEditCameraParameters));
         StatusText = $"Camera đang chạy ({width}×{height})";
     }
 
+    private void OnGrabStatusChanged(string message)
+        => StatusText = message;
+
     public void StopCamera()
     {
-        _cameraService.Stop();
+        StopCameraInternal();
         OnPropertyChanged(nameof(IsRunning));
+        OnPropertyChanged(nameof(CanEditCameraParameters));
         _frameCount = 0;
         CurrentFps = 0;
         StatusText = "Camera đã dừng.";
     }
 
-    public async Task CaptureTestFrameAsync()
+    public void LoadRecommendedParametersToUi()
+    {
+        var defaults = CameraDefaultsLoader.LoadRecommended();
+        ExposureTimeUs = defaults.ExposureTimeUs;
+        GainDb = defaults.GainDb;
+        Gamma = defaults.Gamma;
+    }
+
+    public void ApplyCameraParameters()
+    {
+        if (_cameraService is null || !IsRunning)
+        {
+            StatusText = "Chỉ áp dụng tham số khi camera đang chạy.";
+            return;
+        }
+
+        try
+        {
+            var resolution = GetCurrentResolutionFromRunningCamera();
+            _cameraService.ApplyParameters(BuildParametersFromUi(resolution.Width, resolution.Height));
+            SyncParametersFromCamera();
+            StatusText = $"Đã áp dụng tham số (Exposure {ExposureTimeUs:F0} µs, Gain {GainDb:F1} dB).";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Lỗi áp dụng tham số: {ex.Message}";
+        }
+    }
+
+    public void ResetPipelineParameters()
+    {
+        _pipelineParameters.ResetToDefaults();
+        OnPropertyChanged(nameof(CannyThreshold1));
+        OnPropertyChanged(nameof(CannyThreshold2));
+        StatusText = "Đã đặt lại tham số Canny (50 / 150).";
+    }
+
+    public void ResetCameraParameters()
+    {
+        if (_cameraService is null)
+        {
+            LoadRecommendedParametersToUi();
+            StatusText = "Đã tải tham số khuyến nghị.";
+            return;
+        }
+
+        try
+        {
+            _cameraService.ResetToRecommended();
+            SyncParametersFromCamera();
+            StatusText = "Đã đặt lại và áp dụng tham số khuyến nghị.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Lỗi đặt lại tham số: {ex.Message}";
+        }
+    }
+
+    /// <summary>Grab one frame from the running camera (caller owns the returned <see cref="Mat"/>).</summary>
+    public async Task<Mat?> CaptureFrameAsync()
     {
         StatusText = "Đang chụp ảnh...";
+
+        if (_cameraService is null)
+        {
+            StatusText = "Camera chưa khởi động.";
+            return null;
+        }
 
         var frame = await Task.Run(() => _cameraService.GrabFrame());
 
@@ -212,17 +346,21 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             frame?.Dispose();
             StatusText = "Không thể chụp ảnh từ camera.";
-            return;
+            return null;
         }
 
-        frame = CropToSelectedRegion(frame);
-        StatusText = "Đã mở Test Pipeline.";
-        TestFrameCaptured?.Invoke(frame);
+        return CropToSelectedRegion(frame);
     }
 
     public async Task CaptureTest2FrameAsync()
     {
         StatusText = "Đang chụp ảnh (Test 2)...";
+
+        if (_cameraService is null)
+        {
+            StatusText = "Camera chưa khởi động.";
+            return;
+        }
 
         var frame = await Task.Run(() => _cameraService.GrabFrame());
 
@@ -242,6 +380,12 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         StatusText = "Đang chụp ảnh để tạo mẫu...";
 
+        if (_cameraService is null)
+        {
+            StatusText = "Camera chưa khởi động.";
+            return;
+        }
+
         var frame = await Task.Run(() => _cameraService.GrabFrame());
 
         if (frame is null || frame.Empty())
@@ -253,6 +397,115 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
         StatusText = "Đã mở form tạo mẫu.";
         TemplateFrameCaptured?.Invoke(frame);
+    }
+
+    public async Task CaptureFiducialTemplateFrameAsync()
+    {
+        StatusText = "Đang chụp ảnh và chạy Morphology Close...";
+
+        if (_cameraService is null)
+        {
+            StatusText = "Camera chưa khởi động.";
+            return;
+        }
+
+        var frame = await Task.Run(() => _cameraService.GrabFrame());
+
+        if (frame is null || frame.Empty())
+        {
+            frame?.Dispose();
+            StatusText = "Không thể chụp ảnh từ camera.";
+            return;
+        }
+
+        frame = CropToSelectedRegion(frame);
+
+        Mat? closedImage = await Task.Run(() =>
+        {
+            var segmentation = new PcbSegmentationService(_pipelineParameters);
+            using var pipeline = segmentation.RunPipeline(frame);
+            return pipeline.Closed.Clone();
+        });
+        frame.Dispose();
+
+        if (closedImage is null || closedImage.Empty())
+        {
+            closedImage?.Dispose();
+            StatusText = "Không tạo được ảnh Morphology Close.";
+            return;
+        }
+
+        StatusText = "Đã mở form tạo mẫu 4 lỗ tròn (Morphology Close).";
+        FiducialTemplateFrameCaptured?.Invoke(closedImage);
+    }
+
+    public async Task CaptureAndSaveFrameAsync()
+    {
+        StatusText = "Đang chụp và lưu ảnh...";
+
+        if (_cameraService is null)
+        {
+            StatusText = "Camera chưa khởi động.";
+            return;
+        }
+
+        using var frame = await Task.Run(() => _cameraService.GrabFrame());
+
+        if (frame is null || frame.Empty())
+        {
+            StatusText = "Không thể chụp ảnh từ camera.";
+            return;
+        }
+
+        try
+        {
+            var filePath = await Task.Run(() => _cameraCaptureService.SaveFrame(frame));
+            StatusText = $"Đã lưu ảnh: {filePath}";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Lỗi lưu ảnh: {ex.Message}";
+        }
+    }
+
+    public void RefreshFiducialTemplateStatus()
+    {
+        OnPropertyChanged(nameof(HasFiducialTemplates));
+    }
+
+    private CameraParameters BuildParametersFromUi(int width, int height) => new()
+    {
+        ExposureTimeUs = ExposureTimeUs,
+        GainDb = GainDb,
+        Gamma = Gamma,
+        Width = width,
+        Height = height,
+        BalanceWhiteAuto = CameraDefaultsLoader.LoadRecommended().BalanceWhiteAuto
+    };
+
+    private void SyncParametersFromCamera()
+    {
+        if (_cameraService is null) return;
+
+        var current = _cameraService.ReadCurrentParameters();
+        ExposureTimeUs = current.ExposureTimeUs;
+        GainDb = current.GainDb;
+        Gamma = current.Gamma;
+    }
+
+    private (int Width, int Height) GetCurrentResolutionFromRunningCamera()
+    {
+        if (_cameraService is not null)
+        {
+            var current = _cameraService.ReadCurrentParameters();
+            return (current.Width, current.Height);
+        }
+
+        if (_lastFrameWidth > 0 && _lastFrameHeight > 0)
+            return (_lastFrameWidth, _lastFrameHeight);
+
+        var defaults = CameraDefaultsLoader.LoadRecommended();
+        return (defaults.Width, defaults.Height);
     }
 
     private Mat CropToSelectedRegion(Mat frame)
@@ -271,6 +524,19 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         return result;
     }
 
+    private void StopCameraInternal()
+    {
+        if (_cameraService is null) return;
+
+        _cameraService.FrameArrived -= OnFrameArrived;
+        _cameraService.GrabStatusChanged -= OnGrabStatusChanged;
+        _cameraService.Stop();
+        _cameraService.Dispose();
+        _cameraService = null;
+    }
+
+    private const int PreviewMaxDimension = 1920;
+
     private void OnFrameArrived(Mat frame)
     {
         _frameCount++;
@@ -281,22 +547,51 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
             _fpsStopwatch.Restart();
         }
 
-        if (frame.Width != _lastFrameWidth || frame.Height != _lastFrameHeight)
-        {
-            _lastFrameWidth = frame.Width;
-            _lastFrameHeight = frame.Height;
-        }
+        _lastFrameWidth = frame.Width;
+        _lastFrameHeight = frame.Height;
 
-        if (_selectedRegion.HasValue)
+        Mat? previewMat = null;
+        try
         {
-            var roi = ClampRect(_selectedRegion.Value, frame.Width, frame.Height);
-            if (roi.Width > 0 && roi.Height > 0)
-                Cv2.Rectangle(frame, roi, new Scalar(0, 200, 0), 2);
-        }
+            Mat displaySource = frame;
+            int maxDim = Math.Max(frame.Width, frame.Height);
+            if (maxDim > PreviewMaxDimension)
+            {
+                previewMat = new Mat();
+                double scale = PreviewMaxDimension / (double)maxDim;
+                Cv2.Resize(frame, previewMat, new Size(), scale, scale, InterpolationFlags.Area);
+                displaySource = previewMat;
+            }
 
-        var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(frame);
-        bitmap.Freeze();
-        FrameReady?.Invoke(bitmap);
+            using var annotated = displaySource.Clone();
+
+            if (_selectedRegion.HasValue)
+            {
+                double scaleX = (double)displaySource.Width / frame.Width;
+                double scaleY = (double)displaySource.Height / frame.Height;
+                var roi = _selectedRegion.Value;
+                var scaled = new OpenCvSharp.Rect(
+                    (int)(roi.X * scaleX),
+                    (int)(roi.Y * scaleY),
+                    (int)(roi.Width * scaleX),
+                    (int)(roi.Height * scaleY));
+                roi = ClampRect(scaled, annotated.Width, annotated.Height);
+                if (roi.Width > 0 && roi.Height > 0)
+                    Cv2.Rectangle(annotated, roi, new Scalar(0, 200, 0), 2);
+            }
+
+            var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(annotated);
+            bitmap.Freeze();
+            FrameReady?.Invoke(bitmap);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Hiển thị preview lỗi: {ex.Message}";
+        }
+        finally
+        {
+            previewMat?.Dispose();
+        }
     }
 
     private static OpenCvSharp.Rect ClampRect(OpenCvSharp.Rect r, int w, int h)
@@ -350,8 +645,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        _cameraService.FrameArrived -= OnFrameArrived;
-        _cameraService.Dispose();
+        StopCameraInternal();
         _disposed = true;
     }
 }
