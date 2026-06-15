@@ -116,23 +116,37 @@
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="10">
-                <StackPanel>
-                    <TextBlock Text="Mẫu lỗ tròn"
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="120"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="Mẫu lỗ tròn"
                                FontSize="14"
                                FontWeight="SemiBold"
                                Margin="0,0,0,8"/>
-                    <TextBlock Text="Kéo thả nhiều vùng quanh lỗ tròn trên ảnh Morphology Close, rồi bấm Lưu mẫu một lần."
+                    <TextBlock Grid.Row="1"
+                               Text="Kéo thả nhiều vùng quanh lỗ tròn trên ảnh Morphology Close, rồi bấm Lưu mẫu một lần."
                                TextWrapping="Wrap"
                                Foreground="#666666"
                                FontSize="12"
                                Margin="0,0,0,10"/>
 
-                    <TextBlock Text="Vùng chờ lưu"
+                    <TextBlock Grid.Row="2"
+                               Text="Vùng chờ lưu"
                                FontSize="12"
                                FontWeight="SemiBold"
                                Margin="0,0,0,6"/>
-                    <ListBox x:Name="PendingRegionsList"
-                             Height="120"
+                    <ListBox Grid.Row="3"
+                             x:Name="PendingRegionsList"
                              SelectionChanged="PendingRegionsList_SelectionChanged">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -154,26 +168,30 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <Button x:Name="BtnSave"
+                    <Button Grid.Row="4"
+                            x:Name="BtnSave"
                             Content="💾 Lưu mẫu"
                             Height="34"
                             Margin="0,10,0,8"
                             Click="BtnSave_Click"
                             Style="{StaticResource PrimaryBtn}"/>
 
-                    <Button x:Name="BtnClearSelection"
+                    <Button Grid.Row="5"
+                            x:Name="BtnClearSelection"
                             Content="Xóa tất cả vùng"
                             Height="30"
                             Margin="0,0,0,12"
                             Click="BtnClearSelection_Click"
                             Style="{StaticResource SecondaryBtn}"/>
 
-                    <TextBlock Text="Thư viện mẫu đã lưu"
+                    <TextBlock Grid.Row="6"
+                               Text="Thư viện mẫu đã lưu"
                                FontSize="12"
                                FontWeight="SemiBold"
                                Margin="0,0,0,6"/>
-                    <ListBox x:Name="SavedTemplatesList"
-                             Height="180">
+                    <ListBox Grid.Row="7"
+                             x:Name="SavedTemplatesList"
+                             VerticalAlignment="Stretch">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="0,2">
@@ -194,7 +212,7 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                </StackPanel>
+                </Grid>
             </Border>
         </Grid>
 
