@@ -179,7 +179,7 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0"
-                                               Text="{Binding}"
+                                               Text="{Binding DisplayText}"
                                                VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis"/>
                                     <controls:DeleteIconButton Grid.Column="1"

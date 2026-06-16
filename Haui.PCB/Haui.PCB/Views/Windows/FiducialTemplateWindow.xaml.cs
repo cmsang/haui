@@ -24,7 +24,7 @@ public partial class FiducialTemplateWindow : System.Windows.Window
         _viewModel = new FiducialTemplateViewModel(templateService);
         DataContext = _viewModel;
         PendingRegionsList.ItemsSource = _viewModel.PendingRegions;
-        SavedTemplatesList.ItemsSource = _viewModel.SavedTemplateFiles;
+        SavedTemplatesList.ItemsSource = _viewModel.SavedTemplates;
 
         _viewModel.ImageReady += bitmap =>
             Dispatcher.InvokeAsync(() =>
@@ -125,8 +125,8 @@ public partial class FiducialTemplateWindow : System.Windows.Window
 
     private void BtnDeleteTemplate_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not FrameworkElement { Tag: string fileName }) return;
-        _viewModel.DeleteSavedTemplate(fileName);
+        if (sender is not FrameworkElement { Tag: FiducialSavedTemplateItem item }) return;
+        _viewModel.DeleteSavedTemplate(item.FileName);
     }
 
     private void BtnSave_Click(object sender, RoutedEventArgs e)

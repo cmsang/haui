@@ -15,7 +15,17 @@ public interface IFiducialHoleTemplateService
     bool HasTemplates();
 
     IReadOnlyList<string> ListTemplateFileNames();
+
+    /// <summary>Recognition counts keyed by template file name (missing entries = 0).</summary>
+    IReadOnlyDictionary<string, int> GetRecognitionCounts();
+
+    /// <summary>Templates sorted by recognition count descending; caller owns cloned <see cref="Mat"/> instances.</summary>
+    IReadOnlyList<FiducialTemplateEntry> LoadTemplateEntries();
+
     IReadOnlyList<Mat> LoadTemplates();
+
+    void UpdateRecognitionStats(IReadOnlyList<FiducialTemplateRecognitionOutcome> outcomes);
+
     string SaveTemplate(Mat template);
     void DeleteTemplate(string fileName);
 }

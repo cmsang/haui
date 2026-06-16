@@ -8,9 +8,10 @@ namespace Haui.PCB.Processing.Fiducial;
 public interface IFiducialHoleDetectionService
 {
     /// <param name="searchImage">Ảnh sau bước Morphology Close (grayscale).</param>
+    /// <param name="templates">Mẫu đã sắp theo điểm nhận diện giảm dần.</param>
     FiducialDetectionResult Detect(
         Mat searchImage,
-        IReadOnlyList<Mat> templates,
+        IReadOnlyList<FiducialTemplateEntry> templates,
         double minMatchScore,
         int maxMatchDimension);
 }

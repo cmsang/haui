@@ -18,6 +18,7 @@
 - [x] Optional ROI on preview (`last_region.json`)
 - [x] PCB segmentation (fiducial holes → perspective warp; contour fallback removed 2026-06-14)
 - [x] Fiducial holes — `hole_*.png` library; downscale + RAM cache; fast Segment path
+- [x] Fiducial recognition scoring — `hole_recognition_stats.json` per template (+1/−1); ordered matching + early exit
 - [x] Pipeline step gallery on Dashboard — per-step elapsed time via `PipelineStepMapper` (removed separate `PipelineStepsWindow` 2026-06-16)
 - [x] Create template — draw regions, save PNG + `*_regions.json`; names ∈ `AllowedRegionNames`
 - [x] Template library — scan `*.png` + `*_regions.json` (no `index.json`); folder via `ComponentTemplates.CustomFolder`

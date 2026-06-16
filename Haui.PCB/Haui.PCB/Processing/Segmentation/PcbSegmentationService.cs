@@ -89,16 +89,19 @@ public class PcbSegmentationService : IPcbSegmentationService
         if (_fiducialTemplates?.HasTemplates() == true && _fiducialDetection is not null)
         {
             var settings = _fiducialTemplates.LoadSettings();
-            var templates = _fiducialTemplates.LoadTemplates();
+            var entries = _fiducialTemplates.LoadTemplateEntries();
             try
             {
                 sw.Restart();
                 var fiducialResult = _fiducialDetection.Detect(
                     closedWork,
-                    templates,
+                    entries,
                     settings.MinMatchScore,
                     settings.MaxMatchDimension);
                 RecordTiming(timings, SegmentationPipelineSteps.Fiducial, sw.Elapsed);
+
+                if (fiducialResult.TemplateOutcomes is { Count: > 0 } outcomes)
+                    _fiducialTemplates.UpdateRecognitionStats(outcomes);
 
                 if (fiducialResult.Success && fiducialResult.Centers is not null)
                 {
@@ -116,8 +119,8 @@ public class PcbSegmentationService : IPcbSegmentationService
             }
             finally
             {
-                foreach (var template in templates)
-                    template.Dispose();
+                foreach (var entry in entries)
+                    entry.Template.Dispose();
             }
         }
         else

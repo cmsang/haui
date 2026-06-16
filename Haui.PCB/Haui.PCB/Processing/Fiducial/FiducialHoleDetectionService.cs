@@ -3,7 +3,7 @@
 namespace Haui.PCB.Processing.Fiducial;
 
 /// <summary>
-/// Template matching tìm 4 lỗ tròn giống nhau — toàn bộ thư viện mẫu, có downscale để tăng tốc.
+/// Template matching tìm 4 lỗ tròn — thử mẫu theo điểm nhận diện giảm dần, dừng sớm khi đủ 4 lỗ.
 /// </summary>
 public class FiducialHoleDetectionService : IFiducialHoleDetectionService
 {
@@ -13,7 +13,7 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
 
     public FiducialDetectionResult Detect(
         Mat searchImage,
-        IReadOnlyList<Mat> templates,
+        IReadOnlyList<FiducialTemplateEntry> templates,
         double minMatchScore,
         int maxMatchDimension)
     {
@@ -39,10 +39,13 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
                 : null;
 
             Mat searchForMatch = scaledSearch ?? gray;
-            var allCandidates = new List<(Point2f Center, double Score)>(templates.Count * PeaksPerTemplate);
+            var allCandidates = new List<(Point2f Center, double Score, string FileName)>(
+                templates.Count * PeaksPerTemplate);
+            var triedTemplates = new List<string>();
 
-            foreach (var template in templates)
+            foreach (var entry in templates)
             {
+                var template = entry.Template;
                 if (template.Empty())
                     continue;
 
@@ -57,6 +60,8 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
                     || templateForMatch.Height < MinTemplateSize)
                     continue;
 
+                triedTemplates.Add(entry.FileName);
+
                 var peaks = FindTopMatches(searchForMatch, templateForMatch, minMatchScore, PeaksPerTemplate);
                 if (scale < 1.0 - 1e-6)
                 {
@@ -65,17 +70,32 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
                     {
                         allCandidates.Add((
                             new Point2f((float)(peak.Center.X * invScale), (float)(peak.Center.Y * invScale)),
-                            peak.Score));
+                            peak.Score,
+                            entry.FileName));
                     }
                 }
                 else
                 {
-                    allCandidates.AddRange(peaks);
+                    foreach (var peak in peaks)
+                        allCandidates.Add((peak.Center, peak.Score, entry.FileName));
                 }
+
+                var selectedSoFar = SelectDistinctCandidates(
+                    allCandidates,
+                    gray.Width,
+                    gray.Height,
+                    RequiredHoleCount);
+
+                if (selectedSoFar.Count >= RequiredHoleCount)
+                    break;
             }
 
             if (allCandidates.Count == 0)
-                return Fail($"Không khớp mẫu nào (ngưỡng {minMatchScore:P0}).");
+            {
+                return Fail(
+                    $"Không khớp mẫu nào (ngưỡng {minMatchScore:P0}).",
+                    BuildOutcomes(triedTemplates, []));
+            }
 
             var selected = SelectDistinctCandidates(
                 allCandidates,
@@ -84,21 +104,44 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
                 RequiredHoleCount);
 
             if (selected.Count < RequiredHoleCount)
-                return Fail($"Chỉ tìm thấy {selected.Count}/{RequiredHoleCount} lỗ (ngưỡng {minMatchScore:P0}).");
+            {
+                return Fail(
+                    $"Chỉ tìm thấy {selected.Count}/{RequiredHoleCount} lỗ (ngưỡng {minMatchScore:P0}).",
+                    BuildOutcomes(triedTemplates, []));
+            }
 
             var ordered = OrderPoints(selected.Select(c => c.Center).ToArray());
+            var contributing = selected.Select(c => c.FileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             return new FiducialDetectionResult
             {
                 Success = true,
                 Centers = ordered,
                 MatchScores = selected.Select(c => c.Score).ToArray(),
-                Message = $"Đã tìm thấy {RequiredHoleCount} lỗ ({templates.Count} mẫu, scale={scale:F2})."
+                Message = $"Đã tìm thấy {RequiredHoleCount} lỗ ({triedTemplates.Count}/{templates.Count} mẫu, scale={scale:F2}).",
+                TemplateOutcomes = BuildOutcomes(triedTemplates, contributing)
             };
         }
         finally
         {
             ownedGray?.Dispose();
         }
+    }
+
+    private static IReadOnlyList<FiducialTemplateRecognitionOutcome> BuildOutcomes(
+        IReadOnlyList<string> triedTemplates,
+        HashSet<string> contributingFileNames)
+    {
+        if (triedTemplates.Count == 0)
+            return [];
+
+        return triedTemplates
+            .Select(fileName => new FiducialTemplateRecognitionOutcome
+            {
+                FileName = fileName,
+                ContributedToFinalHoles = contributingFileNames.Contains(fileName)
+            })
+            .ToList();
     }
 
     private static double ComputeMatchScale(int width, int height, int maxMatchDimension)
@@ -116,15 +159,15 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
         return resized;
     }
 
-    private static List<(Point2f Center, double Score)> SelectDistinctCandidates(
-        List<(Point2f Center, double Score)> candidates,
+    private static List<(Point2f Center, double Score, string FileName)> SelectDistinctCandidates(
+        List<(Point2f Center, double Score, string FileName)> candidates,
         int imageWidth,
         int imageHeight,
         int count)
     {
         double minDistance = Math.Min(imageWidth, imageHeight) * 0.08;
         var sorted = candidates.OrderByDescending(c => c.Score).ToList();
-        var selected = new List<(Point2f Center, double Score)>(count);
+        var selected = new List<(Point2f Center, double Score, string FileName)>(count);
 
         foreach (var candidate in sorted)
         {
@@ -201,9 +244,12 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
         return MathF.Sqrt(dx * dx + dy * dy);
     }
 
-    private static FiducialDetectionResult Fail(string message) => new()
+    private static FiducialDetectionResult Fail(
+        string message,
+        IReadOnlyList<FiducialTemplateRecognitionOutcome>? outcomes = null) => new()
     {
         Success = false,
-        Message = message
+        Message = message,
+        TemplateOutcomes = outcomes
     };
 }

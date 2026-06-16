@@ -36,6 +36,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Hybrid region similarity (2026-06-16):** `RegionComparisonService` đổi metric production từ histogram-only sang **0.7 NCC + 0.3 histogram correlation** sau cùng pipeline tiền xử lý (resize 128×128, LAB-L, CLAHE, bilateral). Mục tiêu: nhạy hơn với thiếu/sai linh kiện nhưng vẫn ổn định khi ánh sáng biến thiên nhẹ.
 
+**Fiducial recognition scoring (2026-06-16):** `hole_recognition_stats.json` trong thư mục mẫu lỗ — mỗi lần detect: +1 nếu mẫu có candidate trong 4 lỗ cuối, −1 nếu đã thử nhưng không; `LoadTemplateEntries()` sort theo điểm DESC; detect dừng sớm khi đủ 4 lỗ; UI `FiducialTemplateWindow` hiển thị điểm cạnh tên file.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:
