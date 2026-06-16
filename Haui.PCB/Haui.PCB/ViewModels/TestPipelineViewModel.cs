@@ -30,6 +30,9 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Phát khi ảnh đã vẽ các vùng so sánh sẵn sàng — BitmapSource đã Freeze.</summary>
     public event Action<System.Windows.Media.Imaging.BitmapSource?>? AnnotatedImageReady;
 
+    /// <summary>Phát khi nhận dạng xong — true = PASS, false = FAIL (kích hoạt phân loại robot).</summary>
+    public event Action<bool>? InspectionCompleted;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     // ──── Properties ─────────────────────────────────────────────────────────
@@ -159,6 +162,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
                 StatusText = "Không phát hiện được bo mạch. Thử điều chỉnh ảnh.";
                 ProcessedImageReady?.Invoke(null);
                 AnnotatedImageReady?.Invoke(null);
+                RaiseInspectionCompleted(false);
                 return;
             }
 
@@ -173,6 +177,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             StatusText = $"Lỗi: {ex.Message}";
             ProcessedImageReady?.Invoke(null);
             AnnotatedImageReady?.Invoke(null);
+            RaiseInspectionCompleted(false);
         }
         finally
         {
@@ -199,6 +204,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             IsFullMatch = false;
             StatusText = "Bo mạch đã cắt. Chưa có mẫu nào trong thư viện (hoặc thiếu vùng/ảnh).";
             await PublishAnnotatedImageAsync(newBoard, []);
+            RaiseInspectionCompleted(false);
             return;
         }
 
@@ -246,8 +252,13 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             ? $"Đạt — {match.MatchedCount}/{match.TotalCount} vùng giống (≥ {thresholdText} mỗi tên).{rotationNote}"
             : $"Chưa đạt — TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} vùng giống (ngưỡng {thresholdText}).{rotationNote}";
 
+        RaiseInspectionCompleted(match.IsFullMatch);
+
         rotatedBoard?.Dispose();
     }
+
+    private void RaiseInspectionCompleted(bool isPass)
+        => InspectionCompleted?.Invoke(isPass);
 
     private SegmentationRunResult RunSegmentationPipeline(Mat source)
     {

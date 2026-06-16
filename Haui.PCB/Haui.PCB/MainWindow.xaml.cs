@@ -79,9 +79,9 @@ public partial class MainWindow : System.Windows.Window
     {
         MainContentHost.Content = kind switch
         {
-            MainTabKind.Dashboard => _dashboardTab ??= new DashboardTabView(_viewModel, this),
+            MainTabKind.Dashboard => _dashboardTab ??= new DashboardTabView(_viewModel, this, HandleInspectionCompletedAsync),
             MainTabKind.Setting => _settingTab ??= new SettingTabView(),
-            _ => _dashboardTab ??= new DashboardTabView(_viewModel, this)
+            _ => _dashboardTab ??= new DashboardTabView(_viewModel, this, HandleInspectionCompletedAsync)
         };
 
         SidebarDashboard.Background = kind == MainTabKind.Dashboard ? SidebarActiveBrush : SidebarIdleBrush;
@@ -247,6 +247,39 @@ public partial class MainWindow : System.Windows.Window
         _serialService.DataSent -= Serial_DataSent;
         _serialService.FrameReceived += Serial_FrameReceived;
         _serialService.DataSent += Serial_DataSent;
+    }
+
+    private async Task HandleInspectionCompletedAsync(bool isPass)
+    {
+        var label = isPass ? "PASS" : "FAIL";
+
+        if (!RobotConnectionHelper.IsRobotArmReady(_serialService, _startupHandshake))
+        {
+            await Dispatcher.InvokeAsync(() =>
+                _dashboardTab?.SetStatusMessage(
+                    $"Nhận dạng: {label} — robot chưa sẵn sàng, không chạy phân loại tự động."));
+            return;
+        }
+
+        if (_viewModel.IsMaterialTransferRunning)
+        {
+            await Dispatcher.InvokeAsync(() =>
+                _dashboardTab?.SetStatusMessage(
+                    $"Nhận dạng: {label} — chu trình robot đang chạy, bỏ qua."));
+            return;
+        }
+
+        await Dispatcher.InvokeAsync(UpdateRobotOperationButtons);
+        await Dispatcher.InvokeAsync(() =>
+            _dashboardTab?.SetStatusMessage($"Nhận dạng: {label} — đang phân loại bằng robot..."));
+
+        await _viewModel.TransferMaterialByInspectionResultAsync(isPass);
+
+        await Dispatcher.InvokeAsync(() =>
+        {
+            UpdateRobotOperationButtons();
+            _dashboardTab?.SetStatusMessage(_viewModel.StatusText);
+        });
     }
 
     private void btnDashboard_Click(object sender, RoutedEventArgs e)

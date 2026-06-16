@@ -197,6 +197,10 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    /// <summary>Phân loại robot theo kết quả nhận dạng (PASS → OK, FAIL → NG).</summary>
+    public Task TransferMaterialByInspectionResultAsync(bool isPass)
+        => isPass ? TransferPassMaterial() : TransferFailMaterial();
+
     public void OnCameraSelected(CameraInfo? camera)
     {
         _selectedCamera = camera;
