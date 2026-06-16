@@ -103,6 +103,7 @@ public partial class DashboardTabView : UserControl
     private void WireInspectionViewModel()
     {
         PipelineStepsPanel.ItemsSource = _inspectionViewModel.Steps;
+        ComponentResultsPanel.DataContext = _inspectionViewModel;
 
         _inspectionViewModel.ProcessedImageReady += bitmap =>
         {
@@ -215,6 +216,7 @@ public partial class DashboardTabView : UserControl
         ResultImage.Source = null;
         ResultPlaceholder.Text = "Chưa kiểm tra";
         ResultPlaceholder.Visibility = Visibility.Visible;
+        _inspectionViewModel.ClearInspectionResults();
         _inspectionViewModel.ClearPipelineSteps();
         UpdatePipelineStepsPlaceholder();
         PassFailText.Text = "—";

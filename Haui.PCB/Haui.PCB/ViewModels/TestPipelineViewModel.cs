@@ -78,6 +78,14 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasPipelineSteps => Steps.Count > 0;
 
+    public int SearchedComponentCount => MatchedRegions.Count + DifferentRegions.Count;
+
+    public int MatchedComponentCount => MatchedRegions.Count;
+
+    public int MissingComponentCount => DifferentRegions.Count;
+
+    public bool HasComponentResults => SearchedComponentCount > 0;
+
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
     public TestPipelineViewModel(
@@ -146,6 +154,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         StatusText = "Đang xử lý...";
         MatchedRegions.Clear();
         DifferentRegions.Clear();
+        NotifyComponentCounts();
         Steps.Clear();
         OnPropertyChanged(nameof(HasPipelineSteps));
 
@@ -311,6 +320,24 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             else
                 DifferentRegions.Add(r);
         }
+
+        NotifyComponentCounts();
+    }
+
+    public void ClearInspectionResults()
+    {
+        MatchedRegions.Clear();
+        DifferentRegions.Clear();
+        IsFullMatch = null;
+        NotifyComponentCounts();
+    }
+
+    private void NotifyComponentCounts()
+    {
+        OnPropertyChanged(nameof(SearchedComponentCount));
+        OnPropertyChanged(nameof(MatchedComponentCount));
+        OnPropertyChanged(nameof(MissingComponentCount));
+        OnPropertyChanged(nameof(HasComponentResults));
     }
 
     /// <summary>
@@ -348,6 +375,9 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
             foreach (var r in results)
             {
+                if (!r.HasBoardRect)
+                    continue;
+
                 var color = r.IsMatch ? green : red;
                 Cv2.Rectangle(canvas, r.BoardRect, color, thickness);
 

@@ -29,6 +29,7 @@ public class RegionComparisonService : IRegionComparisonService
         foreach (var region in regions)
         {
             double similarity = CompareRegion(templateBoard, newBoard, region);
+            var similarityPercent = Math.Round(similarity * 100.0, 1);
 
             // Tính tọa độ tuyệt đối của vùng trên ảnh bo mạch mới
             int bx = Math.Clamp((int)(region.RelX * newBoard.Width), 0, newBoard.Width - 1);
@@ -39,9 +40,12 @@ public class RegionComparisonService : IRegionComparisonService
             results.Add(new RegionComparisonResult
             {
                 Name = region.Name,
-                Similarity = Math.Round(similarity * 100.0, 1),
+                Similarity = similarityPercent,
                 BoardRect = new Rect(bx, by, bw, bh),
-                MatchThresholdPercent = matchThreshold
+                MatchThresholdPercent = matchThreshold,
+                Outcome = similarityPercent >= matchThreshold
+                    ? RegionMatchOutcome.Matched
+                    : RegionMatchOutcome.BelowThreshold
             });
         }
 

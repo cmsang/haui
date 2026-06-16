@@ -26,12 +26,12 @@ public sealed class CompositeTemplateMatchService : ICompositeTemplateMatchServi
         if (entries.Count == 0)
             return null;
 
-        var allowedNames = ComponentTemplateRegionNames.LoadAllowedNames();
-        var groups = BuildRegionGroups(entries, allowedNames);
-        if (groups.Count == 0)
+        var allowedOrder = ComponentTemplateRegionNames.LoadAllowedNamesInOrder();
+        if (allowedOrder.Count == 0)
             return null;
 
-        var allowedOrder = ComponentTemplateRegionNames.LoadAllowedNamesInOrder();
+        var allowedNames = ComponentTemplateRegionNames.LoadAllowedNames();
+        var groups = BuildRegionGroups(entries, allowedNames);
         var matchThreshold = AppSettingsStore.LoadMatchThresholdPercent();
         var boardCache = new Dictionary<string, Mat>(StringComparer.OrdinalIgnoreCase);
 
@@ -43,7 +43,17 @@ public sealed class CompositeTemplateMatchService : ICompositeTemplateMatchServi
             foreach (var name in allowedOrder)
             {
                 if (!groups.TryGetValue(name, out var candidates) || candidates.Count == 0)
+                {
+                    results.Add(new RegionComparisonResult
+                    {
+                        Stt = stt++,
+                        Name = name,
+                        Similarity = 0,
+                        MatchThresholdPercent = matchThreshold,
+                        Outcome = RegionMatchOutcome.NoTemplateInLibrary
+                    });
                     continue;
+                }
 
                 RegionComparisonResult? picked = null;
 
@@ -71,7 +81,17 @@ public sealed class CompositeTemplateMatchService : ICompositeTemplateMatchServi
                 }
 
                 if (picked is null)
+                {
+                    results.Add(new RegionComparisonResult
+                    {
+                        Stt = stt++,
+                        Name = name,
+                        Similarity = 0,
+                        MatchThresholdPercent = matchThreshold,
+                        Outcome = RegionMatchOutcome.NotComparable
+                    });
                     continue;
+                }
 
                 results.Add(new RegionComparisonResult
                 {
@@ -79,12 +99,10 @@ public sealed class CompositeTemplateMatchService : ICompositeTemplateMatchServi
                     Name = name,
                     Similarity = picked.Similarity,
                     BoardRect = picked.BoardRect,
-                    MatchThresholdPercent = picked.MatchThresholdPercent
+                    MatchThresholdPercent = picked.MatchThresholdPercent,
+                    Outcome = picked.Outcome
                 });
             }
-
-            if (results.Count == 0)
-                return null;
 
             return new CompositeTemplateMatchResult
             {

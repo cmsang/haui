@@ -7,6 +7,7 @@
              Loaded="UserControl_Loaded"
              IsVisibleChanged="UserControl_IsVisibleChanged">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="#0078D4" />
             <Setter Property="Foreground" Value="White" />
@@ -205,7 +206,7 @@
         <!-- Main: camera | result + pass/fail -->
         <Grid Grid.Row="1" Margin="8,8,8,4">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2.2*" />
+                <ColumnDefinition Width="1.5*" />
                 <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
@@ -284,32 +285,139 @@
                     </Grid>
                 </Border>
 
-                <!-- Pass / Fail -->
-                <Border x:Name="PassFailPanel"
+                <!-- Result summary panel -->
+                <Border x:Name="ComponentResultsPanel"
                         Grid.Row="1"
                         Margin="0,8,0,0"
-                        MinHeight="72"
-                        BorderBrush="#DDDDDD"
+                        MinHeight="180"
+                        BorderBrush="#D0D0D0"
                         BorderThickness="1"
-                        Background="#FAFAFA"
+                        Background="#F7F7F7"
                         CornerRadius="4">
-                    <Grid>
+                    <Grid Margin="8">
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0"
-                                   Text="Kết quả pass/fail"
-                                   Style="{StaticResource PanelHeaderStyle}" />
-                        <TextBlock x:Name="PassFailText"
-                                   Grid.Row="1"
-                                   Text="—"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontSize="32"
-                                   FontWeight="Bold"
-                                   Foreground="#888888"
-                                   Margin="8" />
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Kết quả:"
+                                       FontSize="14"
+                                       Foreground="#333333"
+                                       VerticalAlignment="Center"
+                                       Margin="2,2,6,2" />
+                            <TextBlock Grid.Column="1"
+                                       FontSize="14"
+                                       Foreground="#333333"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Right"
+                                       Margin="0,2,8,2">
+                                <Run Text="{Binding MatchedComponentCount, Mode=OneWay}" />
+                                <Run Text="/" />
+                                <Run Text="{Binding SearchedComponentCount, Mode=OneWay}" />
+                            </TextBlock>
+                            <Border x:Name="PassFailPanel"
+                                    Grid.Column="2"
+                                    BorderBrush="#CFCFCF"
+                                    BorderThickness="1"
+                                    CornerRadius="2"
+                                    Background="#FAFAFA"
+                                    Padding="12,2"
+                                    Margin="0,1,0,1">
+                                <TextBlock x:Name="PassFailText"
+                                           Text="—"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="#888888" />
+                            </Border>
+                        </Grid>
+
+                        <Border Grid.Row="0"
+                                VerticalAlignment="Bottom"
+                                BorderBrush="#DCDCDC"
+                                BorderThickness="0,0,0,1" />
+
+                        <Grid Grid.Row="1" Margin="0,4,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="D/s linh kiện thiếu:"
+                                       FontSize="14"
+                                       Foreground="#333333"
+                                       VerticalAlignment="Center"
+                                       Margin="2,2,6,2" />
+                            <TextBlock Grid.Column="1"
+                                       FontSize="14"
+                                       Foreground="#333333"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Right"
+                                       Margin="0,2,2,2">
+                                <Run Text="{Binding MissingComponentCount, Mode=OneWay}" />
+                                <Run Text="/" />
+                                <Run Text="{Binding SearchedComponentCount, Mode=OneWay}" />
+                            </TextBlock>
+                        </Grid>
+
+                        <Border Grid.Row="1"
+                                VerticalAlignment="Bottom"
+                                BorderBrush="#DCDCDC"
+                                BorderThickness="0,0,0,1" />
+
+                        <Grid Grid.Row="3" Margin="0,0,0,2">
+                            <DataGrid ItemsSource="{Binding DifferentRegions}"
+                                      AutoGenerateColumns="False"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      IsReadOnly="True"
+                                      HeadersVisibility="Column"
+                                      GridLinesVisibility="Horizontal"
+                                      RowHeight="28"
+                                      MaxHeight="116"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      ScrollViewer.CanContentScroll="True"
+                                      FontSize="12"
+                                      Visibility="{Binding HasComponentResults, Converter={StaticResource BoolToVis}}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="STT"
+                                                        Binding="{Binding Stt}"
+                                                        Width="52" />
+                                    <DataGridTextColumn Header="Tên linh kiện"
+                                                        Binding="{Binding Name}"
+                                                        Width="*" />
+                                    <DataGridTextColumn Header="Độ tương đồng"
+                                                        Binding="{Binding SimilarityDisplayText}"
+                                                        Width="110" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <TextBlock Text="Chưa kiểm tra"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="#888888"
+                                       FontSize="12">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasComponentResults}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
                     </Grid>
                 </Border>
             </Grid>

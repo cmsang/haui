@@ -30,6 +30,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Delete icon button (2026-06-16):** Inline row delete actions use shared `Views/Controls/DeleteIconButton` + app-wide `DeleteIconButtonStyle` (`App.xaml`); used in FiducialTemplateWindow, CreateTemplateWindow, SettingTabView AllowedRegionNames grid. TemplateViewerWindow cũng dùng DeleteIconButton cho cột xóa theo từng dòng (bỏ nút Lưu thư viện). Delete buttons right-aligned per row (`StretchListBoxItemStyle` on ListBoxes; DataGrid cell `HorizontalContentAlignment=Right`).
 
+**Dashboard component panel (2026-06-16):** Đã vẽ lại panel kết quả dạng bảng theo mẫu vận hành: dòng **Kết quả** (`x/y` + PASS/FAIL), dòng **D/s linh kiện thiếu**, tiêu đề đỏ gạch chân **Danh sách linh kiện thiếu**, và DataGrid danh sách thiếu ngay bên dưới. Vẫn bind `TestPipelineViewModel` qua `ComponentResultsPanel.DataContext`; `PassFailPanel`/`PassFailText` giữ nguyên để code-behind đổi màu theo PASS/FAIL.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:

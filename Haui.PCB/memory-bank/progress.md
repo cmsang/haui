@@ -21,8 +21,8 @@
 - [x] Pipeline step gallery on Dashboard — per-step elapsed time via `PipelineStepMapper` (removed separate `PipelineStepsWindow` 2026-06-16)
 - [x] Create template — draw regions, save PNG + `*_regions.json`; names ∈ `AllowedRegionNames`
 - [x] Template library — scan `*.png` + `*_regions.json` (no `index.json`); folder via `ComponentTemplates.CustomFolder`
-- [x] Test pipeline — composite match by `AllowedRegionNames`; 180° retry; overlay green/red
-- [x] Dashboard inline test — result image, PASS/FAIL panel, pipeline steps gallery on tab (no popup on Test)
+- [x] Test pipeline — composite match by `AllowedRegionNames`; 180° retry; overlay green/red; every configured name reported (`RegionMatchOutcome`)
+- [x] Dashboard inline test — result image + panel kết quả dạng bảng (Kết quả x/y + PASS/FAIL, D/s linh kiện thiếu, DataGrid thiếu), pipeline steps gallery on tab (no popup on Test)
 - [x] Preview perf — off-thread Mat→BitmapSource, frame drop, coalesced Dispatcher updates (2026-06-15)
 - [x] Unified Test — single `RunPipeline` feeds PASS/FAIL + step gallery via `PipelineStepMapper` (2026-06-15)
 - [x] Region compare — 128×128, LAB-L + CLAHE + bilateral, threshold from `MinMatchSimilarityPercent`
