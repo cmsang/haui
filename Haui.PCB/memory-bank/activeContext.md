@@ -38,6 +38,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Fiducial recognition scoring (2026-06-16):** `hole_recognition_stats.json` trong thư mục mẫu lỗ — mỗi lần detect: +1 nếu mẫu có candidate trong 4 lỗ cuối, −1 nếu đã thử nhưng không; `LoadTemplateEntries()` sort theo điểm DESC; detect dừng sớm khi đủ 4 lỗ; UI `FiducialTemplateWindow` hiển thị điểm cạnh tên file.
 
+**Pipeline fiducial annotation (2026-06-16):** Bước gallery **Lỗ định vị** vẽ annotation trên ảnh gốc màu: vòng tròn + số thứ tự + % khớp; tứ giác cam khi đủ 4 lỗ (xanh), vàng khi thiếu lỗ. Partial detect trả về tâm lỗ để hiển thị debug.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:

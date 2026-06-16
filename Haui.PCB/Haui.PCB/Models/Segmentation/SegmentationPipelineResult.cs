@@ -16,6 +16,7 @@ public sealed class SegmentationPipelineResult : IDisposable
     public required double CannyThreshold2 { get; init; }
 
     public Point2f[]? FiducialCenters { get; init; }
+    public double[]? FiducialMatchScores { get; init; }
     public string? FiducialDescription { get; init; }
 
     /// <summary>Ảnh bo mạch đã warp; null nếu không phát hiện được.</summary>

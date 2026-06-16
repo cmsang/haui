@@ -48,22 +48,15 @@ public static class PipelineStepMapper
             "Đóng kín khoảng hở trên biên (Close, 3 lần lặp)",
             GetTiming(timings, SegmentationPipelineSteps.MorphologyClose)));
 
-        if (pipeline.FiducialCenters is not null)
+        if (!string.IsNullOrWhiteSpace(pipeline.FiducialDescription))
         {
-            using var fiducialVis = new Mat();
-            Cv2.CvtColor(pipeline.Closed, fiducialVis, ColorConversionCodes.GRAY2BGR);
-            DrawFiducialHoles(fiducialVis, pipeline.FiducialCenters);
+            using var fiducialVis = source.Clone();
+            if (pipeline.FiducialCenters is { Length: > 0 } centers)
+                DrawFiducialHoles(fiducialVis, centers, pipeline.FiducialMatchScores);
+
             steps.Add(MakeStep(
-                "Fiducial Matching",
+                "Lỗ định vị",
                 fiducialVis,
-                pipeline.FiducialDescription ?? "Template matching 4 lỗ trên ảnh Morphology Close",
-                GetTiming(timings, SegmentationPipelineSteps.Fiducial)));
-        }
-        else if (!string.IsNullOrWhiteSpace(pipeline.FiducialDescription))
-        {
-            steps.Add(MakeStep(
-                "Fiducial Matching",
-                pipeline.Closed.Clone(),
                 pipeline.FiducialDescription,
                 GetTiming(timings, SegmentationPipelineSteps.Fiducial)));
         }
@@ -101,25 +94,42 @@ public static class PipelineStepMapper
 
     private static void DrawQuad(Mat img, Point2f[] pts, Scalar color)
     {
+        int thickness = Math.Clamp(Math.Min(img.Width, img.Height) / 180, 2, 6);
         for (int i = 0; i < 4; i++)
         {
             var p1 = new Point((int)pts[i].X, (int)pts[i].Y);
             var p2 = new Point((int)pts[(i + 1) % 4].X, (int)pts[(i + 1) % 4].Y);
-            Cv2.Line(img, p1, p2, color, 2);
+            Cv2.Line(img, p1, p2, color, thickness);
         }
     }
 
-    private static void DrawFiducialHoles(Mat img, Point2f[] centers)
+    private static void DrawFiducialHoles(Mat img, Point2f[] centers, double[]? matchScores)
     {
+        const int RequiredHoleCount = 4;
+        int minDim = Math.Min(img.Width, img.Height);
+        int radius = Math.Clamp(minDim / 60, 10, 36);
+        int thickness = Math.Clamp(minDim / 180, 2, 6);
+        double fontScale = Math.Clamp(minDim / 1400.0, 0.45, 1.0);
+
+        bool complete = centers.Length >= RequiredHoleCount;
+        var holeColor = complete ? new Scalar(0, 220, 0) : new Scalar(0, 200, 255);
+        var quadColor = new Scalar(0, 165, 255);
+
         for (int i = 0; i < centers.Length; i++)
         {
             var center = new Point((int)centers[i].X, (int)centers[i].Y);
-            Cv2.Circle(img, center, 12, new Scalar(0, 255, 255), 2);
-            Cv2.PutText(img, (i + 1).ToString(),
-                new Point(center.X + 14, center.Y + 5),
-                HersheyFonts.HersheySimplex, 0.7, new Scalar(0, 255, 255), 2);
+            Cv2.Circle(img, center, radius, holeColor, thickness);
+
+            var label = (i + 1).ToString();
+            if (matchScores is not null && i < matchScores.Length)
+                label += $" {matchScores[i]:P0}";
+
+            var labelPos = new Point(center.X + radius + 4, center.Y + radius / 3);
+            Cv2.PutText(img, label, labelPos,
+                HersheyFonts.HersheySimplex, fontScale, holeColor, thickness, LineTypes.AntiAlias);
         }
 
-        DrawQuad(img, centers, new Scalar(255, 128, 0));
+        if (complete)
+            DrawQuad(img, centers, quadColor);
     }
 }

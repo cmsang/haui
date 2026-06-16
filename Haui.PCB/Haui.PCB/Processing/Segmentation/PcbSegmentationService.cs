@@ -83,6 +83,7 @@ public class PcbSegmentationService : IPcbSegmentationService
         RecordTiming(timings, SegmentationPipelineSteps.MorphologyClose, sw.Elapsed);
 
         Point2f[]? fiducialCenters = null;
+        double[]? fiducialMatchScores = null;
         string? fiducialDescription = null;
         Mat? warped = null;
 
@@ -103,18 +104,19 @@ public class PcbSegmentationService : IPcbSegmentationService
                 if (fiducialResult.TemplateOutcomes is { Count: > 0 } outcomes)
                     _fiducialTemplates.UpdateRecognitionStats(outcomes);
 
-                if (fiducialResult.Success && fiducialResult.Centers is not null)
-                {
-                    fiducialCenters = fiducialResult.Centers;
-                    fiducialDescription = fiducialResult.Message;
+                fiducialDescription = fiducialResult.Message ?? "Không nhận diện được 4 lỗ định vị.";
 
+                if (fiducialResult.Centers is { Length: > 0 } centers)
+                {
+                    fiducialCenters = centers;
+                    fiducialMatchScores = fiducialResult.MatchScores;
+                }
+
+                if (fiducialResult.Success && fiducialCenters is not null)
+                {
                     sw.Restart();
                     warped = WarpPerspective(source, fiducialCenters);
                     RecordTiming(timings, SegmentationPipelineSteps.Warp, sw.Elapsed);
-                }
-                else
-                {
-                    fiducialDescription = fiducialResult.Message ?? "Không nhận diện được 4 lỗ định vị.";
                 }
             }
             finally
@@ -138,6 +140,7 @@ public class PcbSegmentationService : IPcbSegmentationService
             CannyThreshold1 = t1,
             CannyThreshold2 = t2,
             FiducialCenters = fiducialCenters,
+            FiducialMatchScores = fiducialMatchScores,
             FiducialDescription = fiducialDescription,
             Warped = warped,
             StepTimings = timings ?? new Dictionary<string, TimeSpan>()

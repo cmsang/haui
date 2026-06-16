@@ -105,9 +105,15 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
 
             if (selected.Count < RequiredHoleCount)
             {
-                return Fail(
-                    $"Chỉ tìm thấy {selected.Count}/{RequiredHoleCount} lỗ (ngưỡng {minMatchScore:P0}).",
-                    BuildOutcomes(triedTemplates, []));
+                var partialOrdered = OrderPoints(selected.Select(c => c.Center).ToArray());
+                return new FiducialDetectionResult
+                {
+                    Success = false,
+                    Centers = partialOrdered,
+                    MatchScores = selected.Select(c => c.Score).ToArray(),
+                    Message = $"Chỉ tìm thấy {selected.Count}/{RequiredHoleCount} lỗ (ngưỡng {minMatchScore:P0}).",
+                    TemplateOutcomes = BuildOutcomes(triedTemplates, [])
+                };
             }
 
             var ordered = OrderPoints(selected.Select(c => c.Center).ToArray());
