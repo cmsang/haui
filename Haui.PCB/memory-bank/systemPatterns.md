@@ -15,7 +15,7 @@ Haui.PCB/                 # WPF app project
 ├── Processing/           # Services + I* theo domain
 │   ├── Configuration/    # AppSettingService, AppConfigPaths, …
 │   ├── Camera/           # BaslerCameraService, CameraCaptureService, …
-│   ├── Segmentation/     # PcbSegmentationService, PipelineDebugService
+│   ├── Segmentation/     # PcbSegmentationService, PipelineStepMapper
 │   ├── Templates/        # TemplateLibraryService, RegionComparisonService, …
 │   ├── Fiducial/         # FiducialHoleDetectionService, …
 │   └── Robot/            # RobotSerialService, RobotConfigService, …
@@ -42,7 +42,8 @@ Haui.PCB/                 # WPF app project
 | `IPcbSegmentationService` | `PcbSegmentationService` | Canny + fiducial holes + perspective warp → straight board |
 | `ITemplateLibraryService` | `TemplateLibraryService` | Thư viện mẫu: quét `*.png` + `*_regions.json` |
 | `IRegionComparisonService` | `RegionComparisonService` | Per-region histogram compare |
-| `IPipelineDebugService` | `PipelineDebugService` | Wraps `RunPipeline()` → step images for PipelineStepsWindow (no duplicate CV logic) |
+
+Step gallery on Dashboard uses `PipelineStepMapper` + `TestPipelineViewModel.Steps` (same `RunPipeline` as PASS/FAIL).
 
 ## Template storage
 
@@ -57,7 +58,6 @@ Thư mục cấu hình (`templates/` hoặc tùy chỉnh qua `Config/setting.jso
 
 ```
 App → MainWindow (MainViewModel + CameraService)
-        ├─ PipelineStepsWindow     (Owner=Main; DeveloperMode Test 2)
         ├─ CreateTemplateWindow    (Owner=Main or Viewer)
         └─ TemplateViewerWindow    (Owner=Main)
               └─ CreateTemplateWindow (edit mode via RegionsSaved)
