@@ -34,6 +34,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Result overlay border thickness (2026-06-16):** `TestPipelineViewModel.DrawAnnotations` tăng độ dày viền vùng linh kiện trên ảnh kết quả từ `2` lên `6` (x3) để dễ quan sát PASS/FAIL theo từng vùng.
 
+**Hybrid region similarity (2026-06-16):** `RegionComparisonService` đổi metric production từ histogram-only sang **0.7 NCC + 0.3 histogram correlation** sau cùng pipeline tiền xử lý (resize 128×128, LAB-L, CLAHE, bilateral). Mục tiêu: nhạy hơn với thiếu/sai linh kiện nhưng vẫn ổn định khi ánh sáng biến thiên nhẹ.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:

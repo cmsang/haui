@@ -57,8 +57,8 @@ Pipeline: BGR→gray → GaussianBlur(5×5) → Canny → morphology close → f
 
 - Crop region on template and new board using relative coords
 - Resize to **128×128** (`INTER_AREA` when downscaling, `INTER_LINEAR` when upscaling)
-- Preprocess: **LAB L** → **CLAHE** (clip 2.0, tile 8×8) → **bilateral** (d=5) → grayscale histogram
-- `CompareHist` with `HistCompMethods.Correl`; hist MinMax normalize
+- Preprocess: **LAB L** → **CLAHE** (clip 2.0, tile 8×8) → **bilateral** (d=5)
+- Similarity metric: **Hybrid score** = `0.7 * NCC(CCoeffNormed)` + `0.3 * histogram correlation`; both clamped to 0..1
 - Match threshold **`MinMatchSimilarityPercent`** in `setting.json` → ComponentTemplates (default 80); `RegionComparisonResult.IsMatch`
 
 ## Models

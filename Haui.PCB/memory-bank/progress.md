@@ -26,7 +26,7 @@
 - [x] Result overlay — viền đánh dấu vùng linh kiện trên ảnh kết quả tăng x3 độ dày (2 → 6) để dễ nhìn khi vận hành
 - [x] Preview perf — off-thread Mat→BitmapSource, frame drop, coalesced Dispatcher updates (2026-06-15)
 - [x] Unified Test — single `RunPipeline` feeds PASS/FAIL + step gallery via `PipelineStepMapper` (2026-06-15)
-- [x] Region compare — 128×128, LAB-L + CLAHE + bilateral, threshold from `MinMatchSimilarityPercent`
+- [x] Region compare — 128×128, LAB-L + CLAHE + bilateral, **hybrid score** (0.7 NCC + 0.3 histogram), threshold from `MinMatchSimilarityPercent`
 - [x] Unified config — `Config/setting.json` (`AppSettingService`)
 - [x] DeveloperMode — **Chọn ảnh** (file inspect, no camera required), **Chọn ảnh lỗ** (file → fiducial template window), Tạo mẫu / Thêm mẫu lỗ on Dashboard toolbar; Sửa in template viewer (lưu trực tiếp trong dialog, xóa theo từng dòng)
 - [x] Virtual Serial Port — `VirtualRobotSerialService` when dev + virtual enabled (no COM required)
