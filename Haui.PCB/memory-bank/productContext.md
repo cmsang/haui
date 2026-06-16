@@ -18,8 +18,8 @@ Operators inspect PCB boards against a visual template: capture under camera, au
 1. **MainWindow** — camera, resolution (default 1280×720), live preview + FPS
 2. **Optional ROI** — rectangle on preview → `last_region.json`
 3. **Toolbar** (capture frame, open child window):
-   - **Test** → segment, compare all library templates, best match detail
-   - **Test 2** → OpenCV pipeline debug steps
+   - **Test** → segment, compare all library templates, best match detail (camera capture)
+   - **Chọn ảnh** (DeveloperMode) → same inspection from a file on disk; result in `ResultImage` only — `CameraImage` stays live camera feed
    - **Tạo mẫu** → segment, draw regions, save template
    - **Xem mẫu** → browse library, edit/delete
 

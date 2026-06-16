@@ -45,7 +45,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     public event Action<System.Windows.Media.Imaging.BitmapSource>? FrameReady;
     public event Action<Mat>? TemplateFrameCaptured;
     public event Action<Mat>? FiducialTemplateFrameCaptured;
-    public event Action<Mat>? Test2FrameCaptured;
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public IReadOnlyList<CameraInfo> Cameras
@@ -373,30 +372,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
 
         return CropToSelectedRegion(frame);
-    }
-
-    public async Task CaptureTest2FrameAsync()
-    {
-        StatusText = "Đang chụp ảnh (Test 2)...";
-
-        if (_cameraService is null)
-        {
-            StatusText = "Camera chưa khởi động.";
-            return;
-        }
-
-        var frame = await Task.Run(() => _cameraService.GrabFrame());
-
-        if (frame is null || frame.Empty())
-        {
-            frame?.Dispose();
-            StatusText = "Không thể chụp ảnh từ camera.";
-            return;
-        }
-
-        frame = CropToSelectedRegion(frame);
-        StatusText = "Đã mở Pipeline Debug.";
-        Test2FrameCaptured?.Invoke(frame);
     }
 
     public async Task CaptureTemplateFrameAsync()

@@ -18,11 +18,13 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Template data (2026-06-15):** `pcb_templates/` (11 mẫu) và `fiducial_holes/` (128 ảnh) checkout từ `cmsang/pcb` → nhánh `cmsang/pcb-new` (staged, chưa commit).
 
-**Pipeline step timing (2026-06-15):** Dashboard gallery + `PipelineStepsWindow` show per-step elapsed ms (`Stopwatch` in `PcbSegmentationService` → `SegmentationPipelineResult.StepTimings`); description moved to tooltip. Dashboard gallery row height **248px** (was 220) so elapsed-time footer is not clipped when horizontal scrollbar shows.
+**Pipeline step timing (2026-06-15):** Dashboard gallery shows per-step elapsed ms (`Stopwatch` in `PcbSegmentationService` → `SegmentationPipelineResult.StepTimings`); description moved to tooltip. Dashboard gallery row height **248px** (was 220) so elapsed-time footer is not clipped when horizontal scrollbar shows.
 
 **UI thread / preview perf (2026-06-15):** Camera preview resize + `ToBitmapSource` moved off pylon grab thread with frame drop; Dashboard coalesces `CameraImage` updates (`DispatcherPriority.Render`); Test runs inspection then pipeline steps sequentially; `TestPipelineViewModel` bitmap conversion on thread pool.
 
 **GigE connect speed (2026-06-15):** `CameraBasler.deviceIp` → announce + `ICameraInfo` connect (not `new Camera(ip)`); GigE-only enumerate; resolution probe cached per serial; `StartAsync` off UI thread. Fix: open by serial/`ICameraInfo`, restore `WidthMax`/`HeightMax` probe.
+
+**Dashboard cleanup (2026-06-16):** Removed Test 2 + `PipelineStepsWindow` / `PipelineDebugService`. DeveloperMode **Chọn ảnh** runs `TestPipelineViewModel.InspectFromFileAsync` — results in `ResultImage` + gallery only; `CameraImage` remains live camera feed.
 
 ## Configuration (single file)
 

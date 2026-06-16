@@ -112,11 +112,11 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         await RunSegmentationAsync();
     }
 
-    /// <summary>Nạp ảnh từ đường dẫn file.</summary>
-    public void LoadImageFromFile(string filePath)
+    /// <summary>Load an image from disk and await the full inspection pipeline.</summary>
+    public async Task InspectFromFileAsync(string filePath)
     {
         _sourceMat?.Dispose();
-        _sourceMat = Cv2.ImRead(filePath, ImreadModes.Color);
+        _sourceMat = await Task.Run(() => Cv2.ImRead(filePath, ImreadModes.Color));
 
         if (_sourceMat.Empty())
         {
@@ -127,6 +127,8 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
         StatusText = $"Đã chọn: {System.IO.Path.GetFileName(filePath)}";
         OnPropertyChanged(nameof(HasSource));
+        IsFullMatch = null;
+        await RunSegmentationAsync();
     }
 
     /// <summary>

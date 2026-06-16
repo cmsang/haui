@@ -150,14 +150,13 @@
                         IsEnabled="False"
                         Style="{StaticResource PrimaryButtonStyle}"
                         Click="BtnTest_Click"/>
-                <Button x:Name="BtnTest2"
-                        Content="🧪 Test 2"
-                        Height="30" Width="100"
+                <Button x:Name="BtnSelectImage"
+                        Content="📂 Chọn ảnh"
+                        Height="30" Width="120"
                         Margin="0,0,8,0"
-                        IsEnabled="False"
                         Visibility="Collapsed"
-                        Click="BtnTest2_Click"
-                        Style="{StaticResource SecondaryButtonStyle}" />
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Click="BtnSelectImage_Click" />
                 <Button x:Name="BtnSelectRegion"
                         Content="🔲 Chọn vùng"
                         Height="30" Width="120"

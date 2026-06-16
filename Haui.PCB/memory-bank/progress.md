@@ -18,7 +18,7 @@
 - [x] Optional ROI on preview (`last_region.json`)
 - [x] PCB segmentation (fiducial holes → perspective warp; contour fallback removed 2026-06-14)
 - [x] Fiducial holes — `hole_*.png` library; downscale + RAM cache; fast Segment path
-- [x] Pipeline step debugger (`PipelineStepsWindow`) — per-step elapsed time on Dashboard gallery + debug window
+- [x] Pipeline step gallery on Dashboard — per-step elapsed time via `PipelineStepMapper` (removed separate `PipelineStepsWindow` 2026-06-16)
 - [x] Create template — draw regions, save PNG + `*_regions.json`; names ∈ `AllowedRegionNames`
 - [x] Template library — scan `*.png` + `*_regions.json` (no `index.json`); folder via `ComponentTemplates.CustomFolder`
 - [x] Test pipeline — composite match by `AllowedRegionNames`; 180° retry; overlay green/red
@@ -27,7 +27,7 @@
 - [x] Unified Test — single `RunPipeline` feeds PASS/FAIL + step gallery via `PipelineStepMapper` (2026-06-15)
 - [x] Region compare — 128×128, LAB-L + CLAHE + bilateral, threshold from `MinMatchSimilarityPercent`
 - [x] Unified config — `Config/setting.json` (`AppSettingService`)
-- [x] DeveloperMode — hides Tạo mẫu / Thêm mẫu lỗ on Dashboard toolbar; Sửa in template viewer
+- [x] DeveloperMode — **Chọn ảnh** (file inspect, no camera required), Tạo mẫu / Thêm mẫu lỗ on Dashboard toolbar; Sửa in template viewer
 - [x] Virtual Serial Port — `VirtualRobotSerialService` when dev + virtual enabled (no COM required)
 - [x] Sharpest-frame selection (Laplacian variance)
 
