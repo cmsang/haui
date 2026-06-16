@@ -161,6 +161,7 @@
 
                     <ListBox Grid.Row="2"
                              x:Name="RegionsGrid"
+                             ItemContainerStyle="{StaticResource StretchListBoxItemStyle}"
                              SelectionChanged="RegionsGrid_SelectionChanged">
                         <ListBox.ItemTemplate>
                             <DataTemplate>

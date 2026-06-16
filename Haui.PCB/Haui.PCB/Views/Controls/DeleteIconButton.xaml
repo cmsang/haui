@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              x:Name="Root"
+             HorizontalAlignment="Right"
              VerticalAlignment="Center">
     <Button Style="{StaticResource DeleteIconButtonStyle}"
             Click="DeleteButton_Click"

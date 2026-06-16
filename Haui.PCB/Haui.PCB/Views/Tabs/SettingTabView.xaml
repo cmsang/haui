@@ -184,13 +184,18 @@
                                 <DataGridTextColumn Header="Tên vùng"
                                                     Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
                                                     Width="*"/>
-                                <DataGridTemplateColumn Header="" Width="44">
+                                <DataGridTemplateColumn Header="" Width="Auto" MinWidth="44">
+                                    <DataGridTemplateColumn.CellStyle>
+                                        <Style TargetType="DataGridCell">
+                                            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+                                            <Setter Property="Padding" Value="0,0,4,0"/>
+                                        </Style>
+                                    </DataGridTemplateColumn.CellStyle>
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <controls:DeleteIconButton Click="BtnDeleteRegionName_Click"
                                                                        Tag="{Binding}"
-                                                                       ToolTip="Xóa dòng"
-                                                                       HorizontalAlignment="Center"/>
+                                                                       ToolTip="Xóa dòng"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

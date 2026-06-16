@@ -125,6 +125,7 @@
                                Margin="0,0,0,6"/>
                     <ListBox Grid.Row="3"
                              x:Name="PendingRegionsList"
+                             ItemContainerStyle="{StaticResource StretchListBoxItemStyle}"
                              SelectionChanged="PendingRegionsList_SelectionChanged">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -168,6 +169,7 @@
                                Margin="0,0,0,6"/>
                     <ListBox Grid.Row="7"
                              x:Name="SavedTemplatesList"
+                             ItemContainerStyle="{StaticResource StretchListBoxItemStyle}"
                              VerticalAlignment="Stretch">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
