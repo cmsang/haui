@@ -101,6 +101,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     private readonly HashSet<string> _allowedRegionNames;
     private readonly string _allowedNamesHint;
     private bool _disposed;
+    private TemplateEntry? _editingEntry;
 
     // ──── Events ──────────────────────────────────────────────────────────────
 
@@ -124,6 +125,8 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     public int BoardHeight => _boardImage?.Height ?? 0;
 
     public int RegionCount => Regions.Count;
+
+    public bool IsEditing => _editingEntry is not null;
 
     /// <summary>Chỉ cho lưu khi có ảnh bo mạch, ít nhất một vùng và mọi tên nằm trong danh sách cấu hình.</summary>
     public bool CanSave =>
@@ -277,8 +280,10 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>
     /// Nạp ảnh và danh sách vùng của một mẫu có sẵn để chỉnh sửa.
     /// </summary>
-    public void LoadExistingTemplate(Mat boardImage, IEnumerable<TemplateRegion> existingRegions)
+    public void LoadExistingTemplate(Mat boardImage, TemplateEntry editingEntry)
     {
+        _editingEntry = editingEntry;
+
         _boardImage?.Dispose();
         _boardImage = boardImage.Clone();
 
@@ -289,7 +294,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 
         Regions.Clear();
         int idx = 0;
-        foreach (var r in existingRegions)
+        foreach (var r in editingEntry.Regions)
         {
             var item = TemplateRegionItem.FromModel(r, RegionPalette[idx % RegionPalette.Length]);
             item.Stt = idx + 1;
@@ -313,6 +318,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Nạp ảnh chụp từ camera, cắt bo mạch, tải vùng đã lưu.</summary>
     public async Task LoadFrameAsync(Mat sourceFrame)
     {
+        _editingEntry = null;
         StatusText = "Đang cắt bo mạch...";
         using var source = sourceFrame.Clone();
 
@@ -419,25 +425,55 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         if (_boardImage is null)
             return;
 
-        var templateName = $"{DateTime.Now:dd/MM/yyyy HH:mm}";
-        var imagePath = _libraryService.SaveBoardImage(templateName, _boardImage);
-        var regionsPath = _libraryService.GetRegionsFilePathForBoardImage(imagePath);
         var regionModels = Regions.Select(r => r.ToModel()).ToList();
-        _libraryService.SaveRegions(regionsPath, templateName, regionModels);
+
+        // Editing existing template: overwrite its board image + regions JSON.
+        if (_editingEntry is not null)
+        {
+            var templateName = _editingEntry.Name;
+            var imagePath = _editingEntry.BoardImagePath;
+            var regionsPath = !string.IsNullOrWhiteSpace(_editingEntry.RegionsFilePath)
+                ? _editingEntry.RegionsFilePath
+                : (!string.IsNullOrWhiteSpace(imagePath)
+                    ? _libraryService.GetRegionsFilePathForBoardImage(imagePath)
+                    : string.Empty);
+
+            if (string.IsNullOrWhiteSpace(imagePath) || string.IsNullOrWhiteSpace(regionsPath))
+            {
+                StatusText = "Không thể lưu mẫu: thiếu đường dẫn file.";
+                return;
+            }
+
+            Cv2.ImWrite(imagePath, _boardImage);
+            _libraryService.SaveRegions(regionsPath, templateName, regionModels);
+
+            _editingEntry.Regions = regionModels;
+
+            var folder = _libraryService.GetLibraryFolder();
+            StatusText =
+                $"Đã lưu mẫu \"{templateName}\" ({Regions.Count} vùng) vào thư viện \"{folder}\".";
+            return;
+        }
+
+        // Create new template: save new board image + regions JSON, then persist.
+        var newTemplateName = $"{DateTime.Now:dd/MM/yyyy HH:mm}";
+        var newImagePath = _libraryService.SaveBoardImage(newTemplateName, _boardImage);
+        var newRegionsPath = _libraryService.GetRegionsFilePathForBoardImage(newImagePath);
+        _libraryService.SaveRegions(newRegionsPath, newTemplateName, regionModels);
 
         var existing = _libraryService.LoadAll().ToList();
         existing.Add(new TemplateEntry
         {
-            Name = templateName,
-            BoardImagePath = imagePath,
-            RegionsFilePath = regionsPath,
+            Name = newTemplateName,
+            BoardImagePath = newImagePath,
+            RegionsFilePath = newRegionsPath,
             Regions = regionModels
         });
         _libraryService.SaveAll(existing);
 
-        var folder = _libraryService.GetLibraryFolder();
+        var createFolder = _libraryService.GetLibraryFolder();
         StatusText =
-            $"Đã lưu ảnh mẫu ({Regions.Count} vùng) vào thư viện \"{folder}\".";
+            $"Đã lưu ảnh mẫu ({Regions.Count} vùng) vào thư viện \"{createFolder}\".";
     }
 
     /// <summary>Kiểm tra tên vùng theo cấu hình (dùng khi sửa từ thư viện).</summary>

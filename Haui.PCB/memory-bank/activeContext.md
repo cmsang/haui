@@ -28,7 +28,7 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Fiducial template from file (2026-06-16):** DeveloperMode **Chọn ảnh lỗ** → `MainViewModel.LoadFiducialTemplateFromFileAsync` (ImRead + Morphology Close) → `FiducialTemplateWindow`; no camera required. Camera path **Thêm mẫu lỗ** unchanged (ROI crop + grab).
 
-**Delete icon button (2026-06-16):** Inline row delete actions use shared `Views/Controls/DeleteIconButton` + app-wide `DeleteIconButtonStyle` (`App.xaml`); used in FiducialTemplateWindow, CreateTemplateWindow, SettingTabView AllowedRegionNames grid. Delete buttons right-aligned per row (`StretchListBoxItemStyle` on ListBoxes; DataGrid cell `HorizontalContentAlignment=Right`).
+**Delete icon button (2026-06-16):** Inline row delete actions use shared `Views/Controls/DeleteIconButton` + app-wide `DeleteIconButtonStyle` (`App.xaml`); used in FiducialTemplateWindow, CreateTemplateWindow, SettingTabView AllowedRegionNames grid. TemplateViewerWindow cũng dùng DeleteIconButton cho cột xóa theo từng dòng (bỏ nút Lưu thư viện). Delete buttons right-aligned per row (`StretchListBoxItemStyle` on ListBoxes; DataGrid cell `HorizontalContentAlignment=Right`).
 
 ## Configuration (single file)
 

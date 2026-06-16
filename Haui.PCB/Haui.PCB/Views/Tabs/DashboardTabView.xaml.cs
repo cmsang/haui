@@ -83,7 +83,7 @@ public partial class DashboardTabView : UserControl
                 {
                     frame.Dispose();
                 }
-                templateWindow.Show();
+                templateWindow.ShowDialog();
             });
         };
 
@@ -95,7 +95,7 @@ public partial class DashboardTabView : UserControl
                 fiducialWindow.Closed += (_, _) => _viewModel.RefreshFiducialTemplateStatus();
                 fiducialWindow.LoadFrame(frame);
                 frame.Dispose();
-                fiducialWindow.Show();
+                fiducialWindow.ShowDialog();
             });
         };
     }
@@ -463,7 +463,7 @@ public partial class DashboardTabView : UserControl
     private void BtnViewTemplates_Click(object sender, RoutedEventArgs e)
     {
         var viewerWindow = new TemplateViewerWindow { Owner = _owner };
-        viewerWindow.Show();
+        viewerWindow.ShowDialog();
     }
 
     private async void BtnCapture_Click(object sender, RoutedEventArgs e)
