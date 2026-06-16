@@ -40,6 +40,10 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Pipeline fiducial annotation (2026-06-16):** Bước gallery **Lỗ định vị** vẽ annotation trên ảnh gốc màu: vòng tròn + số thứ tự + % khớp; tứ giác cam khi đủ 4 lỗ (xanh), vàng khi thiếu lỗ. Partial detect trả về tâm lỗ để hiển thị debug.
 
+**Fiducial quad ordering fix (2026-06-16):** `FiducialQuadOrdering.OrderCorners` thay `OrderPoints` cũ (IndexOf trùng góc) — warp không còn suy biến; gallery downscale max 1920px + marker lớn hơn để thấy trên thumbnail.
+
+**Fiducial geometric quad selection (2026-06-16):** `FiducialQuadSelector` + `FiducialQuadGeometry` — combinatorial search trong pool ứng viên (dedupe, max 15); lọc tứ giác lồi + rectangularity; ràng buộc tỷ lệ cạnh từ `PcbBoard` (mặc định **400×550 mm**); width/height = 0 → fallback diện tích lớn nhất. `FiducialHoles`: `aspectRatioTolerance`, `maxQuadSearchCandidates`, `minQuadRectangularity`. Setting tab: chiều rộng/cao bo mạch (mm).
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:
@@ -47,7 +51,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 | Section | Purpose |
 |---------|---------|
 | `ComponentTemplates` | Library folder, `MinMatchSimilarityPercent`, `AllowedRegionNames` (region count = list size) |
-| `FiducialHoles` | Fiducial template folder, `MinMatchScore`, `MaxMatchDimension` |
+| `FiducialHoles` | Fiducial template folder, `MinMatchScore`, `MaxMatchDimension`, quad-search tuning |
+| `PcbBoard` | Board `widthMm` / `heightMm` (default 400×550) for fiducial aspect-ratio filter |
 | `CameraBasler` / `CameraCapture` | GenICam defaults, quick-capture save folder |
 | Robot | `com`, `warehouseCom`, `DatabaseConnection`, … |
 | Developer | `developerMode`, `virtualSerialPort` (serial simulation; requires dev mode) |
@@ -57,7 +62,7 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 ## Open decisions
 
 1. **Calibrate defaults** — `camera_basler_defaults.json` for acA4600-7gc on real bench
-2. **Fiducial UI** — `MinMatchScore` / `MaxMatchDimension` in setting.json; no slider UI yet
+2. **Fiducial UI** — board mm + `MinMatchScore` / `MaxMatchDimension` in Setting tab; `aspectRatioTolerance` etc. JSON-only for now
 3. **Job History tab** — placeholder; **Setting tab** edits `Config/setting.json` (DeveloperMode, robot, DB, ComponentTemplates incl. AllowedRegionNames grid, Fiducial, CameraCapture)
 
 ## Recent UI (2026-06-13)
@@ -73,7 +78,7 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 |------|------------|
 | Camera / capture | `ViewModels/MainViewModel.cs`, `Processing/Camera/BaslerCameraService.cs` |
 | Basler connection & samples | `memory-bank/baslerCamera.md` |
-| Fiducial holes | `Processing/Fiducial/FiducialHoleDetectionService.cs`, `Views/Windows/FiducialTemplateWindow.xaml.cs` |
+| Fiducial holes | `Processing/Fiducial/FiducialHoleDetectionService.cs`, `FiducialQuadSelector.cs`, `Views/Windows/FiducialTemplateWindow.xaml.cs` |
 | Segmentation | `Processing/Segmentation/PcbSegmentationService.cs` |
 | Basler defaults (file only) | `Config/setting.json` → `CameraBasler`, `Processing/Camera/BaslerCameraService.cs` |
 | App config | `Processing/Configuration/AppSettingService.cs`, `ViewModels/SettingViewModel.cs`, `Views/Tabs/SettingTabView.xaml` |

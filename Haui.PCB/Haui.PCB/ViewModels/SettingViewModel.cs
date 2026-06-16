@@ -47,6 +47,8 @@ public sealed class SettingViewModel : INotifyPropertyChanged
     private string _fiducialTemplateFolder = FiducialHoleSettings.DefaultTemplateFolder;
     private double _fiducialMinMatchScore = FiducialHoleSettings.DefaultMinMatchScore;
     private int _fiducialMaxMatchDimension = FiducialHoleSettings.DefaultMaxMatchDimension;
+    private double _pcbBoardWidthMm = PcbBoardSettings.DefaultWidthMm;
+    private double _pcbBoardHeightMm = PcbBoardSettings.DefaultHeightMm;
     private string _cameraCaptureSaveFolder = string.Empty;
     private string _saveStatusText = string.Empty;
 
@@ -152,6 +154,18 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         set { _fiducialMaxMatchDimension = value; OnPropertyChanged(); }
     }
 
+    public double PcbBoardWidthMm
+    {
+        get => _pcbBoardWidthMm;
+        set { _pcbBoardWidthMm = value; OnPropertyChanged(); }
+    }
+
+    public double PcbBoardHeightMm
+    {
+        get => _pcbBoardHeightMm;
+        set { _pcbBoardHeightMm = value; OnPropertyChanged(); }
+    }
+
     public string CameraCaptureSaveFolder
     {
         get => _cameraCaptureSaveFolder;
@@ -197,6 +211,9 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         FiducialTemplateFolder = setting.FiducialHoles.TemplateFolder;
         FiducialMinMatchScore = setting.FiducialHoles.MinMatchScore;
         FiducialMaxMatchDimension = setting.FiducialHoles.MaxMatchDimension;
+
+        PcbBoardWidthMm = setting.PcbBoard.WidthMm;
+        PcbBoardHeightMm = setting.PcbBoard.HeightMm;
 
         CameraCaptureSaveFolder = setting.CameraCapture.SaveFolder;
 
@@ -265,6 +282,9 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         setting.FiducialHoles.MinMatchScore = FiducialMinMatchScore;
         setting.FiducialHoles.MaxMatchDimension = Math.Max(1, FiducialMaxMatchDimension);
 
+        setting.PcbBoard.WidthMm = Math.Max(0, PcbBoardWidthMm);
+        setting.PcbBoard.HeightMm = Math.Max(0, PcbBoardHeightMm);
+
         setting.CameraCapture.SaveFolder = CameraCaptureSaveFolder.Trim();
 
         _appSettingService.Save(setting);
@@ -272,6 +292,8 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         MinMatchSimilarityPercent = setting.ComponentTemplates.MinMatchSimilarityPercent;
         SpeedPercent = setting.SpeedPercent;
         FiducialMaxMatchDimension = setting.FiducialHoles.MaxMatchDimension;
+        PcbBoardWidthMm = setting.PcbBoard.WidthMm;
+        PcbBoardHeightMm = setting.PcbBoard.HeightMm;
 
         AllowedRegionNames.Clear();
         for (var i = 0; i < trimmedNames.Count; i++)

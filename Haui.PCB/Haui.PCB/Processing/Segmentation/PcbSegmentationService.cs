@@ -89,7 +89,8 @@ public class PcbSegmentationService : IPcbSegmentationService
 
         if (_fiducialTemplates?.HasTemplates() == true && _fiducialDetection is not null)
         {
-            var settings = _fiducialTemplates.LoadSettings();
+            var fiducialSettings = _fiducialTemplates.LoadSettings();
+            var boardSettings = AppSettingsStore.LoadPcbBoard();
             var entries = _fiducialTemplates.LoadTemplateEntries();
             try
             {
@@ -97,8 +98,8 @@ public class PcbSegmentationService : IPcbSegmentationService
                 var fiducialResult = _fiducialDetection.Detect(
                     closedWork,
                     entries,
-                    settings.MinMatchScore,
-                    settings.MaxMatchDimension);
+                    fiducialSettings,
+                    boardSettings);
                 RecordTiming(timings, SegmentationPipelineSteps.Fiducial, sw.Elapsed);
 
                 if (fiducialResult.TemplateOutcomes is { Count: > 0 } outcomes)
@@ -158,7 +159,7 @@ public class PcbSegmentationService : IPcbSegmentationService
 
     private static Mat WarpPerspective(Mat source, Point2f[] quad)
     {
-        var ordered = OrderPoints(quad);
+        var ordered = FiducialQuadOrdering.OrderCorners(quad);
 
         float width = Math.Max(
             Distance(ordered[0], ordered[1]),
@@ -193,20 +194,6 @@ public class PcbSegmentationService : IPcbSegmentationService
         }
 
         return warped;
-    }
-
-    private static Point2f[] OrderPoints(Point2f[] pts)
-    {
-        var sums = pts.Select(p => p.X + p.Y).ToArray();
-        var diffs = pts.Select(p => p.Y - p.X).ToArray();
-
-        return
-        [
-            pts[Array.IndexOf(sums, sums.Min())],
-            pts[Array.IndexOf(diffs, diffs.Min())],
-            pts[Array.IndexOf(sums, sums.Max())],
-            pts[Array.IndexOf(diffs, diffs.Max())]
-        ];
     }
 
     private static float Distance(Point2f a, Point2f b)

@@ -1,9 +1,10 @@
-﻿using OpenCvSharp;
+﻿using Haui.PCB.Models.Configuration;
+using OpenCvSharp;
 
 namespace Haui.PCB.Processing.Fiducial;
 
 /// <summary>
-/// Template matching tìm 4 lỗ tròn — thử mẫu theo điểm nhận diện giảm dần, dừng sớm khi đủ 4 lỗ.
+/// Template matching finds fiducial holes; geometry + board aspect ratio selects the correct outer quad.
 /// </summary>
 public class FiducialHoleDetectionService : IFiducialHoleDetectionService
 {
@@ -14,14 +15,17 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
     public FiducialDetectionResult Detect(
         Mat searchImage,
         IReadOnlyList<FiducialTemplateEntry> templates,
-        double minMatchScore,
-        int maxMatchDimension)
+        FiducialHoleSettings fiducialSettings,
+        PcbBoardSettings boardSettings)
     {
         if (searchImage.Empty())
             return Fail("Ảnh Morphology Close rỗng.");
 
         if (templates.Count == 0)
             return Fail("Chưa có mẫu lỗ tròn trong thư mục.");
+
+        double minMatchScore = fiducialSettings.MinMatchScore;
+        int maxMatchDimension = fiducialSettings.MaxMatchDimension;
 
         Mat? ownedGray = null;
         try
@@ -42,6 +46,7 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
             var allCandidates = new List<(Point2f Center, double Score, string FileName)>(
                 templates.Count * PeaksPerTemplate);
             var triedTemplates = new List<string>();
+            int maxPoolSize = fiducialSettings.MaxQuadSearchCandidates;
 
             foreach (var entry in templates)
             {
@@ -80,13 +85,12 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
                         allCandidates.Add((peak.Center, peak.Score, entry.FileName));
                 }
 
-                var selectedSoFar = SelectDistinctCandidates(
+                var poolSoFar = FiducialQuadSelector.BuildCandidatePool(
                     allCandidates,
-                    gray.Width,
-                    gray.Height,
-                    RequiredHoleCount);
+                    (float)(Math.Min(gray.Width, gray.Height) * 0.08),
+                    maxPoolSize);
 
-                if (selectedSoFar.Count >= RequiredHoleCount)
+                if (poolSoFar.Count >= maxPoolSize)
                     break;
             }
 
@@ -97,34 +101,72 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
                     BuildOutcomes(triedTemplates, []));
             }
 
-            var selected = SelectDistinctCandidates(
+            var selection = FiducialQuadSelector.SelectBestQuad(
                 allCandidates,
                 gray.Width,
                 gray.Height,
-                RequiredHoleCount);
+                boardSettings,
+                fiducialSettings);
 
-            if (selected.Count < RequiredHoleCount)
+            float minCornerDistance = (float)(Math.Min(gray.Width, gray.Height) * 0.08);
+
+            if (selection is null)
             {
-                var partialOrdered = OrderPoints(selected.Select(c => c.Center).ToArray());
+                var partialPool = FiducialQuadSelector.BuildCandidatePool(
+                    allCandidates,
+                    minCornerDistance,
+                    maxPoolSize);
+
+                if (partialPool.Count == 0)
+                {
+                    return Fail(
+                        BuildNoQuadMessage(boardSettings, fiducialSettings, minMatchScore),
+                        BuildOutcomes(triedTemplates, []));
+                }
+
+                int partialCount = Math.Min(partialPool.Count, RequiredHoleCount);
+                var partialCenters = partialPool.Take(partialCount).Select(c => c.Center).ToArray();
+                var partialScores = partialPool.Take(partialCount).Select(c => c.Score).ToArray();
+
                 return new FiducialDetectionResult
                 {
                     Success = false,
-                    Centers = partialOrdered,
-                    MatchScores = selected.Select(c => c.Score).ToArray(),
-                    Message = $"Chỉ tìm thấy {selected.Count}/{RequiredHoleCount} lỗ (ngưỡng {minMatchScore:P0}).",
+                    Centers = partialCenters,
+                    MatchScores = partialScores,
+                    Message = BuildNoQuadMessage(boardSettings, fiducialSettings, minMatchScore),
                     TemplateOutcomes = BuildOutcomes(triedTemplates, [])
                 };
             }
 
-            var ordered = OrderPoints(selected.Select(c => c.Center).ToArray());
-            var contributing = selected.Select(c => c.FileName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var ordered = selection.Value.OrderedCorners;
+            if (!FiducialQuadOrdering.AreDistinctCorners(ordered, minCornerDistance))
+            {
+                int distinctCount = FiducialQuadOrdering.CountDistinctCorners(ordered, minCornerDistance);
+                return new FiducialDetectionResult
+                {
+                    Success = false,
+                    Centers = ordered,
+                    MatchScores = selection.Value.MatchScores,
+                    Message = $"Chỉ tìm thấy {distinctCount}/{RequiredHoleCount} lỗ phân biệt (ngưỡng {minMatchScore:P0}).",
+                    TemplateOutcomes = BuildOutcomes(triedTemplates, [])
+                };
+            }
+
+            var contributing = selection.Value.Members
+                .Select(c => c.FileName)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            string modeLabel = boardSettings.HasAspectConstraint
+                ? $"tỷ lệ bo mạch {boardSettings.WidthMm:0.#}×{boardSettings.HeightMm:0.#} mm"
+                : "diện tích lớn nhất";
 
             return new FiducialDetectionResult
             {
                 Success = true,
                 Centers = ordered,
-                MatchScores = selected.Select(c => c.Score).ToArray(),
-                Message = $"Đã tìm thấy {RequiredHoleCount} lỗ ({triedTemplates.Count}/{templates.Count} mẫu, scale={scale:F2}).",
+                MatchScores = selection.Value.MatchScores,
+                Message =
+                    $"Đã tìm thấy {RequiredHoleCount} lỗ ({triedTemplates.Count}/{templates.Count} mẫu, {modeLabel}, scale={scale:F2}).",
                 TemplateOutcomes = BuildOutcomes(triedTemplates, contributing)
             };
         }
@@ -132,6 +174,20 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
         {
             ownedGray?.Dispose();
         }
+    }
+
+    private static string BuildNoQuadMessage(
+        PcbBoardSettings board,
+        FiducialHoleSettings options,
+        double minMatchScore)
+    {
+        if (board.HasAspectConstraint)
+        {
+            return $"Không tìm được 4 lỗ hợp lệ (tỷ lệ {board.WidthMm:0.#}×{board.HeightMm:0.#} mm, "
+                   + $"sai số ≤{options.AspectRatioTolerance:P0}, ngưỡng khớp {minMatchScore:P0}).";
+        }
+
+        return $"Không tìm được 4 lỗ hợp lệ (chế độ diện tích, ngưỡng khớp {minMatchScore:P0}).";
     }
 
     private static IReadOnlyList<FiducialTemplateRecognitionOutcome> BuildOutcomes(
@@ -163,29 +219,6 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
         var resized = new Mat();
         Cv2.Resize(source, resized, new Size(), scale, scale, InterpolationFlags.Area);
         return resized;
-    }
-
-    private static List<(Point2f Center, double Score, string FileName)> SelectDistinctCandidates(
-        List<(Point2f Center, double Score, string FileName)> candidates,
-        int imageWidth,
-        int imageHeight,
-        int count)
-    {
-        double minDistance = Math.Min(imageWidth, imageHeight) * 0.08;
-        var sorted = candidates.OrderByDescending(c => c.Score).ToList();
-        var selected = new List<(Point2f Center, double Score, string FileName)>(count);
-
-        foreach (var candidate in sorted)
-        {
-            if (selected.Any(s => Distance(s.Center, candidate.Center) < minDistance))
-                continue;
-
-            selected.Add(candidate);
-            if (selected.Count == count)
-                break;
-        }
-
-        return selected;
     }
 
     private static List<(Point2f Center, double Score)> FindTopMatches(
@@ -227,27 +260,6 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
         int x2 = Math.Min(matchMap.Width - 1, peak.X + radius);
         int y2 = Math.Min(matchMap.Height - 1, peak.Y + radius);
         Cv2.Rectangle(matchMap, new OpenCvSharp.Rect(x1, y1, x2 - x1 + 1, y2 - y1 + 1), Scalar.All(0), -1);
-    }
-
-    private static Point2f[] OrderPoints(Point2f[] pts)
-    {
-        var sums = pts.Select(p => p.X + p.Y).ToArray();
-        var diffs = pts.Select(p => p.Y - p.X).ToArray();
-
-        return
-        [
-            pts[Array.IndexOf(sums, sums.Min())],
-            pts[Array.IndexOf(diffs, diffs.Min())],
-            pts[Array.IndexOf(sums, sums.Max())],
-            pts[Array.IndexOf(diffs, diffs.Max())]
-        ];
-    }
-
-    private static float Distance(Point2f a, Point2f b)
-    {
-        float dx = a.X - b.X;
-        float dy = a.Y - b.Y;
-        return MathF.Sqrt(dx * dx + dy * dy);
     }
 
     private static FiducialDetectionResult Fail(

@@ -44,6 +44,9 @@ public class AppSetting
     [JsonPropertyName("FiducialHoles")]
     public FiducialHoleSettings FiducialHoles { get; set; } = new();
 
+    [JsonPropertyName("PcbBoard")]
+    public PcbBoardSettings PcbBoard { get; set; } = new();
+
     [JsonPropertyName("CameraBasler")]
     public CameraParameters CameraBasler { get; set; } = new();
 

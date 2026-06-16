@@ -221,6 +221,8 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" Text="Thư mục mẫu lỗ" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FieldTextBox}"
@@ -231,6 +233,12 @@
                             <TextBlock Grid.Row="2" Text="Max match dimension (px)" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
                                      Text="{Binding FiducialMaxMatchDimension, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="3" Text="Chiều rộng bo mạch (mm)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding PcbBoardWidthMm, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="4" Text="Chiều cao bo mạch (mm)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding PcbBoardHeightMm, UpdateSourceTrigger=PropertyChanged}"/>
                         </Grid>
                     </StackPanel>
                 </Border>
