@@ -26,6 +26,7 @@ public partial class DashboardTabView : UserControl
     private readonly MainViewModel _viewModel;
     private readonly TestPipelineViewModel _inspectionViewModel;
     private readonly Window _owner;
+    private readonly Func<bool, Task>? _onInspectionCompleted;
     private readonly IAppSettingService _appSettingService = new AppSettingService();
     private bool _developerMode;
     private bool _isSelectingRegion;
@@ -35,10 +36,11 @@ public partial class DashboardTabView : UserControl
     private BitmapSource? _latestCameraFrame;
     private int _cameraFrameDispatchQueued;
 
-    public DashboardTabView(MainViewModel viewModel, Window owner)
+    public DashboardTabView(MainViewModel viewModel, Window owner, Func<bool, Task>? onInspectionCompleted = null)
     {
         _viewModel = viewModel;
         _owner = owner;
+        _onInspectionCompleted = onInspectionCompleted;
 
         var libraryService = new TemplateLibraryService();
         var comparisonService = new RegionComparisonService();
@@ -155,6 +157,25 @@ public partial class DashboardTabView : UserControl
                         StatusText.Text = _inspectionViewModel.StatusText;
                 });
         };
+
+        _inspectionViewModel.InspectionCompleted += isPass =>
+        {
+            if (_onInspectionCompleted is null) return;
+            _ = RunInspectionCompletedHandlerAsync(isPass);
+        };
+    }
+
+    private async Task RunInspectionCompletedHandlerAsync(bool isPass)
+    {
+        try
+        {
+            await _onInspectionCompleted(isPass);
+        }
+        catch (Exception ex)
+        {
+            await Dispatcher.InvokeAsync(() =>
+                StatusText.Text = $"Lỗi phân loại robot sau nhận dạng: {ex.Message}");
+        }
     }
 
     private void UpdatePassFailDisplay()
