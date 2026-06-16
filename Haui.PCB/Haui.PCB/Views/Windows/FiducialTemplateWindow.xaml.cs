@@ -116,7 +116,7 @@ public partial class FiducialTemplateWindow : System.Windows.Window
 
     private void BtnRemovePendingRegion_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: FiducialHoleRegionItem item }) return;
+        if (sender is not FrameworkElement { Tag: FiducialHoleRegionItem item }) return;
         _viewModel.RemovePendingRegion(item);
     }
 
@@ -125,7 +125,7 @@ public partial class FiducialTemplateWindow : System.Windows.Window
 
     private void BtnDeleteTemplate_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: string fileName }) return;
+        if (sender is not FrameworkElement { Tag: string fileName }) return;
         _viewModel.DeleteSavedTemplate(fileName);
     }
 

@@ -1,0 +1,14 @@
+<UserControl x:Class="Haui.PCB.Views.Controls.DeleteIconButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             x:Name="Root"
+             VerticalAlignment="Center">
+    <Button Style="{StaticResource DeleteIconButtonStyle}"
+            Click="DeleteButton_Click"
+            Tag="{Binding Tag, ElementName=Root}"
+            ToolTip="{Binding ToolTip, ElementName=Root}"
+            VerticalAlignment="Center">
+        <md:PackIcon Kind="Delete" Width="18" Height="18"/>
+    </Button>
+</UserControl>

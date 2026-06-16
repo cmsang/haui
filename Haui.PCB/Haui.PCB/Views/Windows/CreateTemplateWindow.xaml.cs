@@ -226,7 +226,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
     private void BtnDeleteRegion_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as Button)?.Tag is TemplateRegionItem item)
+        if (sender is FrameworkElement { Tag: TemplateRegionItem item })
             _viewModel.RemoveRegion(item);
     }
 
