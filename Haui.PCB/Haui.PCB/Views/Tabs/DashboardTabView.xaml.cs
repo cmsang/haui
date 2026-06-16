@@ -209,6 +209,7 @@ public partial class DashboardTabView : UserControl
         var visibility = _developerMode ? Visibility.Visible : Visibility.Collapsed;
         BtnCreateTemplate.Visibility = visibility;
         BtnCreateFiducialTemplates.Visibility = visibility;
+        BtnSelectFiducialImage.Visibility = visibility;
         BtnSelectImage.Visibility = visibility;
 
         if (!_developerMode)
@@ -413,6 +414,28 @@ public partial class DashboardTabView : UserControl
         finally
         {
             BtnCreateFiducialTemplates.IsEnabled = _viewModel.IsRunning;
+        }
+    }
+
+    private async void BtnSelectFiducialImage_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Chọn ảnh để tạo mẫu lỗ định vị",
+            Filter = "Ảnh (*.png;*.jpg;*.jpeg;*.bmp;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff"
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        BtnSelectFiducialImage.IsEnabled = false;
+        try
+        {
+            await _viewModel.LoadFiducialTemplateFromFileAsync(dialog.FileName);
+        }
+        finally
+        {
+            BtnSelectFiducialImage.IsEnabled = true;
         }
     }
 

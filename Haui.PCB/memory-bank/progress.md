@@ -27,7 +27,7 @@
 - [x] Unified Test — single `RunPipeline` feeds PASS/FAIL + step gallery via `PipelineStepMapper` (2026-06-15)
 - [x] Region compare — 128×128, LAB-L + CLAHE + bilateral, threshold from `MinMatchSimilarityPercent`
 - [x] Unified config — `Config/setting.json` (`AppSettingService`)
-- [x] DeveloperMode — **Chọn ảnh** (file inspect, no camera required), Tạo mẫu / Thêm mẫu lỗ on Dashboard toolbar; Sửa in template viewer
+- [x] DeveloperMode — **Chọn ảnh** (file inspect, no camera required), **Chọn ảnh lỗ** (file → fiducial template window), Tạo mẫu / Thêm mẫu lỗ on Dashboard toolbar; Sửa in template viewer
 - [x] Virtual Serial Port — `VirtualRobotSerialService` when dev + virtual enabled (no COM required)
 - [x] Sharpest-frame selection (Laplacian variance)
 

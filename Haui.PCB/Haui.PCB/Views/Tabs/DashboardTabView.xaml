@@ -180,6 +180,13 @@
                         Margin="0,0,8,0"
                         Click="BtnCreateFiducialTemplates_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
+                <Button x:Name="BtnSelectFiducialImage"
+                        Content="📂 Chọn ảnh lỗ"
+                        Height="30" Width="130"
+                        Visibility="Collapsed"
+                        Margin="0,0,8,0"
+                        Click="BtnSelectFiducialImage_Click"
+                        Style="{StaticResource SecondaryButtonStyle}" />
                 <Button x:Name="BtnViewTemplates"
                         Content="🖼 Xem mẫu"
                         Height="30" Width="110"
