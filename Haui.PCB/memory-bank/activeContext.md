@@ -26,6 +26,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Dashboard cleanup (2026-06-16):** Removed Test 2 + `PipelineStepsWindow` / `PipelineDebugService`. DeveloperMode **Chọn ảnh** runs `TestPipelineViewModel.InspectFromFileAsync` — results in `ResultImage` + gallery only; `CameraImage` remains live camera feed.
 
+**Fiducial template from file (2026-06-16):** DeveloperMode **Chọn ảnh lỗ** → `MainViewModel.LoadFiducialTemplateFromFileAsync` (ImRead + Morphology Close) → `FiducialTemplateWindow`; no camera required. Camera path **Thêm mẫu lỗ** unchanged (ROI crop + grab).
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:
@@ -51,6 +53,7 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 - Removed Dashboard sidebar: Basler exposure/gain/gamma + Canny threshold sliders
 - Removed Camera Basler section from Setting tab (runtime defaults still in `setting.json` → `CameraBasler`)
 - **Thêm mẫu lỗ** toolbar button between **Tạo mẫu** and **Xem mẫu** — visible only when DeveloperMode on
+- **Chọn ảnh lỗ** (DeveloperMode) — file → Morphology Close → `FiducialTemplateWindow`; no camera required
 
 ## Entry files by task
 

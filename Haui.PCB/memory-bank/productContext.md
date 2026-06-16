@@ -20,6 +20,8 @@ Operators inspect PCB boards against a visual template: capture under camera, au
 3. **Toolbar** (capture frame, open child window):
    - **Test** → segment, compare all library templates, best match detail (camera capture)
    - **Chọn ảnh** (DeveloperMode) → same inspection from a file on disk; result in `ResultImage` only — `CameraImage` stays live camera feed
+   - **Thêm mẫu lỗ** (DeveloperMode, camera) → Morphology Close from live capture; crop ROI if set
+   - **Chọn ảnh lỗ** (DeveloperMode) → Morphology Close from file; opens fiducial template editor (no camera)
    - **Tạo mẫu** → segment, draw regions, save template
    - **Xem mẫu** → browse library, edit/delete
 
