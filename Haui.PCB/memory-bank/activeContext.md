@@ -32,6 +32,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Dashboard component panel (2026-06-16):** Đã vẽ lại panel kết quả dạng bảng theo mẫu vận hành: dòng **Kết quả** (`x/y` + PASS/FAIL), dòng **D/s linh kiện thiếu**, tiêu đề đỏ gạch chân **Danh sách linh kiện thiếu**, và DataGrid danh sách thiếu ngay bên dưới. Vẫn bind `TestPipelineViewModel` qua `ComponentResultsPanel.DataContext`; `PassFailPanel`/`PassFailText` giữ nguyên để code-behind đổi màu theo PASS/FAIL.
 
+**Result overlay border thickness (2026-06-16):** `TestPipelineViewModel.DrawAnnotations` tăng độ dày viền vùng linh kiện trên ảnh kết quả từ `2` lên `6` (x3) để dễ quan sát PASS/FAIL theo từng vùng.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:

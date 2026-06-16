@@ -370,7 +370,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             using var canvas = board.Clone();
             var green = new Scalar(0, 200, 0);
             var red = new Scalar(0, 0, 220);
-            const int thickness = 2;
+            const int thickness = 8;
             const double fontScale = 0.45;
 
             foreach (var r in results)
