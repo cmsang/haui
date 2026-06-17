@@ -44,6 +44,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Fiducial geometric quad selection (2026-06-16):** `FiducialQuadSelector` + `FiducialQuadGeometry` — combinatorial search trong pool ứng viên (dedupe, max 15); lọc tứ giác lồi + rectangularity; ràng buộc tỷ lệ cạnh từ `PcbBoard` (mặc định **400×550 mm**); width/height = 0 → fallback diện tích lớn nhất. `FiducialHoles`: `aspectRatioTolerance`, `maxQuadSearchCandidates`, `minQuadRectangularity`. Setting tab: chiều rộng/cao bo mạch (mm).
 
+**Create template region validation (2026-06-17):** Trước khi lưu mẫu PCB — tên vùng phải ∈ `ComponentTemplates.AllowedRegionNames` và không trùng; `CanSave`, validate trước lưu. UI: ComboBox chọn tên từ danh sách cấu hình (không gõ tự do); vùng mới tự gán tên chưa dùng.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:

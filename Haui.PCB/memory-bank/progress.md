@@ -21,7 +21,7 @@
 - [x] Fiducial recognition scoring — `hole_recognition_stats.json` per template (+1/−1); ordered template matching
 - [x] Fiducial geometric quad — `FiducialQuadSelector` combinatorial search + `PcbBoard` aspect ratio (default 400×550 mm); fallback largest area when mm disabled
 - [x] Pipeline step gallery on Dashboard — per-step elapsed time via `PipelineStepMapper` (removed separate `PipelineStepsWindow` 2026-06-16); bước **Lỗ định vị** annotate tâm lỗ + % khớp trên ảnh gốc
-- [x] Create template — draw regions, save PNG + `*_regions.json`; names ∈ `AllowedRegionNames`
+- [x] Create template — draw regions, save PNG + `*_regions.json`; names ∈ `AllowedRegionNames`, unique per template (validate before save)
 - [x] Template library — scan `*.png` + `*_regions.json` (no `index.json`); folder via `ComponentTemplates.CustomFolder`
 - [x] Test pipeline — composite match by `AllowedRegionNames`; 180° retry; overlay green/red; every configured name reported (`RegionMatchOutcome`)
 - [x] Dashboard inline test — result image + panel kết quả dạng bảng (Kết quả x/y + PASS/FAIL, D/s linh kiện thiếu, DataGrid thiếu), pipeline steps gallery on tab (no popup on Test)

@@ -99,6 +99,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     private BitmapSource? _boardBitmap;
     private string _statusText = string.Empty;
     private readonly HashSet<string> _allowedRegionNames;
+    private readonly IReadOnlyList<string> _allowedRegionNamesOrdered;
     private readonly string _allowedNamesHint;
     private bool _disposed;
     private TemplateEntry? _editingEntry;
@@ -113,6 +114,9 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     // ──── Properties ─────────────────────────────────────────────────────────
 
     public ObservableCollection<TemplateRegionItem> Regions { get; } = [];
+
+    /// <summary>Danh sách tên vùng được phép — bind ComboBox chọn tên.</summary>
+    public IReadOnlyList<string> AllowedRegionNames => _allowedRegionNamesOrdered;
 
     public string StatusText
     {
@@ -144,7 +148,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     public string RegionProgressText =>
         CanSave
             ? $"Vùng linh kiện: {Regions.Count} — có thể lưu."
-            : $"Vùng linh kiện: {Regions.Count} — kiểm tra tên (danh sách cấu hình, không trùng).";
+            : $"Vùng linh kiện: {Regions.Count} — chọn tên từ danh sách cấu hình, không trùng.";
 
     // ──── Bảng 50 màu phân biệt ───────────────────────────────────────────────
 
@@ -216,6 +220,23 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         return RegionPalette[Regions.Count % RegionPalette.Length];
     }
 
+    /// <summary>First allowed name not yet used by another region.</summary>
+    private string GetNextUnusedRegionName()
+    {
+        var used = Regions
+            .Select(r => r.Name.Trim())
+            .Where(n => n.Length > 0)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var name in _allowedRegionNamesOrdered)
+        {
+            if (!used.Contains(name))
+                return name;
+        }
+
+        return string.Empty;
+    }
+
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
     public CreateTemplateViewModel(
@@ -225,6 +246,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         _segmentationService = segmentationService;
         _libraryService = libraryService;
         _allowedRegionNames = ComponentTemplateRegionNames.LoadAllowedNames();
+        _allowedRegionNamesOrdered = ComponentTemplateRegionNames.LoadAllowedNamesInOrder();
         _allowedNamesHint = ComponentTemplateRegionNames.FormatAllowedNamesHint(_allowedRegionNames);
 
         Regions.CollectionChanged += OnRegionsCollectionChanged;
@@ -353,7 +375,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         Regions.Clear();
 
         StatusText =
-            $"Kéo thả trên ảnh để đánh dấu vùng linh kiện. Tên hợp lệ: {_allowedNamesHint}.";
+            "Kéo thả trên ảnh để đánh dấu vùng linh kiện. Chọn tên vùng từ danh sách cấu hình.";
         NotifyRegionValidationChanged();
         NotifyBoardChanged();
     }
@@ -388,10 +410,11 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     /// </summary>
     public void AddRegion(double relX, double relY, double relW, double relH)
     {
+        var defaultName = GetNextUnusedRegionName();
         var item = new TemplateRegionItem
         {
             Stt = Regions.Count + 1,
-            Name = $"Vùng {Regions.Count + 1}",
+            Name = defaultName,
             RelX = relX,
             RelY = relY,
             RelWidth = relW,
@@ -399,7 +422,8 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             RegionColor = GetNextColor()
         };
         Regions.Add(item);
-        StatusText = RegionValidationStatusSuffix($"Đã thêm \"{item.Name}\".");
+        var nameLabel = string.IsNullOrEmpty(defaultName) ? "(chưa chọn tên)" : $"\"{defaultName}\"";
+        StatusText = RegionValidationStatusSuffix($"Đã thêm vùng {nameLabel}.");
     }
 
     /// <summary>Xóa vùng được chọn.</summary>
@@ -418,7 +442,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             return $"{action} Có thể lưu ({Regions.Count} vùng).";
         if (Regions.Count == 0)
             return $"{action} Chưa có vùng nào.";
-        return $"{action} ({Regions.Count} vùng — kiểm tra tên: danh sách cấu hình, không trùng).";
+        return $"{action} ({Regions.Count} vùng — chọn tên từ danh sách cấu hình, không trùng).";
     }
 
     /// <summary>Kiểm tra tên vùng trước khi lưu.</summary>
