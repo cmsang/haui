@@ -36,9 +36,7 @@ public sealed class FiducialSavedTemplateItem
     public required string FileName { get; init; }
     public int RecognitionCount { get; init; }
 
-    public string DisplayText => RecognitionCount >= 0
-        ? $"{FileName} (+{RecognitionCount})"
-        : $"{FileName} ({RecognitionCount})";
+    public string DisplayText => $"{FileName} (+{RecognitionCount})";
 }
 
 /// <summary>

@@ -95,11 +95,7 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
             }
 
             if (allCandidates.Count == 0)
-            {
-                return Fail(
-                    $"Không khớp mẫu nào (ngưỡng {minMatchScore:P0}).",
-                    BuildOutcomes(triedTemplates, []));
-            }
+                return Fail($"Không khớp mẫu nào (ngưỡng {minMatchScore:P0}).");
 
             var selection = FiducialQuadSelector.SelectBestQuad(
                 allCandidates,
@@ -118,11 +114,7 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
                     maxPoolSize);
 
                 if (partialPool.Count == 0)
-                {
-                    return Fail(
-                        BuildNoQuadMessage(boardSettings, fiducialSettings, minMatchScore),
-                        BuildOutcomes(triedTemplates, []));
-                }
+                    return Fail(BuildNoQuadMessage(boardSettings, fiducialSettings, minMatchScore));
 
                 int partialCount = Math.Min(partialPool.Count, RequiredHoleCount);
                 var partialCenters = partialPool.Take(partialCount).Select(c => c.Center).ToArray();
@@ -133,8 +125,7 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
                     Success = false,
                     Centers = partialCenters,
                     MatchScores = partialScores,
-                    Message = BuildNoQuadMessage(boardSettings, fiducialSettings, minMatchScore),
-                    TemplateOutcomes = BuildOutcomes(triedTemplates, [])
+                    Message = BuildNoQuadMessage(boardSettings, fiducialSettings, minMatchScore)
                 };
             }
 
@@ -147,14 +138,9 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
                     Success = false,
                     Centers = ordered,
                     MatchScores = selection.Value.MatchScores,
-                    Message = $"Chỉ tìm thấy {distinctCount}/{RequiredHoleCount} lỗ phân biệt (ngưỡng {minMatchScore:P0}).",
-                    TemplateOutcomes = BuildOutcomes(triedTemplates, [])
+                    Message = $"Chỉ tìm thấy {distinctCount}/{RequiredHoleCount} lỗ phân biệt (ngưỡng {minMatchScore:P0})."
                 };
             }
-
-            var contributing = selection.Value.Members
-                .Select(c => c.FileName)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             string modeLabel = boardSettings.HasAspectConstraint
                 ? $"tỷ lệ bo mạch {boardSettings.WidthMm:0.#}×{boardSettings.HeightMm:0.#} mm"
@@ -167,7 +153,7 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
                 MatchScores = selection.Value.MatchScores,
                 Message =
                     $"Đã tìm thấy {RequiredHoleCount} lỗ ({triedTemplates.Count}/{templates.Count} mẫu, {modeLabel}, scale={scale:F2}).",
-                TemplateOutcomes = BuildOutcomes(triedTemplates, contributing)
+                TemplateOutcomes = BuildOutcomesFromMembers(selection.Value.Members)
             };
         }
         finally
@@ -190,21 +176,16 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
         return $"Không tìm được 4 lỗ hợp lệ (chế độ diện tích, ngưỡng khớp {minMatchScore:P0}).";
     }
 
-    private static IReadOnlyList<FiducialTemplateRecognitionOutcome> BuildOutcomes(
-        IReadOnlyList<string> triedTemplates,
-        HashSet<string> contributingFileNames)
-    {
-        if (triedTemplates.Count == 0)
-            return [];
-
-        return triedTemplates
-            .Select(fileName => new FiducialTemplateRecognitionOutcome
+    private static IReadOnlyList<FiducialTemplateRecognitionOutcome> BuildOutcomesFromMembers(
+        IReadOnlyList<(Point2f Center, double Score, string FileName)> members)
+        => members
+            .GroupBy(m => m.FileName, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new FiducialTemplateRecognitionOutcome
             {
-                FileName = fileName,
-                ContributedToFinalHoles = contributingFileNames.Contains(fileName)
+                FileName = g.Key,
+                RecognizedHoleCount = g.Count()
             })
             .ToList();
-    }
 
     private static double ComputeMatchScale(int width, int height, int maxMatchDimension)
     {
@@ -262,12 +243,9 @@ public class FiducialHoleDetectionService : IFiducialHoleDetectionService
         Cv2.Rectangle(matchMap, new OpenCvSharp.Rect(x1, y1, x2 - x1 + 1, y2 - y1 + 1), Scalar.All(0), -1);
     }
 
-    private static FiducialDetectionResult Fail(
-        string message,
-        IReadOnlyList<FiducialTemplateRecognitionOutcome>? outcomes = null) => new()
+    private static FiducialDetectionResult Fail(string message) => new()
     {
         Success = false,
-        Message = message,
-        TemplateOutcomes = outcomes
+        Message = message
     };
 }

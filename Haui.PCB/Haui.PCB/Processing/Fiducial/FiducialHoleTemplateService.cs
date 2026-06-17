@@ -11,6 +11,7 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
 {
     private const string TemplateSearchPattern = "hole_*.png";
     private const string RecognitionStatsFileName = "hole_recognition_stats.json";
+    private const int RecognitionScoreModulus = 100_000_000;
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -94,11 +95,11 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
         var stats = LoadStats();
         foreach (var outcome in outcomes)
         {
-            if (string.IsNullOrWhiteSpace(outcome.FileName))
+            if (string.IsNullOrWhiteSpace(outcome.FileName) || outcome.RecognizedHoleCount <= 0)
                 continue;
 
-            var delta = outcome.ContributedToFinalHoles ? 1 : -1;
-            stats[outcome.FileName] = stats.GetValueOrDefault(outcome.FileName, 0) + delta;
+            var current = stats.GetValueOrDefault(outcome.FileName, 0);
+            stats[outcome.FileName] = (current + outcome.RecognizedHoleCount) % RecognitionScoreModulus;
         }
 
         SaveStats(stats);
@@ -151,9 +152,14 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
         {
             var json = File.ReadAllText(path);
             var loaded = JsonSerializer.Deserialize<Dictionary<string, int>>(json, JsonOptions);
-            return loaded is null
-                ? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
-                : new Dictionary<string, int>(loaded, StringComparer.OrdinalIgnoreCase);
+            if (loaded is null)
+                return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            var stats = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (fileName, count) in loaded)
+                stats[fileName] = Math.Max(0, count);
+
+            return stats;
         }
         catch
         {
