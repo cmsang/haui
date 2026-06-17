@@ -97,6 +97,8 @@ public class AppSettingService : IAppSettingService
         Save(app);
     }
 
+    public PcbBoardSettings LoadPcbBoard() => Load().PcbBoard;
+
     public CameraParameters LoadCameraBasler()
     {
         var cam = Load().CameraBasler;
@@ -122,6 +124,19 @@ public class AppSettingService : IAppSettingService
 
         setting.ComponentTemplates.MinMatchSimilarityPercent =
             NormalizeMatchThreshold(setting.ComponentTemplates.MinMatchSimilarityPercent);
+
+        setting.FiducialHoles.AspectRatioTolerance = Math.Clamp(
+            setting.FiducialHoles.AspectRatioTolerance,
+            0.01,
+            1.0);
+        setting.FiducialHoles.MaxQuadSearchCandidates = Math.Clamp(
+            setting.FiducialHoles.MaxQuadSearchCandidates,
+            4,
+            30);
+        setting.FiducialHoles.MinQuadRectangularity = Math.Clamp(
+            setting.FiducialHoles.MinQuadRectangularity,
+            0.1,
+            1.0);
     }
 
     private static double NormalizeMatchThreshold(double value)

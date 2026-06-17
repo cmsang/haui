@@ -11,4 +11,7 @@ public sealed class FiducialDetectionResult
     public Point2f[]? Centers { get; init; }
     public double[]? MatchScores { get; init; }
     public string? Message { get; init; }
+
+    /// <summary>Per-template outcomes for tried templates; null when detection was not run.</summary>
+    public IReadOnlyList<FiducialTemplateRecognitionOutcome>? TemplateOutcomes { get; init; }
 }

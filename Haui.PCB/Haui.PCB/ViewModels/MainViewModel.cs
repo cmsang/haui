@@ -45,7 +45,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     public event Action<System.Windows.Media.Imaging.BitmapSource>? FrameReady;
     public event Action<Mat>? TemplateFrameCaptured;
     public event Action<Mat>? FiducialTemplateFrameCaptured;
-    public event Action<Mat>? Test2FrameCaptured;
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public IReadOnlyList<CameraInfo> Cameras
@@ -375,30 +374,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         return CropToSelectedRegion(frame);
     }
 
-    public async Task CaptureTest2FrameAsync()
-    {
-        StatusText = "Đang chụp ảnh (Test 2)...";
-
-        if (_cameraService is null)
-        {
-            StatusText = "Camera chưa khởi động.";
-            return;
-        }
-
-        var frame = await Task.Run(() => _cameraService.GrabFrame());
-
-        if (frame is null || frame.Empty())
-        {
-            frame?.Dispose();
-            StatusText = "Không thể chụp ảnh từ camera.";
-            return;
-        }
-
-        frame = CropToSelectedRegion(frame);
-        StatusText = "Đã mở Pipeline Debug.";
-        Test2FrameCaptured?.Invoke(frame);
-    }
-
     public async Task CaptureTemplateFrameAsync()
     {
         StatusText = "Đang chụp ảnh để tạo mẫu...";
@@ -443,13 +418,7 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
         frame = CropToSelectedRegion(frame);
 
-        Mat? closedImage = await Task.Run(() =>
-        {
-            var segmentation = new PcbSegmentationService(_pipelineParameters);
-            using var pipeline = segmentation.RunPipeline(frame);
-            return pipeline.Closed.Clone();
-        });
-        frame.Dispose();
+        var closedImage = await BuildMorphologyCloseForFiducialAsync(frame, disposeSource: true);
 
         if (closedImage is null || closedImage.Empty())
         {
@@ -459,6 +428,31 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
 
         StatusText = "Đã mở form tạo mẫu 4 lỗ tròn (Morphology Close).";
+        FiducialTemplateFrameCaptured?.Invoke(closedImage);
+    }
+
+    public async Task LoadFiducialTemplateFromFileAsync(string filePath)
+    {
+        StatusText = "Đang đọc ảnh và chạy Morphology Close...";
+
+        using var frame = await Task.Run(() => Cv2.ImRead(filePath, ImreadModes.Color));
+
+        if (frame.Empty())
+        {
+            StatusText = "Không thể đọc ảnh.";
+            return;
+        }
+
+        var closedImage = await BuildMorphologyCloseForFiducialAsync(frame, disposeSource: false);
+
+        if (closedImage is null || closedImage.Empty())
+        {
+            closedImage?.Dispose();
+            StatusText = "Không tạo được ảnh Morphology Close.";
+            return;
+        }
+
+        StatusText = "Đã mở form tạo mẫu lỗ (Morphology Close).";
         FiducialTemplateFrameCaptured?.Invoke(closedImage);
     }
 
@@ -529,6 +523,24 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
         var defaults = CameraDefaultsLoader.LoadRecommended();
         return (defaults.Width, defaults.Height);
+    }
+
+    private async Task<Mat?> BuildMorphologyCloseForFiducialAsync(Mat source, bool disposeSource)
+    {
+        try
+        {
+            return await Task.Run(() =>
+            {
+                var segmentation = new PcbSegmentationService(_pipelineParameters);
+                using var pipeline = segmentation.RunPipeline(source);
+                return pipeline.Closed.Clone();
+            });
+        }
+        finally
+        {
+            if (disposeSource)
+                source.Dispose();
+        }
     }
 
     private Mat CropToSelectedRegion(Mat frame)

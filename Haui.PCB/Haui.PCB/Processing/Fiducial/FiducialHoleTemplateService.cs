@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Text.Json;
 using OpenCvSharp;
 
 namespace Haui.PCB.Processing.Fiducial;
@@ -9,6 +10,10 @@ namespace Haui.PCB.Processing.Fiducial;
 public class FiducialHoleTemplateService : IFiducialHoleTemplateService
 {
     private const string TemplateSearchPattern = "hole_*.png";
+    private const string RecognitionStatsFileName = "hole_recognition_stats.json";
+    private const int RecognitionScoreModulus = 100_000_000;
+
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     /// <summary>Số lỗ định vị cần tìm trên bo mạch (không phụ thuộc số file mẫu).</summary>
     public const int RequiredDetectionCount = 4;
@@ -41,10 +46,63 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
         return _cache.Select(c => c.FileName).ToList();
     }
 
-    public IReadOnlyList<Mat> LoadTemplates()
+    public IReadOnlyDictionary<string, int> GetRecognitionCounts()
     {
         EnsureCacheLoaded();
-        return _cache.Select(c => c.Template.Clone()).ToList();
+        var stats = LoadStats();
+        return _cache.ToDictionary(
+            c => c.FileName,
+            c => stats.GetValueOrDefault(c.FileName, 0));
+    }
+
+    public IReadOnlyList<FiducialTemplateEntry> LoadTemplateEntries()
+    {
+        EnsureCacheLoaded();
+        var stats = LoadStats();
+
+        return _cache
+            .Select(c => new FiducialTemplateEntry
+            {
+                FileName = c.FileName,
+                RecognitionCount = stats.GetValueOrDefault(c.FileName, 0),
+                Template = c.Template.Clone()
+            })
+            .OrderByDescending(e => e.RecognitionCount)
+            .ThenBy(e => e.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public IReadOnlyList<Mat> LoadTemplates()
+    {
+        var entries = LoadTemplateEntries();
+        try
+        {
+            return entries.Select(e => e.Template).ToList();
+        }
+        catch
+        {
+            foreach (var entry in entries)
+                entry.Template.Dispose();
+            throw;
+        }
+    }
+
+    public void UpdateRecognitionStats(IReadOnlyList<FiducialTemplateRecognitionOutcome> outcomes)
+    {
+        if (outcomes.Count == 0)
+            return;
+
+        var stats = LoadStats();
+        foreach (var outcome in outcomes)
+        {
+            if (string.IsNullOrWhiteSpace(outcome.FileName) || outcome.RecognizedHoleCount <= 0)
+                continue;
+
+            var current = stats.GetValueOrDefault(outcome.FileName, 0);
+            stats[outcome.FileName] = (current + outcome.RecognizedHoleCount) % RecognitionScoreModulus;
+        }
+
+        SaveStats(stats);
     }
 
     public string SaveTemplate(Mat template)
@@ -57,6 +115,11 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
 
         var fileName = $"hole_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png";
         Cv2.ImWrite(Path.Combine(folder, fileName), template);
+
+        var stats = LoadStats();
+        stats[fileName] = 0;
+        SaveStats(stats);
+
         InvalidateCache();
         return fileName;
     }
@@ -70,7 +133,47 @@ public class FiducialHoleTemplateService : IFiducialHoleTemplateService
         if (File.Exists(path))
             File.Delete(path);
 
+        var stats = LoadStats();
+        if (stats.Remove(fileName))
+            SaveStats(stats);
+
         InvalidateCache();
+    }
+
+    private string GetStatsFilePath() => Path.Combine(GetTemplateFolder(), RecognitionStatsFileName);
+
+    private Dictionary<string, int> LoadStats()
+    {
+        var path = GetStatsFilePath();
+        if (!File.Exists(path))
+            return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            var json = File.ReadAllText(path);
+            var loaded = JsonSerializer.Deserialize<Dictionary<string, int>>(json, JsonOptions);
+            if (loaded is null)
+                return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            var stats = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (fileName, count) in loaded)
+                stats[fileName] = Math.Max(0, count);
+
+            return stats;
+        }
+        catch
+        {
+            return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private void SaveStats(Dictionary<string, int> stats)
+    {
+        var folder = GetTemplateFolder();
+        Directory.CreateDirectory(folder);
+        var path = GetStatsFilePath();
+        var json = JsonSerializer.Serialize(stats, JsonOptions);
+        File.WriteAllText(path, json);
     }
 
     private void EnsureCacheLoaded()

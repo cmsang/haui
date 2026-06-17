@@ -83,41 +83,47 @@ public class PcbSegmentationService : IPcbSegmentationService
         RecordTiming(timings, SegmentationPipelineSteps.MorphologyClose, sw.Elapsed);
 
         Point2f[]? fiducialCenters = null;
+        double[]? fiducialMatchScores = null;
         string? fiducialDescription = null;
         Mat? warped = null;
 
         if (_fiducialTemplates?.HasTemplates() == true && _fiducialDetection is not null)
         {
-            var settings = _fiducialTemplates.LoadSettings();
-            var templates = _fiducialTemplates.LoadTemplates();
+            var fiducialSettings = _fiducialTemplates.LoadSettings();
+            var boardSettings = AppSettingsStore.LoadPcbBoard();
+            var entries = _fiducialTemplates.LoadTemplateEntries();
             try
             {
                 sw.Restart();
                 var fiducialResult = _fiducialDetection.Detect(
                     closedWork,
-                    templates,
-                    settings.MinMatchScore,
-                    settings.MaxMatchDimension);
+                    entries,
+                    fiducialSettings,
+                    boardSettings);
                 RecordTiming(timings, SegmentationPipelineSteps.Fiducial, sw.Elapsed);
 
-                if (fiducialResult.Success && fiducialResult.Centers is not null)
-                {
-                    fiducialCenters = fiducialResult.Centers;
-                    fiducialDescription = fiducialResult.Message;
+                if (fiducialResult.TemplateOutcomes is { Count: > 0 } outcomes)
+                    _fiducialTemplates.UpdateRecognitionStats(outcomes);
 
+                fiducialDescription = fiducialResult.Message ?? "Không nhận diện được 4 lỗ định vị.";
+
+                if (fiducialResult.Centers is { Length: > 0 } centers)
+                {
+                    fiducialCenters = centers;
+                    fiducialMatchScores = fiducialResult.MatchScores;
+                }
+
+                if (fiducialResult.Success && fiducialCenters is not null)
+                {
                     sw.Restart();
                     warped = WarpPerspective(source, fiducialCenters);
                     RecordTiming(timings, SegmentationPipelineSteps.Warp, sw.Elapsed);
                 }
-                else
-                {
-                    fiducialDescription = fiducialResult.Message ?? "Không nhận diện được 4 lỗ định vị.";
-                }
             }
             finally
             {
-                foreach (var template in templates)
-                    template.Dispose();
+                foreach (var entry in entries)
+                    entry.Template.Dispose();
             }
         }
         else
@@ -135,6 +141,7 @@ public class PcbSegmentationService : IPcbSegmentationService
             CannyThreshold1 = t1,
             CannyThreshold2 = t2,
             FiducialCenters = fiducialCenters,
+            FiducialMatchScores = fiducialMatchScores,
             FiducialDescription = fiducialDescription,
             Warped = warped,
             StepTimings = timings ?? new Dictionary<string, TimeSpan>()
@@ -152,7 +159,7 @@ public class PcbSegmentationService : IPcbSegmentationService
 
     private static Mat WarpPerspective(Mat source, Point2f[] quad)
     {
-        var ordered = OrderPoints(quad);
+        var ordered = FiducialQuadOrdering.OrderCorners(quad);
 
         float width = Math.Max(
             Distance(ordered[0], ordered[1]),
@@ -187,20 +194,6 @@ public class PcbSegmentationService : IPcbSegmentationService
         }
 
         return warped;
-    }
-
-    private static Point2f[] OrderPoints(Point2f[] pts)
-    {
-        var sums = pts.Select(p => p.X + p.Y).ToArray();
-        var diffs = pts.Select(p => p.Y - p.X).ToArray();
-
-        return
-        [
-            pts[Array.IndexOf(sums, sums.Min())],
-            pts[Array.IndexOf(diffs, diffs.Min())],
-            pts[Array.IndexOf(sums, sums.Max())],
-            pts[Array.IndexOf(diffs, diffs.Max())]
-        ];
     }
 
     private static float Distance(Point2f a, Point2f b)

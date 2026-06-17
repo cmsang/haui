@@ -1,6 +1,7 @@
 ﻿<Window x:Class="Haui.PCB.Views.Windows.TemplateViewerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Haui.PCB.Views.Controls"
         Title="Thư viện ảnh mẫu"
         Height="680" Width="1100"
         MinHeight="480" MinWidth="750"
@@ -123,6 +124,16 @@
                                                    Binding="{Binding RegionCount}"
                                                    Width="76"
                                                    ElementStyle="{StaticResource DataGridSttCellTextStyle}"/>
+                                <DataGridTemplateColumn Header="" Width="Auto" MinWidth="44">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <controls:DeleteIconButton
+                                                Click="BtnDeleteTemplateRow_Click"
+                                                Tag="{Binding}"
+                                                ToolTip="Xóa mẫu"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
@@ -256,15 +267,6 @@
                             Height="30" Width="80"
                             Margin="0,0,8,0"
                             Click="BtnEditTemplate_Click"/>
-                    <Button Content="🗑 Xóa"
-                            Height="30" Width="80"
-                            Margin="0,0,8,0"
-                            Click="BtnDeleteTemplate_Click"/>
-                    <Button x:Name="BtnSaveLibrary"
-                            Content="💾 Lưu"
-                            Height="30" Width="90"
-                            Margin="0,0,8,0"
-                            Click="BtnSaveLibrary_Click"/>
                     <Button Content="✕ Đóng"
                             Height="30" Width="80"
                             Click="BtnClose_Click"/>

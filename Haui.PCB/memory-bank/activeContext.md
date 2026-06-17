@@ -18,11 +18,33 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Template data (2026-06-15):** `pcb_templates/` (11 mẫu) và `fiducial_holes/` (128 ảnh) checkout từ `cmsang/pcb` → nhánh `cmsang/pcb-new` (staged, chưa commit).
 
-**Pipeline step timing (2026-06-15):** Dashboard gallery + `PipelineStepsWindow` show per-step elapsed ms (`Stopwatch` in `PcbSegmentationService` → `SegmentationPipelineResult.StepTimings`); description moved to tooltip. Dashboard gallery row height **248px** (was 220) so elapsed-time footer is not clipped when horizontal scrollbar shows.
+**Pipeline step timing (2026-06-15):** Dashboard gallery shows per-step elapsed ms (`Stopwatch` in `PcbSegmentationService` → `SegmentationPipelineResult.StepTimings`); description moved to tooltip. Dashboard gallery row height **248px** (was 220) so elapsed-time footer is not clipped when horizontal scrollbar shows.
 
 **UI thread / preview perf (2026-06-15):** Camera preview resize + `ToBitmapSource` moved off pylon grab thread with frame drop; Dashboard coalesces `CameraImage` updates (`DispatcherPriority.Render`); Test runs inspection then pipeline steps sequentially; `TestPipelineViewModel` bitmap conversion on thread pool.
 
 **GigE connect speed (2026-06-15):** `CameraBasler.deviceIp` → announce + `ICameraInfo` connect (not `new Camera(ip)`); GigE-only enumerate; resolution probe cached per serial; `StartAsync` off UI thread. Fix: open by serial/`ICameraInfo`, restore `WidthMax`/`HeightMax` probe.
+
+**Dashboard cleanup (2026-06-16):** Removed Test 2 + `PipelineStepsWindow` / `PipelineDebugService`. DeveloperMode **Chọn ảnh** runs `TestPipelineViewModel.InspectFromFileAsync` — results in `ResultImage` + gallery only; `CameraImage` remains live camera feed.
+
+**Fiducial template from file (2026-06-16):** DeveloperMode **Chọn ảnh lỗ** → `MainViewModel.LoadFiducialTemplateFromFileAsync` (ImRead + Morphology Close) → `FiducialTemplateWindow`; no camera required. Camera path **Thêm mẫu lỗ** unchanged (ROI crop + grab).
+
+**Delete icon button (2026-06-16):** Inline row delete actions use shared `Views/Controls/DeleteIconButton` + app-wide `DeleteIconButtonStyle` (`App.xaml`); used in FiducialTemplateWindow, CreateTemplateWindow, SettingTabView AllowedRegionNames grid. TemplateViewerWindow cũng dùng DeleteIconButton cho cột xóa theo từng dòng (bỏ nút Lưu thư viện). Delete buttons right-aligned per row (`StretchListBoxItemStyle` on ListBoxes; DataGrid cell `HorizontalContentAlignment=Right`).
+
+**Dashboard component panel (2026-06-16):** Đã vẽ lại panel kết quả dạng bảng theo mẫu vận hành: dòng **Kết quả** (`x/y` + PASS/FAIL), dòng **D/s linh kiện thiếu**, tiêu đề đỏ gạch chân **Danh sách linh kiện thiếu**, và DataGrid danh sách thiếu ngay bên dưới. Vẫn bind `TestPipelineViewModel` qua `ComponentResultsPanel.DataContext`; `PassFailPanel`/`PassFailText` giữ nguyên để code-behind đổi màu theo PASS/FAIL.
+
+**Result overlay border thickness (2026-06-16):** `TestPipelineViewModel.DrawAnnotations` tăng độ dày viền vùng linh kiện trên ảnh kết quả từ `2` lên `6` (x3) để dễ quan sát PASS/FAIL theo từng vùng.
+
+**Hybrid region similarity (2026-06-16):** `RegionComparisonService` đổi metric production từ histogram-only sang **0.7 NCC + 0.3 histogram correlation** sau cùng pipeline tiền xử lý (resize 128×128, LAB-L, CLAHE, bilateral). Mục tiêu: nhạy hơn với thiếu/sai linh kiện nhưng vẫn ổn định khi ánh sáng biến thiên nhẹ.
+
+**Fiducial recognition scoring (2026-06-17):** `hole_recognition_stats.json` — chỉ khi detect thành công 4 lỗ: mỗi mẫu +1 điểm/lỗ nhận diện (tối đa +4/lần), mẫu không khớp giữ nguyên (mặc định 0); điểm lưu `(cũ + mới) % 100_000_000`; `LoadStats` clamp âm về 0; sort DESC; UI `FiducialTemplateWindow` hiển thị `+N`.
+
+**Pipeline fiducial annotation (2026-06-16):** Bước gallery **Lỗ định vị** vẽ annotation trên ảnh gốc màu: vòng tròn + số thứ tự + % khớp; tứ giác cam khi đủ 4 lỗ (xanh), vàng khi thiếu lỗ. Partial detect trả về tâm lỗ để hiển thị debug.
+
+**Fiducial quad ordering fix (2026-06-16):** `FiducialQuadOrdering.OrderCorners` thay `OrderPoints` cũ (IndexOf trùng góc) — warp không còn suy biến; gallery downscale max 1920px + marker lớn hơn để thấy trên thumbnail.
+
+**Fiducial geometric quad selection (2026-06-16):** `FiducialQuadSelector` + `FiducialQuadGeometry` — combinatorial search trong pool ứng viên (dedupe, max 15); lọc tứ giác lồi + rectangularity; ràng buộc tỷ lệ cạnh từ `PcbBoard` (mặc định **400×550 mm**); width/height = 0 → fallback diện tích lớn nhất. `FiducialHoles`: `aspectRatioTolerance`, `maxQuadSearchCandidates`, `minQuadRectangularity`. Setting tab: chiều rộng/cao bo mạch (mm).
+
+**Create template region validation (2026-06-17):** Trước khi lưu mẫu PCB — tên vùng phải ∈ `ComponentTemplates.AllowedRegionNames` và không trùng; `CanSave`, validate trước lưu. UI: ComboBox chọn tên từ danh sách cấu hình (không gõ tự do); vùng mới tự gán tên chưa dùng.
 
 ## Configuration (single file)
 
@@ -31,7 +53,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 | Section | Purpose |
 |---------|---------|
 | `ComponentTemplates` | Library folder, `MinMatchSimilarityPercent`, `AllowedRegionNames` (region count = list size) |
-| `FiducialHoles` | Fiducial template folder, `MinMatchScore`, `MaxMatchDimension` |
+| `FiducialHoles` | Fiducial template folder, `MinMatchScore`, `MaxMatchDimension`, quad-search tuning |
+| `PcbBoard` | Board `widthMm` / `heightMm` (default 400×550) for fiducial aspect-ratio filter |
 | `CameraBasler` / `CameraCapture` | GenICam defaults, quick-capture save folder |
 | Robot | `com`, `warehouseCom`, `DatabaseConnection`, … |
 | Developer | `developerMode`, `virtualSerialPort` (serial simulation; requires dev mode) |
@@ -41,7 +64,7 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 ## Open decisions
 
 1. **Calibrate defaults** — `camera_basler_defaults.json` for acA4600-7gc on real bench
-2. **Fiducial UI** — `MinMatchScore` / `MaxMatchDimension` in setting.json; no slider UI yet
+2. **Fiducial UI** — board mm + `MinMatchScore` / `MaxMatchDimension` in Setting tab; `aspectRatioTolerance` etc. JSON-only for now
 3. **Job History tab** — placeholder; **Setting tab** edits `Config/setting.json` (DeveloperMode, robot, DB, ComponentTemplates incl. AllowedRegionNames grid, Fiducial, CameraCapture)
 
 ## Recent UI (2026-06-13)
@@ -49,6 +72,7 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 - Removed Dashboard sidebar: Basler exposure/gain/gamma + Canny threshold sliders
 - Removed Camera Basler section from Setting tab (runtime defaults still in `setting.json` → `CameraBasler`)
 - **Thêm mẫu lỗ** toolbar button between **Tạo mẫu** and **Xem mẫu** — visible only when DeveloperMode on
+- **Chọn ảnh lỗ** (DeveloperMode) — file → Morphology Close → `FiducialTemplateWindow`; no camera required
 
 ## Entry files by task
 
@@ -56,7 +80,7 @@ Legacy files (`appsettings.json`, `component_template_settings.json`, `fiducial_
 |------|------------|
 | Camera / capture | `ViewModels/MainViewModel.cs`, `Processing/Camera/BaslerCameraService.cs` |
 | Basler connection & samples | `memory-bank/baslerCamera.md` |
-| Fiducial holes | `Processing/Fiducial/FiducialHoleDetectionService.cs`, `Views/Windows/FiducialTemplateWindow.xaml.cs` |
+| Fiducial holes | `Processing/Fiducial/FiducialHoleDetectionService.cs`, `FiducialQuadSelector.cs`, `Views/Windows/FiducialTemplateWindow.xaml.cs` |
 | Segmentation | `Processing/Segmentation/PcbSegmentationService.cs` |
 | Basler defaults (file only) | `Config/setting.json` → `CameraBasler`, `Processing/Camera/BaslerCameraService.cs` |
 | App config | `Processing/Configuration/AppSettingService.cs`, `ViewModels/SettingViewModel.cs`, `Views/Tabs/SettingTabView.xaml` |

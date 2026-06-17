@@ -134,6 +134,36 @@ public class TemplateLibraryService : ITemplateLibraryService
         catch { /* bỏ qua lỗi ghi file */ }
     }
 
+    public void DeleteTemplate(TemplateEntry entry)
+    {
+        try
+        {
+            if (entry is null) return;
+
+            // Basic path-safety to avoid traversal in case of corrupted input.
+            if (!string.IsNullOrWhiteSpace(entry.BoardImagePath) && entry.BoardImagePath.Contains(".."))
+                return;
+            if (!string.IsNullOrWhiteSpace(entry.RegionsFilePath) && entry.RegionsFilePath.Contains(".."))
+                return;
+
+            if (!string.IsNullOrWhiteSpace(entry.BoardImagePath) && File.Exists(entry.BoardImagePath))
+                File.Delete(entry.BoardImagePath);
+
+            var regionsPath = !string.IsNullOrWhiteSpace(entry.RegionsFilePath)
+                ? entry.RegionsFilePath
+                : (!string.IsNullOrWhiteSpace(entry.BoardImagePath)
+                    ? GetRegionsFilePathForBoardImage(entry.BoardImagePath)
+                    : string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(regionsPath) && File.Exists(regionsPath))
+                File.Delete(regionsPath);
+        }
+        catch
+        {
+            // Best-effort delete; ignore IO errors.
+        }
+    }
+
     private TemplateRegionsDocument TryLoadRegionsDocument(string regionsFilePath)
     {
         if (string.IsNullOrEmpty(regionsFilePath) || !File.Exists(regionsFilePath))

@@ -70,17 +70,6 @@ public partial class DashboardTabView : UserControl
                 Dispatcher.InvokeAsync(() => StatusText.Text = _viewModel.StatusText);
         };
 
-        _viewModel.Test2FrameCaptured += frame =>
-        {
-            Dispatcher.InvokeAsync(() =>
-            {
-                var stepsWindow = new PipelineStepsWindow { Owner = _owner };
-                stepsWindow.LoadImage(frame);
-                frame.Dispose();
-                stepsWindow.Show();
-            });
-        };
-
         _viewModel.TemplateFrameCaptured += frame =>
         {
             Dispatcher.InvokeAsync(async () =>
@@ -94,7 +83,7 @@ public partial class DashboardTabView : UserControl
                 {
                     frame.Dispose();
                 }
-                templateWindow.Show();
+                templateWindow.ShowDialog();
             });
         };
 
@@ -106,7 +95,7 @@ public partial class DashboardTabView : UserControl
                 fiducialWindow.Closed += (_, _) => _viewModel.RefreshFiducialTemplateStatus();
                 fiducialWindow.LoadFrame(frame);
                 frame.Dispose();
-                fiducialWindow.Show();
+                fiducialWindow.ShowDialog();
             });
         };
     }
@@ -114,6 +103,7 @@ public partial class DashboardTabView : UserControl
     private void WireInspectionViewModel()
     {
         PipelineStepsPanel.ItemsSource = _inspectionViewModel.Steps;
+        ComponentResultsPanel.DataContext = _inspectionViewModel;
 
         _inspectionViewModel.ProcessedImageReady += bitmap =>
         {
@@ -226,6 +216,7 @@ public partial class DashboardTabView : UserControl
         ResultImage.Source = null;
         ResultPlaceholder.Text = "Chưa kiểm tra";
         ResultPlaceholder.Visibility = Visibility.Visible;
+        _inspectionViewModel.ClearInspectionResults();
         _inspectionViewModel.ClearPipelineSteps();
         UpdatePipelineStepsPlaceholder();
         PassFailText.Text = "—";
@@ -241,7 +232,8 @@ public partial class DashboardTabView : UserControl
         var visibility = _developerMode ? Visibility.Visible : Visibility.Collapsed;
         BtnCreateTemplate.Visibility = visibility;
         BtnCreateFiducialTemplates.Visibility = visibility;
-        BtnTest2.Visibility = visibility;
+        BtnSelectFiducialImage.Visibility = visibility;
+        BtnSelectImage.Visibility = visibility;
 
         if (!_developerMode)
         {
@@ -340,7 +332,6 @@ public partial class DashboardTabView : UserControl
 
             BtnStop.IsEnabled = true;
             BtnTest.IsEnabled = true;
-            BtnTest2.IsEnabled = true;
             BtnSelectRegion.IsEnabled = true;
             if (_developerMode)
             {
@@ -366,7 +357,6 @@ public partial class DashboardTabView : UserControl
         SetToolbarEnabled(true);
         BtnStop.IsEnabled = false;
         BtnTest.IsEnabled = false;
-        BtnTest2.IsEnabled = false;
         BtnSelectRegion.IsEnabled = false;
         BtnCreateTemplate.IsEnabled = false;
         BtnCreateFiducialTemplates.IsEnabled = false;
@@ -399,16 +389,28 @@ public partial class DashboardTabView : UserControl
         }
     }
 
-    private async void BtnTest2_Click(object sender, RoutedEventArgs e)
+    private async void BtnSelectImage_Click(object sender, RoutedEventArgs e)
     {
-        BtnTest2.IsEnabled = false;
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Chọn ảnh để kiểm tra",
+            Filter = "Ảnh (*.png;*.jpg;*.jpeg;*.bmp;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff"
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        BtnSelectImage.IsEnabled = false;
         try
         {
-            await _viewModel.CaptureTest2FrameAsync();
+            ResetInspectionDisplay();
+            ResultPlaceholder.Text = "Đang xử lý...";
+            ResultPlaceholder.Visibility = Visibility.Visible;
+            await _inspectionViewModel.InspectFromFileAsync(dialog.FileName);
         }
         finally
         {
-            BtnTest2.IsEnabled = _viewModel.IsRunning;
+            BtnSelectImage.IsEnabled = true;
         }
     }
 
@@ -438,10 +440,32 @@ public partial class DashboardTabView : UserControl
         }
     }
 
+    private async void BtnSelectFiducialImage_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Chọn ảnh để tạo mẫu lỗ định vị",
+            Filter = "Ảnh (*.png;*.jpg;*.jpeg;*.bmp;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff"
+        };
+
+        if (dialog.ShowDialog() != true)
+            return;
+
+        BtnSelectFiducialImage.IsEnabled = false;
+        try
+        {
+            await _viewModel.LoadFiducialTemplateFromFileAsync(dialog.FileName);
+        }
+        finally
+        {
+            BtnSelectFiducialImage.IsEnabled = true;
+        }
+    }
+
     private void BtnViewTemplates_Click(object sender, RoutedEventArgs e)
     {
         var viewerWindow = new TemplateViewerWindow { Owner = _owner };
-        viewerWindow.Show();
+        viewerWindow.ShowDialog();
     }
 
     private async void BtnCapture_Click(object sender, RoutedEventArgs e)

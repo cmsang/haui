@@ -23,12 +23,6 @@ public partial class CreateTemplateWindow : System.Windows.Window
     // Danh sách hình chữ nhật vùng đã vẽ (ánh xạ 1-1 với Regions)
     private readonly List<Rectangle> _regionRects = [];
 
-    /// <summary>
-    /// Sự kiện phát ra khi người dùng bấm Lưu ở chế độ chỉnh sửa mẫu.
-    /// Tham số là danh sách vùng đã cập nhật.
-    /// </summary>
-    public event Action<List<TemplateRegion>>? RegionsSaved;
-
     public CreateTemplateWindow()
     {
         InitializeComponent();
@@ -69,9 +63,9 @@ public partial class CreateTemplateWindow : System.Windows.Window
     public Task LoadFrameAsync(Mat frame) => _viewModel.LoadFrameAsync(frame);
 
     /// <summary>Nạp mẫu có sẵn để chỉnh sửa (ảnh + danh sách vùng).</summary>
-    public void LoadExistingTemplate(Mat boardImage, IEnumerable<TemplateRegion> regions)
+    public void LoadExistingTemplate(Mat boardImage, TemplateEntry entry)
     {
-        _viewModel.LoadExistingTemplate(boardImage, regions);
+        _viewModel.LoadExistingTemplate(boardImage, entry);
     }
 
     // ──── Kéo thả tạo vùng ───────────────────────────────────────────────────
@@ -226,7 +220,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
     private void BtnDeleteRegion_Click(object sender, RoutedEventArgs e)
     {
-        if ((sender as Button)?.Tag is TemplateRegionItem item)
+        if (sender is FrameworkElement { Tag: TemplateRegionItem item })
             _viewModel.RemoveRegion(item);
     }
 
@@ -240,23 +234,23 @@ public partial class CreateTemplateWindow : System.Windows.Window
             return;
         }
 
-        if (RegionsSaved is not null)
-        {
-            RegionsSaved.Invoke(regions);
-            return;
-        }
-
         if (!_viewModel.TrySaveRegions(out error))
         {
             MessageBox.Show(error, "Không thể lưu", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        MessageBox.Show(
-            $"Đã lưu ảnh mẫu với {_viewModel.RegionCount} vùng linh kiện vào thư viện.",
-            "Thành công",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        if (!_viewModel.IsEditing)
+        {
+            MessageBox.Show(
+                $"Đã lưu ảnh mẫu với {_viewModel.RegionCount} vùng linh kiện vào thư viện.",
+                "Thành công",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        DialogResult = true;
+        Close();
     }
 
     private void BtnRotate180_Click(object sender, RoutedEventArgs e)

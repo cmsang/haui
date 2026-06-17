@@ -20,7 +20,7 @@ public partial class SettingTabView : UserControl
 
     private void BtnDeleteRegionName_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not Button { Tag: AllowedRegionNameItem item }) return;
+        if (sender is not FrameworkElement { Tag: AllowedRegionNameItem item }) return;
         _viewModel.RemoveRegionName(item);
     }
 

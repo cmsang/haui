@@ -1,7 +1,7 @@
 <Window x:Class="Haui.PCB.Views.Windows.FiducialTemplateWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:controls="clr-namespace:Haui.PCB.Views.Controls"
         Title="Thư viện mẫu lỗ tròn định vị"
         Height="650" Width="1000"
         MinHeight="480" MinWidth="700"
@@ -125,6 +125,7 @@
                                Margin="0,0,0,6"/>
                     <ListBox Grid.Row="3"
                              x:Name="PendingRegionsList"
+                             ItemContainerStyle="{StaticResource StretchListBoxItemStyle}"
                              SelectionChanged="PendingRegionsList_SelectionChanged">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -136,14 +137,10 @@
                                     <TextBlock Grid.Column="0"
                                                Text="{Binding Label}"
                                                VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1"
-                                            Style="{StaticResource DeleteIconButtonStyle}"
-                                            Click="BtnRemovePendingRegion_Click"
-                                            Tag="{Binding}"
-                                            ToolTip="Xóa vùng"
-                                            VerticalAlignment="Center">
-                                        <md:PackIcon Kind="Delete" Width="18" Height="18"/>
-                                    </Button>
+                                    <controls:DeleteIconButton Grid.Column="1"
+                                                               Click="BtnRemovePendingRegion_Click"
+                                                               Tag="{Binding}"
+                                                               ToolTip="Xóa vùng"/>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -172,6 +169,7 @@
                                Margin="0,0,0,6"/>
                     <ListBox Grid.Row="7"
                              x:Name="SavedTemplatesList"
+                             ItemContainerStyle="{StaticResource StretchListBoxItemStyle}"
                              VerticalAlignment="Stretch">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -181,17 +179,13 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0"
-                                               Text="{Binding}"
+                                               Text="{Binding DisplayText}"
                                                VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis"/>
-                                    <Button Grid.Column="1"
-                                            Style="{StaticResource DeleteIconButtonStyle}"
-                                            Click="BtnDeleteTemplate_Click"
-                                            Tag="{Binding}"
-                                            ToolTip="Xóa mẫu"
-                                            VerticalAlignment="Center">
-                                        <md:PackIcon Kind="Delete" Width="18" Height="18"/>
-                                    </Button>
+                                    <controls:DeleteIconButton Grid.Column="1"
+                                                               Click="BtnDeleteTemplate_Click"
+                                                               Tag="{Binding}"
+                                                               ToolTip="Xóa mẫu"/>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

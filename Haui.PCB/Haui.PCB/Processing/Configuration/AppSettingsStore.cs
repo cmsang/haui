@@ -19,6 +19,8 @@ internal static class AppSettingsStore
 
     public static void SaveFiducialHoles(FiducialHoleSettings settings) => Service.SaveFiducialHoles(settings);
 
+    public static PcbBoardSettings LoadPcbBoard() => Service.LoadPcbBoard();
+
     public static CameraParameters LoadCameraBasler() => Service.LoadCameraBasler();
 
     public static CameraCaptureSettings LoadCameraCapture() => Service.LoadCameraCapture();

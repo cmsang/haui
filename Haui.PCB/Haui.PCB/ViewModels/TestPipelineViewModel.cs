@@ -78,6 +78,14 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasPipelineSteps => Steps.Count > 0;
 
+    public int SearchedComponentCount => MatchedRegions.Count + DifferentRegions.Count;
+
+    public int MatchedComponentCount => MatchedRegions.Count;
+
+    public int MissingComponentCount => DifferentRegions.Count;
+
+    public bool HasComponentResults => SearchedComponentCount > 0;
+
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
 
     public TestPipelineViewModel(
@@ -112,11 +120,11 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         await RunSegmentationAsync();
     }
 
-    /// <summary>Nạp ảnh từ đường dẫn file.</summary>
-    public void LoadImageFromFile(string filePath)
+    /// <summary>Load an image from disk and await the full inspection pipeline.</summary>
+    public async Task InspectFromFileAsync(string filePath)
     {
         _sourceMat?.Dispose();
-        _sourceMat = Cv2.ImRead(filePath, ImreadModes.Color);
+        _sourceMat = await Task.Run(() => Cv2.ImRead(filePath, ImreadModes.Color));
 
         if (_sourceMat.Empty())
         {
@@ -127,6 +135,8 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
         StatusText = $"Đã chọn: {System.IO.Path.GetFileName(filePath)}";
         OnPropertyChanged(nameof(HasSource));
+        IsFullMatch = null;
+        await RunSegmentationAsync();
     }
 
     /// <summary>
@@ -144,6 +154,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         StatusText = "Đang xử lý...";
         MatchedRegions.Clear();
         DifferentRegions.Clear();
+        NotifyComponentCounts();
         Steps.Clear();
         OnPropertyChanged(nameof(HasPipelineSteps));
 
@@ -309,6 +320,24 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             else
                 DifferentRegions.Add(r);
         }
+
+        NotifyComponentCounts();
+    }
+
+    public void ClearInspectionResults()
+    {
+        MatchedRegions.Clear();
+        DifferentRegions.Clear();
+        IsFullMatch = null;
+        NotifyComponentCounts();
+    }
+
+    private void NotifyComponentCounts()
+    {
+        OnPropertyChanged(nameof(SearchedComponentCount));
+        OnPropertyChanged(nameof(MatchedComponentCount));
+        OnPropertyChanged(nameof(MissingComponentCount));
+        OnPropertyChanged(nameof(HasComponentResults));
     }
 
     /// <summary>
@@ -341,11 +370,14 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             using var canvas = board.Clone();
             var green = new Scalar(0, 200, 0);
             var red = new Scalar(0, 0, 220);
-            const int thickness = 2;
+            const int thickness = 8;
             const double fontScale = 0.45;
 
             foreach (var r in results)
             {
+                if (!r.HasBoardRect)
+                    continue;
+
                 var color = r.IsMatch ? green : red;
                 Cv2.Rectangle(canvas, r.BoardRect, color, thickness);
 

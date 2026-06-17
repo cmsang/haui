@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Linq;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Haui.PCB.ViewModels;
@@ -159,69 +160,48 @@ public partial class TemplateViewerWindow : System.Windows.Window
             Title = $"Sửa mẫu — {item.Name}"
         };
 
-        // Nạp ảnh và vùng hiện tại vào form tạo mẫu
-        editWindow.Show();
-        editWindow.LoadExistingTemplate(boardMat, item.Source.Regions);
+        // Load in-memory for editing; save sẽ ghi trực tiếp file và đóng dialog.
+        var boardImagePath = item.Source.BoardImagePath;
+        editWindow.LoadExistingTemplate(boardMat, item.Source);
         boardMat.Dispose();
 
-        // Khi người dùng bấm Lưu trong form chỉnh sửa → cập nhật lại vùng
-        editWindow.RegionsSaved += newRegions =>
+        if (editWindow.ShowDialog() == true)
         {
-            _viewModel.UpdateTemplateRegions(item, newRegions);
-            editWindow.Close();
-        };
+            _viewModel.LoadTemplates();
+
+            var newItem = _viewModel.Templates.FirstOrDefault(t => t.Source.BoardImagePath == boardImagePath);
+            if (newItem is not null)
+            {
+                TemplatesGrid.SelectedItem = newItem;
+                _viewModel.SelectTemplate(newItem);
+            }
+        }
     }
 
-    private void BtnDeleteTemplate_Click(object sender, RoutedEventArgs e)
+    private void BtnDeleteTemplateRow_Click(object sender, RoutedEventArgs e)
     {
-        if (TemplatesGrid.SelectedItem is not TemplateEntryItem item)
-        {
-            MessageBox.Show("Vui lòng chọn một ảnh mẫu để xóa.", "Thông báo",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+        if (sender is not FrameworkElement { Tag: TemplateEntryItem item })
             return;
-        }
 
         var result = MessageBox.Show(
-            $"Bạn có chắc muốn xóa mẫu \"{item.Name}\"?\nThao tác này chưa lưu file cho đến khi bạn bấm Lưu.",
+            $"Bạn có chắc muốn xóa mẫu \"{item.Name}\"?\nThao tác này sẽ xóa file ảnh mẫu và vùng khỏi thư viện.",
             "Xác nhận xóa", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
-        if (result == MessageBoxResult.Yes)
-            _viewModel.DeleteTemplate(item);
-    }
-
-    private void BtnSaveLibrary_Click(object sender, RoutedEventArgs e)
-    {
-        if (!_viewModel.TrySaveLibrary(out var error))
-        {
-            MessageBox.Show(error, "Không thể lưu thư viện",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+        if (result != MessageBoxResult.Yes)
             return;
-        }
 
-        MessageBox.Show("Đã lưu thư viện ảnh mẫu thành công.", "Thành công",
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        _viewModel.DeleteTemplate(item);
+
+        if (_viewModel.Templates.Count > 0)
+        {
+            var next = _viewModel.Templates[0];
+            TemplatesGrid.SelectedItem = next;
+            _viewModel.SelectTemplate(next);
+        }
     }
 
     private void BtnClose_Click(object sender, RoutedEventArgs e)
     {
-        if (_viewModel.HasUnsavedChanges)
-        {
-            var result = MessageBox.Show(
-                "Có thay đổi chưa được lưu. Bạn có muốn lưu trước khi đóng không?",
-                "Lưu thay đổi?", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
-            {
-                if (!_viewModel.TrySaveLibrary(out var error))
-                {
-                    MessageBox.Show(error, "Không thể lưu thư viện",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-            }
-            else if (result == MessageBoxResult.Cancel)
-                return;
-        }
         Close();
     }
 

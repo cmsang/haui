@@ -3,8 +3,9 @@
 namespace Haui.PCB.Processing.Templates;
 
 /// <summary>
-/// So sánh từng vùng giữa ảnh mẫu và ảnh bo mạch mới bằng histogram correlation.
-/// Tiền xử lý: resize → LAB-L → CLAHE → bilateral (cùng tham số cho mẫu và ảnh mới).
+/// Compares each configured region between template and test boards.
+/// Preprocessing is shared for both sides: resize -> LAB L channel -> CLAHE -> bilateral.
+/// Final similarity is a weighted score: NCC (structure) + histogram correlation (brightness stability).
 /// </summary>
 public class RegionComparisonService : IRegionComparisonService
 {
@@ -14,6 +15,9 @@ public class RegionComparisonService : IRegionComparisonService
     private const int BilateralDiameter = 5;
     private const double BilateralSigmaColor = 50;
     private const double BilateralSigmaSpace = 50;
+
+    private const double NccWeight = 0.7;
+    private const double HistogramWeight = 0.3;
 
     private static readonly Size ComparisonPatchDimensions = new(ComparisonPatchSize, ComparisonPatchSize);
     private static readonly CLAHE SharedClahe = Cv2.CreateCLAHE(ClaheClipLimit, ClaheTileGridSize);
@@ -29,6 +33,7 @@ public class RegionComparisonService : IRegionComparisonService
         foreach (var region in regions)
         {
             double similarity = CompareRegion(templateBoard, newBoard, region);
+            var similarityPercent = Math.Round(similarity * 100.0, 1);
 
             // Tính tọa độ tuyệt đối của vùng trên ảnh bo mạch mới
             int bx = Math.Clamp((int)(region.RelX * newBoard.Width), 0, newBoard.Width - 1);
@@ -39,9 +44,12 @@ public class RegionComparisonService : IRegionComparisonService
             results.Add(new RegionComparisonResult
             {
                 Name = region.Name,
-                Similarity = Math.Round(similarity * 100.0, 1),
+                Similarity = similarityPercent,
                 BoardRect = new Rect(bx, by, bw, bh),
-                MatchThresholdPercent = matchThreshold
+                MatchThresholdPercent = matchThreshold,
+                Outcome = similarityPercent >= matchThreshold
+                    ? RegionMatchOutcome.Matched
+                    : RegionMatchOutcome.BelowThreshold
             });
         }
 
@@ -49,7 +57,7 @@ public class RegionComparisonService : IRegionComparisonService
     }
 
     /// <summary>
-    /// Cắt vùng từ cả hai ảnh rồi so sánh histogram. Trả về 0..1.
+    /// Crops both boards by the same relative region and returns similarity in range 0..1.
     /// </summary>
     private static double CompareRegion(Mat templateBoard, Mat newBoard, TemplateRegion region)
     {
@@ -60,8 +68,8 @@ public class RegionComparisonService : IRegionComparisonService
 
             if (tCrop is null || nCrop is null) return 0;
 
-            using var tPrepared = PreparePatchForHistogram(tCrop);
-            using var nPrepared = PreparePatchForHistogram(nCrop);
+            using var tPrepared = PreparePatch(tCrop);
+            using var nPrepared = PreparePatch(nCrop);
 
             using var tHist = new Mat();
             using var nHist = new Mat();
@@ -76,10 +84,12 @@ public class RegionComparisonService : IRegionComparisonService
             Cv2.Normalize(tHist, tHist, 0, 1, NormTypes.MinMax);
             Cv2.Normalize(nHist, nHist, 0, 1, NormTypes.MinMax);
 
-            double correlation = Cv2.CompareHist(tHist, nHist, HistCompMethods.Correl);
+            double histScore = Cv2.CompareHist(tHist, nHist, HistCompMethods.Correl);
+            histScore = Math.Clamp(histScore, 0.0, 1.0);
 
-            // correlation trong [-1, 1]; clamp về [0, 1]
-            return Math.Clamp(correlation, 0.0, 1.0);
+            double nccScore = ComputeNccScore(tPrepared, nPrepared);
+
+            return (NccWeight * nccScore) + (HistogramWeight * histScore);
         }
         catch
         {
@@ -88,9 +98,9 @@ public class RegionComparisonService : IRegionComparisonService
     }
 
     /// <summary>
-    /// Resize (Area khi thu nhỏ), kênh L của LAB, CLAHE, bilateral nhẹ — dùng chung cho mẫu và ảnh test.
+    /// Applies shared patch preprocessing for both template and test regions.
     /// </summary>
-    private static Mat PreparePatchForHistogram(Mat crop)
+    private static Mat PreparePatch(Mat crop)
     {
         using var resized = new Mat();
         var interpolation = SelectResizeInterpolation(crop.Width, crop.Height);
@@ -109,6 +119,15 @@ public class RegionComparisonService : IRegionComparisonService
             BilateralSigmaSpace);
 
         return filtered;
+    }
+
+    private static double ComputeNccScore(Mat templatePatch, Mat testPatch)
+    {
+        using var result = new Mat();
+        Cv2.MatchTemplate(testPatch, templatePatch, result, TemplateMatchModes.CCoeffNormed);
+
+        var ncc = (double)result.At<float>(0, 0);
+        return Math.Clamp(ncc, 0.0, 1.0);
     }
 
     private static Mat ExtractLabLChannel(Mat image)
@@ -141,7 +160,7 @@ public class RegionComparisonService : IRegionComparisonService
     }
 
     /// <summary>
-    /// Cắt vùng từ ảnh theo tọa độ tương đối. Trả về null nếu vùng không hợp lệ.
+    /// Crops a region by relative coordinates. Returns null for invalid region dimensions.
     /// </summary>
     private static Mat? CropRegion(Mat board, TemplateRegion region)
     {
@@ -150,7 +169,7 @@ public class RegionComparisonService : IRegionComparisonService
         int w = (int)(region.RelWidth * board.Width);
         int h = (int)(region.RelHeight * board.Height);
 
-        // Đảm bảo không vượt biên
+        // Keep ROI inside image bounds.
         x = Math.Clamp(x, 0, board.Width - 1);
         y = Math.Clamp(y, 0, board.Height - 1);
         w = Math.Clamp(w, 1, board.Width - x);

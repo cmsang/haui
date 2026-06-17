@@ -15,6 +15,8 @@ public interface IAppSettingService
     FiducialHoleSettings LoadFiducialHoles();
     void SaveFiducialHoles(FiducialHoleSettings settings);
 
+    PcbBoardSettings LoadPcbBoard();
+
     CameraParameters LoadCameraBasler();
     CameraCaptureSettings LoadCameraCapture();
 }

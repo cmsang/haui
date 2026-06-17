@@ -35,7 +35,14 @@
   "FiducialHoles": {
     "templateFolder": "../../../../fiducial_holes",
     "minMatchScore": 0.55,
-    "maxMatchDimension": 1280
+    "maxMatchDimension": 1280,
+    "aspectRatioTolerance": 0.15,
+    "maxQuadSearchCandidates": 15,
+    "minQuadRectangularity": 0.75
+  },
+  "PcbBoard": {
+    "widthMm": 400,
+    "heightMm": 550
   },
   "CameraBasler": {
     "deviceIp": "",

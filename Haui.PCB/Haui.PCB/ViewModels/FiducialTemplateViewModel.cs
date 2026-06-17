@@ -29,6 +29,17 @@ public sealed class FiducialHoleRegionItem : INotifyPropertyChanged
 }
 
 /// <summary>
+/// Saved fiducial hole template with recognition score for library list display.
+/// </summary>
+public sealed class FiducialSavedTemplateItem
+{
+    public required string FileName { get; init; }
+    public int RecognitionCount { get; init; }
+
+    public string DisplayText => $"{FileName} (+{RecognitionCount})";
+}
+
+/// <summary>
 /// ViewModel tạo thư viện mẫu lỗ tròn — chọn nhiều vùng, lưu một lần.
 /// </summary>
 public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposable
@@ -56,7 +67,7 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ObservableCollection<FiducialHoleRegionItem> PendingRegions { get; } = [];
-    public ObservableCollection<string> SavedTemplateFiles { get; } = [];
+    public ObservableCollection<FiducialSavedTemplateItem> SavedTemplates { get; } = [];
 
     public string StatusText
     {
@@ -93,9 +104,19 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
 
     public void RefreshSavedTemplates()
     {
-        SavedTemplateFiles.Clear();
-        foreach (var fileName in _templateService.ListTemplateFileNames())
-            SavedTemplateFiles.Add(fileName);
+        SavedTemplates.Clear();
+        var counts = _templateService.GetRecognitionCounts();
+        foreach (var fileName in _templateService.ListTemplateFileNames()
+                     .OrderByDescending(f => counts.GetValueOrDefault(f, 0))
+                     .ThenBy(f => f, StringComparer.OrdinalIgnoreCase))
+        {
+            SavedTemplates.Add(new FiducialSavedTemplateItem
+            {
+                FileName = fileName,
+                RecognitionCount = counts.GetValueOrDefault(fileName, 0)
+            });
+        }
+
         SavedTemplatesChanged?.Invoke();
     }
 
@@ -186,8 +207,8 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
             RefreshSavedTemplates();
 
             StatusText = savedNames.Count == 1
-                ? $"Đã lưu 1 mẫu \"{savedNames[0]}\" ({SavedTemplateFiles.Count} mẫu trong thư mục)."
-                : $"Đã lưu {savedNames.Count} mẫu ({SavedTemplateFiles.Count} mẫu trong thư mục).";
+                ? $"Đã lưu 1 mẫu \"{savedNames[0]}\" ({SavedTemplates.Count} mẫu trong thư mục)."
+                : $"Đã lưu {savedNames.Count} mẫu ({SavedTemplates.Count} mẫu trong thư mục).";
         }
         catch (Exception ex)
         {
@@ -206,8 +227,8 @@ public sealed class FiducialTemplateViewModel : INotifyPropertyChanged, IDisposa
         {
             _templateService.DeleteTemplate(fileName);
             RefreshSavedTemplates();
-            StatusText = SavedTemplateFiles.Count > 0
-                ? $"Đã xóa \"{fileName}\" — còn {SavedTemplateFiles.Count} mẫu."
+            StatusText = SavedTemplates.Count > 0
+                ? $"Đã xóa \"{fileName}\" — còn {SavedTemplates.Count} mẫu."
                 : $"Đã xóa \"{fileName}\" — thư mục trống.";
         }
         catch (Exception ex)
