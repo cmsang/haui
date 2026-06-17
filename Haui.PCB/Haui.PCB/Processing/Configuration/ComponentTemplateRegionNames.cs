@@ -41,6 +41,20 @@ internal static class ComponentTemplateRegionNames
         return invalidNames.Count == 0;
     }
 
+    public static bool TryGetDuplicateNames(
+        IEnumerable<string> regionNames,
+        out IReadOnlyList<string> duplicateNames)
+    {
+        duplicateNames = regionNames
+            .Select(n => string.IsNullOrWhiteSpace(n) ? string.Empty : n.Trim())
+            .Where(n => n.Length > 0)
+            .GroupBy(n => n, StringComparer.Ordinal)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+        return duplicateNames.Count == 0;
+    }
+
     public static string FormatAllowedNamesHint(HashSet<string> allowedNames)
         => string.Join(", ", allowedNames.OrderBy(n => n, StringComparer.Ordinal));
 }

@@ -128,12 +128,14 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsEditing => _editingEntry is not null;
 
-    /// <summary>Chỉ cho lưu khi có ảnh bo mạch, ít nhất một vùng và mọi tên nằm trong danh sách cấu hình.</summary>
+    /// <summary>Chỉ cho lưu khi có ảnh bo mạch, ít nhất một vùng, tên ∈ cấu hình và không trùng.</summary>
     public bool CanSave =>
         _boardImage is not null
         && Regions.Count > 0
         && ComponentTemplateRegionNames.TryGetInvalidNames(
-            Regions.Select(r => r.Name), _allowedRegionNames, out _);
+            Regions.Select(r => r.Name), _allowedRegionNames, out _)
+        && ComponentTemplateRegionNames.TryGetDuplicateNames(
+            Regions.Select(r => r.Name), out _);
 
     /// <summary>Cho phép xoay khi đã có ảnh bo mạch.</summary>
     public bool CanRotateBoard => _boardImage is not null && !_boardImage.Empty();
@@ -142,7 +144,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     public string RegionProgressText =>
         CanSave
             ? $"Vùng linh kiện: {Regions.Count} — có thể lưu."
-            : $"Vùng linh kiện: {Regions.Count} — tên hợp lệ: {_allowedNamesHint}";
+            : $"Vùng linh kiện: {Regions.Count} — kiểm tra tên (danh sách cấu hình, không trùng).";
 
     // ──── Bảng 50 màu phân biệt ───────────────────────────────────────────────
 
@@ -250,9 +252,24 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 
     private void AttachRegionItem(TemplateRegionItem item)
     {
-        item.NameValidator = name =>
-            ComponentTemplateRegionNames.IsAllowedName(name, _allowedRegionNames);
+        item.NameValidator = IsRegionNameValid;
         item.RefreshNameValidation();
+    }
+
+    private bool IsRegionNameValid(string name)
+    {
+        if (!ComponentTemplateRegionNames.IsAllowedName(name, _allowedRegionNames))
+            return false;
+
+        var trimmed = name.Trim();
+        return Regions.Count(r =>
+            string.Equals(r.Name.Trim(), trimmed, StringComparison.Ordinal)) <= 1;
+    }
+
+    private void RefreshAllRegionNameValidation()
+    {
+        foreach (var item in Regions)
+            item.RefreshNameValidation();
     }
 
     private void OnRegionItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -263,6 +280,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 
     private void NotifyRegionValidationChanged()
     {
+        RefreshAllRegionNameValidation();
         OnPropertyChanged(nameof(RegionCount));
         OnPropertyChanged(nameof(CanSave));
         OnPropertyChanged(nameof(RegionProgressText));
@@ -400,7 +418,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             return $"{action} Có thể lưu ({Regions.Count} vùng).";
         if (Regions.Count == 0)
             return $"{action} Chưa có vùng nào.";
-        return $"{action} ({Regions.Count} vùng — kiểm tra tên theo cấu hình).";
+        return $"{action} ({Regions.Count} vùng — kiểm tra tên: danh sách cấu hình, không trùng).";
     }
 
     /// <summary>Kiểm tra tên vùng trước khi lưu.</summary>
@@ -498,6 +516,14 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             errorMessage =
                 $"Tên vùng không hợp lệ: {string.Join(", ", invalid)}. " +
                 $"Chỉ dùng: {_allowedNamesHint}.";
+            return false;
+        }
+
+        if (!ComponentTemplateRegionNames.TryGetDuplicateNames(regionNames, out var duplicates))
+        {
+            errorMessage =
+                $"Tên vùng trùng lặp: {string.Join(", ", duplicates)}. " +
+                "Mỗi tên chỉ được dùng một lần.";
             return false;
         }
 
