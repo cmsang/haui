@@ -5,6 +5,7 @@
         Title="Tạo mẫu nhận diện"
         Height="650" Width="1000"
         MinHeight="480" MinWidth="700"
+        WindowState="Maximized"
         WindowStartupLocation="CenterOwner"
         Closed="Window_Closed"
         FontFamily="{DynamicResource MaterialDesignFont}">

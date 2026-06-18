@@ -140,12 +140,6 @@ public class TemplateLibraryService : ITemplateLibraryService
         {
             if (entry is null) return;
 
-            // Basic path-safety to avoid traversal in case of corrupted input.
-            if (!string.IsNullOrWhiteSpace(entry.BoardImagePath) && entry.BoardImagePath.Contains(".."))
-                return;
-            if (!string.IsNullOrWhiteSpace(entry.RegionsFilePath) && entry.RegionsFilePath.Contains(".."))
-                return;
-
             if (!string.IsNullOrWhiteSpace(entry.BoardImagePath) && File.Exists(entry.BoardImagePath))
                 File.Delete(entry.BoardImagePath);
 

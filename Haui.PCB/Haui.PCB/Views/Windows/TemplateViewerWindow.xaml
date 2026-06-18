@@ -5,6 +5,7 @@
         Title="Thư viện ảnh mẫu"
         Height="680" Width="1100"
         MinHeight="480" MinWidth="750"
+        WindowState="Maximized"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         Closed="Window_Closed"

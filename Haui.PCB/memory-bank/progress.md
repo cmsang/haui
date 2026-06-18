@@ -23,7 +23,7 @@
 - [x] Pipeline step gallery on Dashboard — per-step elapsed time via `PipelineStepMapper` (removed separate `PipelineStepsWindow` 2026-06-16); bước **Lỗ định vị** annotate tâm lỗ + % khớp trên ảnh gốc
 - [x] Create template — draw regions, save PNG + `*_regions.json`; names ∈ `AllowedRegionNames`, unique per template (validate before save)
 - [x] Template library — scan `*.png` + `*_regions.json` (no `index.json`); folder via `ComponentTemplates.CustomFolder`
-- [x] Test pipeline — composite match by `AllowedRegionNames`; 180° retry; overlay green/red; every configured name reported (`RegionMatchOutcome`)
+- [x] Test pipeline — composite match by `AllowedRegionNames`; overlay green/red; every configured name reported (`RegionMatchOutcome`)
 - [x] Dashboard inline test — result image + panel kết quả dạng bảng (Kết quả x/y + PASS/FAIL, D/s linh kiện thiếu, DataGrid thiếu), pipeline steps gallery on tab (no popup on Test)
 - [x] Result overlay — viền đánh dấu vùng linh kiện trên ảnh kết quả tăng x3 độ dày (2 → 6) để dễ nhìn khi vận hành
 - [x] Preview perf — off-thread Mat→BitmapSource, frame drop, coalesced Dispatcher updates (2026-06-15)
@@ -51,4 +51,4 @@
 
 ## Build status
 
-`dotnet build Haui.PCB.slnx` — **OK** (2026-06-16). NU1701 on `Expression.Blend.Sdk.WPF`.
+`dotnet build Haui.PCB.slnx` — **OK** (2026-06-18). NU1701 on `Expression.Blend.Sdk.WPF`.

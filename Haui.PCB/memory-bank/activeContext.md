@@ -46,6 +46,10 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Create template region validation (2026-06-17):** Trước khi lưu mẫu PCB — tên vùng phải ∈ `ComponentTemplates.AllowedRegionNames` và không trùng; `CanSave`, validate trước lưu. UI: ComboBox chọn tên từ danh sách cấu hình (không gõ tự do); vùng mới tự gán tên chưa dùng.
 
+**Template windows fullscreen (2026-06-18):** `CreateTemplateWindow` và `TemplateViewerWindow` mở `WindowState=Maximized` (giống `MainWindow`).
+
+**Inspection rotation removed (2026-06-18):** `TestPipelineViewModel` không còn xoay bo mạch 180° tự động khi so khớp linh kiện; bo mạch phải đúng hướng mẫu mới PASS. Nút **Xoay 180°** trong Tạo mẫu (`CreateTemplateViewModel.RotateBoard180`) vẫn giữ cho chỉnh mẫu thủ công.
+
 ## Configuration (single file)
 
 `Config/setting.json` via `AppSettingService`:
