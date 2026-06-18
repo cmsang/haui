@@ -24,6 +24,7 @@ public partial class DeleteIconButton : UserControl
 
     private void DeleteButton_Click(object sender, RoutedEventArgs e)
     {
+        e.Handled = true; // Prevents the event from bubbling up to the parent.
         RaiseEvent(new RoutedEventArgs(ClickEvent, this));
     }
 }
