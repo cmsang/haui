@@ -199,7 +199,6 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     /// <summary>
     /// So từng tên trong AllowedRegionNames: lấy ứng viên đầu tiên đạt MinMatchSimilarityPercent trong nhóm.
-    /// Nếu chưa đạt đủ, xoay bo mạch 180° và so lại.
     /// </summary>
     private async Task CompareWithTemplatesAsync(Mat newBoard)
     {
@@ -221,51 +220,16 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
         RefreshMatchThreshold(match.MatchThresholdPercent);
 
-        Mat boardForDisplay = newBoard;
-        Mat? rotatedBoard = null;
-        var usedRotation = false;
-
-        if (!match.IsFullMatch)
-        {
-            rotatedBoard = new Mat();
-            Cv2.Rotate(newBoard, rotatedBoard, RotateFlags.Rotate180);
-
-            var rotatedMatch = await Task.Run(() => _compositeMatchService.Match(rotatedBoard));
-
-            if (rotatedMatch is not null
-                && (rotatedMatch.IsFullMatch
-                    || rotatedMatch.AverageSimilarity > match.AverageSimilarity))
-            {
-                match = rotatedMatch;
-                boardForDisplay = rotatedBoard;
-                usedRotation = true;
-            }
-            else
-            {
-                rotatedBoard.Dispose();
-                rotatedBoard = null;
-            }
-        }
-
-        if (usedRotation)
-        {
-            var bitmap = await ToFrozenBitmapAsync(boardForDisplay);
-            ProcessedImageReady?.Invoke(bitmap);
-        }
-
         ApplyRegionResultsToGrids(match.RegionResults);
-        await PublishAnnotatedImageAsync(boardForDisplay, match.RegionResults);
+        await PublishAnnotatedImageAsync(newBoard, match.RegionResults);
         IsFullMatch = match.IsFullMatch;
 
         var thresholdText = FormatThresholdPercent(match.MatchThresholdPercent);
-        var rotationNote = usedRotation ? " (đã xoay ảnh 180°)" : "";
         StatusText = match.IsFullMatch
-            ? $"Đạt — {match.MatchedCount}/{match.TotalCount} vùng giống (≥ {thresholdText} mỗi tên).{rotationNote}"
-            : $"Chưa đạt — TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} vùng giống (ngưỡng {thresholdText}).{rotationNote}";
+            ? $"Đạt — {match.MatchedCount}/{match.TotalCount} vùng giống (≥ {thresholdText} mỗi tên)."
+            : $"Chưa đạt — TB {match.AverageSimilarity:F1}%, {match.MatchedCount}/{match.TotalCount} vùng giống (ngưỡng {thresholdText}).";
 
         RaiseInspectionCompleted(match.IsFullMatch);
-
-        rotatedBoard?.Dispose();
     }
 
     private void RaiseInspectionCompleted(bool isPass)
