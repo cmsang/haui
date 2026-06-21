@@ -54,6 +54,7 @@ public partial class wdTeaching : Window
         CboComPort.Text = _viewModel.SerialPortName;
         CboBaudRate.SelectedItem = _viewModel.BaudRate;
         TxtStepsPerDeg.Text = _viewModel.StepsPerDeg.ToString();
+        TxtWaitOffset.Text = _viewModel.WaitPointJoint234OffsetDegrees.ToString("0.##");
         SldSpeed.Value = _viewModel.SpeedPercent;
         TxtSpeed.Text = $"{_viewModel.SpeedPercent}%";
 
@@ -213,6 +214,8 @@ public partial class wdTeaching : Window
             _viewModel.BaudRate = baud;
         if (int.TryParse(TxtStepsPerDeg.Text, out var steps))
             _viewModel.StepsPerDeg = steps;
+        if (double.TryParse(TxtWaitOffset.Text, out var waitOffset))
+            _viewModel.WaitPointJoint234OffsetDegrees = waitOffset;
 
         _viewModel.SaveConfiguration();
     }
@@ -258,6 +261,7 @@ public partial class wdTeaching : Window
 
         CboComPort.Text = _viewModel.SerialPortName;
         CboBaudRate.SelectedItem = _viewModel.BaudRate;
+        TxtWaitOffset.Text = _viewModel.WaitPointJoint234OffsetDegrees.ToString("0.##");
 
         if (_viewModel.SelectedPoint != null)
             TeachPointsGrid.SelectedItem = _viewModel.SelectedPoint;

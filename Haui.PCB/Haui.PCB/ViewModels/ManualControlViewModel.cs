@@ -182,7 +182,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         var selectedName = SelectedDestination?.Name;
         DestinationPoints.Clear();
 
-        foreach (var point in RobotTeachPositions.Normalize(_allTeachPoints))
+        foreach (var point in RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset))
         {
             if (point.Group is not ("OK" or "NG")) continue;
             DestinationPoints.Add(point);
@@ -293,8 +293,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>
-    /// Chu trình: G180x → PickUp → G0x → Wait → Destination → G180x → Wait → G0x.
-    /// Mỗi bước chờ phản hồi Dx từ robot.
+    /// Chu trình 13 bước: Wait → gắp → Wait/Wait Place → Place → rút lui Wait Place/Wait → đóng gripper.
     /// </summary>
     public async Task RunPickUpToDestinationTestAsync()
     {
@@ -325,7 +324,31 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
         if (wait == null)
         {
-            StatusText = "Không tìm thấy vị trí Wait trong cấu hình teach.";
+            StatusText = "Không tìm thấy Wait — cần teach Wait.";
+            return;
+        }
+
+        var waitPickUp = RobotTeachPositions.ResolveWaitPickUp(
+            RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset), WaitJoint234Offset);
+        if (waitPickUp == null)
+        {
+            StatusText = "Không tìm thấy Wait PickUp — teach Wait PickUp hoặc PickUp.";
+            return;
+        }
+
+        var isNg = RobotTeachPositions.IsNgSlot(destination.Name);
+        var referenceName = isNg ? RobotTeachPositions.Ng1 : RobotTeachPositions.Ok1;
+        if (GetTeachPoint(referenceName) == null)
+        {
+            StatusText = $"Không tìm thấy {referenceName} — cần teach Wait Place {(isNg ? "NG" : "OK")} hoặc {referenceName}.";
+            return;
+        }
+
+        var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(
+            RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset), destination, WaitJoint234Offset);
+        if (waitPlace == null)
+        {
+            StatusText = $"Không tính được Wait Place {(isNg ? "NG" : "OK")}.";
             return;
         }
 
@@ -341,9 +364,9 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             var ct = _testCts.Token;
 
             await _pickPlaceExecutor.RunPickUpToDestinationAsync(
-                pickUp, wait, destination, msg => StatusText = msg, ct);
+                pickUp, waitPickUp, wait, waitPlace, destination, msg => StatusText = msg, ct);
 
-            StatusText = $"Test hoàn tất: PickUp → {destination.Group} {destination.Name} → Wait.";
+            StatusText = $"Test hoàn tất: Wait → PickUp → {destination.Name} → Wait.";
         }
         catch (OperationCanceledException)
         {
@@ -486,8 +509,10 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private double WaitJoint234Offset => _appSetting.WaitPointJoint234OffsetDegrees;
+
     private RobotTeachPoint? GetTeachPoint(string name)
-        => RobotTeachPositions.Normalize(_allTeachPoints)
+        => RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset)
             .FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     private IReadOnlyList<RobotTeachPoint> LoadAllTeachPoints()
@@ -495,12 +520,12 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         if (!_robotConfigService.TryLoadTeachPoints(out var dbPoints, out var error))
         {
             StatusText = $"Không tải được Database: {error}";
-            return RobotTeachPositions.CreateDefault();
+            return RobotTeachPositions.CreateDefault(WaitJoint234Offset);
         }
 
         return dbPoints.Count > 0
             ? dbPoints
-            : RobotTeachPositions.CreateDefault();
+            : RobotTeachPositions.CreateDefault(WaitJoint234Offset);
     }
 
     private void OnSerialFrameReceived(string frame)

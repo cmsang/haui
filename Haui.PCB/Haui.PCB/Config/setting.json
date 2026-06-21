@@ -7,6 +7,7 @@
   "stepsPerDeg": 100,
   "jogStepDegrees": 15,
   "speedPercent": 31,
+  "waitPointJoint234OffsetDegrees": -20,
   "DatabaseConnection": "Data Source=.\\SQLExpress;Initial Catalog=SmartWarehouse;Integrated Security=True;TrustServerCertificate=True",
   "ComponentTemplates": {
     "customFolder": "../../../../pcb_templates",
@@ -42,7 +43,8 @@
   },
   "PcbBoard": {
     "widthMm": 400,
-    "heightMm": 550
+    "heightMm": 550,
+    "hasAspectConstraint": true
   },
   "CameraBasler": {
     "deviceIp": "",

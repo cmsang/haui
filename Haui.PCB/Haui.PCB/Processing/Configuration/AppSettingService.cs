@@ -137,6 +137,11 @@ public class AppSettingService : IAppSettingService
             setting.FiducialHoles.MinQuadRectangularity,
             0.1,
             1.0);
+
+        setting.WaitPointJoint234OffsetDegrees = Math.Clamp(
+            setting.WaitPointJoint234OffsetDegrees,
+            -180,
+            180);
     }
 
     private static double NormalizeMatchThreshold(double value)

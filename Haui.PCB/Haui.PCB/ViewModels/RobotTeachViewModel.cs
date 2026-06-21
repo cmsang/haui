@@ -85,6 +85,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private int _stepsPerDeg = 100;
     private double _jogStep = 1.0;
     private int _speedPercent = 50;
+    private double _waitPointJoint234Offset = RobotTeachPointOffsets.DefaultJoint234OffsetDegrees;
     private bool _isSerialConnected;
     private bool _isAwaitingRobotDone;
     private bool _isReturningHome;
@@ -111,6 +112,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
         _jogStep = _appSetting.JogStepDegrees;
         _speedPercent = _appSetting.SpeedPercent;
+        _waitPointJoint234Offset = _appSetting.WaitPointJoint234OffsetDegrees;
         _serialPort = _appSetting.Com;
         _baudRate = _appSetting.BaudRate;
         _stepsPerDeg = _appSetting.StepsPerDeg;
@@ -142,6 +144,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasSelectedPoint));
             OnPropertyChanged(nameof(IsSelectedPointStandard));
+            OnPropertyChanged(nameof(CanTeachSelectedPoint));
 
             if (value != null)
                 ApplyPointToJoints(value);
@@ -152,6 +155,10 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsSelectedPointStandard =>
         SelectedPoint != null && RobotTeachPositions.IsStandard(SelectedPoint.Name);
+
+    /// <summary>Cho phép teach mọi vị trí chuẩn (gồm Wait PickUp / Wait OK / NG).</summary>
+    public bool CanTeachSelectedPoint =>
+        HasSelectedPoint && IsSelectedPointStandard;
 
     public bool IsSerialConnected
     {
@@ -237,6 +244,16 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         set
         {
             _speedPercent = Math.Clamp(value, 1, 100);
+            OnPropertyChanged();
+        }
+    }
+
+    public double WaitPointJoint234OffsetDegrees
+    {
+        get => _waitPointJoint234Offset;
+        set
+        {
+            _waitPointJoint234Offset = Math.Clamp(value, -180, 180);
             OnPropertyChanged();
         }
     }
@@ -402,7 +419,22 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        StatusText = $"Đã teach \"{SelectedPoint.Name}\" → lưu Database.";
+        var taughtName = SelectedPoint.Name;
+        var derivedWait = RobotTeachPositions.CreateDerivedWaitPoint(SelectedPoint, WaitPointJoint234OffsetDegrees);
+        if (derivedWait != null)
+        {
+            if (!_robotConfigService.TrySaveTeachPoint(derivedWait, out var waitError))
+            {
+                StatusText = $"Đã teach \"{taughtName}\" nhưng cập nhật \"{derivedWait.Name}\" thất bại — {waitError}";
+                return;
+            }
+
+            ReplaceTeachPointInGrid(derivedWait);
+            StatusText = $"Đã teach \"{taughtName}\" → \"{derivedWait.Name}\" offset {WaitPointJoint234OffsetDegrees:0.##}° J2–J4 → Database.";
+            return;
+        }
+
+        StatusText = $"Đã teach \"{taughtName}\" → lưu Database.";
     }
 
     public void GoToSelectedPoint()
@@ -424,6 +456,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         _appSetting.StepsPerDeg = StepsPerDeg;
         _appSetting.JogStepDegrees = JogStep;
         _appSetting.SpeedPercent = SpeedPercent;
+        _appSetting.WaitPointJoint234OffsetDegrees = WaitPointJoint234OffsetDegrees;
         _appSettingService.Save(_appSetting);
         StatusText = "Đã lưu cấu hình (setting.json).";
     }
@@ -436,7 +469,8 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         StepsPerDeg = _appSetting.StepsPerDeg;
         JogStep = _appSetting.JogStepDegrees;
         SpeedPercent = _appSetting.SpeedPercent;
-        StatusText = $"Đã tải setting.json — COM={SerialPortName}, STEPS_PER_DEG={StepsPerDeg}.";
+        WaitPointJoint234OffsetDegrees = _appSetting.WaitPointJoint234OffsetDegrees;
+        StatusText = $"Đã tải setting.json — COM={SerialPortName}, STEPS_PER_DEG={StepsPerDeg}, Wait offset={WaitPointJoint234OffsetDegrees:0.##}°.";
     }
 
     /// <summary>Tải lại danh sách vị trí teach từ Database (BL → DL).</summary>
@@ -451,8 +485,8 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var points = dbPoints.Count > 0
-            ? RobotTeachPositions.Normalize(dbPoints)
-            : RobotTeachPositions.CreateDefault();
+            ? RobotTeachPositions.Normalize(dbPoints, WaitPointJoint234OffsetDegrees)
+            : RobotTeachPositions.CreateDefault(WaitPointJoint234OffsetDegrees);
 
         TeachPoints.Clear();
         foreach (var point in points)
@@ -718,6 +752,22 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             TeachPoints[idx] = copy;
             SelectedPoint = copy;
         }
+    }
+
+    private void ReplaceTeachPointInGrid(RobotTeachPoint point)
+    {
+        for (var i = 0; i < TeachPoints.Count; i++)
+        {
+            if (!TeachPoints[i].Name.Equals(point.Name, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            TeachPoints[i] = point;
+            if (SelectedPoint?.Name.Equals(point.Name, StringComparison.OrdinalIgnoreCase) == true)
+                SelectedPoint = point;
+            return;
+        }
+
+        TeachPoints.Add(point);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
