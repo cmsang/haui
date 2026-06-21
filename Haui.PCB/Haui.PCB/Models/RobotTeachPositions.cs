@@ -47,7 +47,8 @@ public static class RobotTeachPositions
         _ => "Khác"
     };
 
-    public static List<RobotTeachPoint> CreateDefault()
+    public static List<RobotTeachPoint> CreateDefault(
+        double joint234OffsetDegrees = RobotTeachPointOffsets.DefaultJoint234OffsetDegrees)
     {
         var points = StandardNames.Select(name => new RobotTeachPoint
         {
@@ -55,14 +56,16 @@ public static class RobotTeachPositions
             Group = GetGroup(name)
         }).ToList();
 
-        ApplyDefaultWaitPointsIfUntaught(points);
+        ApplyDefaultWaitPointsIfUntaught(points, joint234OffsetDegrees);
         return points;
     }
 
     /// <summary>
     /// Bổ sung vị trí chuẩn còn thiếu và sắp xếp theo thứ tự quy định.
     /// </summary>
-    public static List<RobotTeachPoint> Normalize(IEnumerable<RobotTeachPoint> saved)
+    public static List<RobotTeachPoint> Normalize(
+        IEnumerable<RobotTeachPoint> saved,
+        double joint234OffsetDegrees = RobotTeachPointOffsets.DefaultJoint234OffsetDegrees)
     {
         var map = saved.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
         var result = new List<RobotTeachPoint>();
@@ -91,7 +94,7 @@ public static class RobotTeachPositions
             result.Add(extra);
         }
 
-        ApplyDefaultWaitPointsIfUntaught(result);
+        ApplyDefaultWaitPointsIfUntaught(result, joint234OffsetDegrees);
         return result;
     }
 
@@ -99,7 +102,9 @@ public static class RobotTeachPositions
         => point.J1 == 0 && point.J2 == 0 && point.J3 == 0 && point.J4 == 0 && point.J5 == 0;
 
     /// <summary>Gợi ý Wait PickUp / Wait OK/NG khi DB chưa có tọa độ (toàn 0).</summary>
-    public static void ApplyDefaultWaitPointsIfUntaught(IList<RobotTeachPoint> points)
+    public static void ApplyDefaultWaitPointsIfUntaught(
+        IList<RobotTeachPoint> points,
+        double joint234OffsetDegrees = RobotTeachPointOffsets.DefaultJoint234OffsetDegrees)
     {
         var pickUp = points.FirstOrDefault(p =>
             p.Name.Equals(PickUp, StringComparison.OrdinalIgnoreCase));
@@ -109,25 +114,27 @@ public static class RobotTeachPositions
             p.Name.Equals(Ng1, StringComparison.OrdinalIgnoreCase));
 
         if (pickUp != null)
-            ApplyDefaultIfUntaught(points, RobotTeachPointOffsets.CreateWaitPickUp(pickUp));
+            ApplyDefaultIfUntaught(points, RobotTeachPointOffsets.CreateWaitPickUp(pickUp, joint234OffsetDegrees));
 
         if (ok1 != null)
-            ApplyDefaultIfUntaught(points, RobotTeachPointOffsets.CreateWaitPlaceOk(ok1));
+            ApplyDefaultIfUntaught(points, RobotTeachPointOffsets.CreateWaitPlaceOk(ok1, joint234OffsetDegrees));
 
         if (ng1 != null)
-            ApplyDefaultIfUntaught(points, RobotTeachPointOffsets.CreateWaitPlaceNg(ng1));
+            ApplyDefaultIfUntaught(points, RobotTeachPointOffsets.CreateWaitPlaceNg(ng1, joint234OffsetDegrees));
     }
 
-    public static RobotTeachPoint? CreateDerivedWaitPoint(RobotTeachPoint reference)
+    public static RobotTeachPoint? CreateDerivedWaitPoint(
+        RobotTeachPoint reference,
+        double joint234OffsetDegrees = RobotTeachPointOffsets.DefaultJoint234OffsetDegrees)
     {
         if (reference.Name.Equals(PickUp, StringComparison.OrdinalIgnoreCase))
-            return RobotTeachPointOffsets.CreateWaitPickUp(reference);
+            return RobotTeachPointOffsets.CreateWaitPickUp(reference, joint234OffsetDegrees);
 
         if (reference.Name.Equals(Ok1, StringComparison.OrdinalIgnoreCase))
-            return RobotTeachPointOffsets.CreateWaitPlaceOk(reference);
+            return RobotTeachPointOffsets.CreateWaitPlaceOk(reference, joint234OffsetDegrees);
 
         if (reference.Name.Equals(Ng1, StringComparison.OrdinalIgnoreCase))
-            return RobotTeachPointOffsets.CreateWaitPlaceNg(reference);
+            return RobotTeachPointOffsets.CreateWaitPlaceNg(reference, joint234OffsetDegrees);
 
         return null;
     }
@@ -137,7 +144,9 @@ public static class RobotTeachPositions
            || name.Equals(Ok1, StringComparison.OrdinalIgnoreCase)
            || name.Equals(Ng1, StringComparison.OrdinalIgnoreCase);
 
-    public static RobotTeachPoint? ResolveWaitPickUp(IEnumerable<RobotTeachPoint> points)
+    public static RobotTeachPoint? ResolveWaitPickUp(
+        IEnumerable<RobotTeachPoint> points,
+        double joint234OffsetDegrees = RobotTeachPointOffsets.DefaultJoint234OffsetDegrees)
     {
         var list = points as IList<RobotTeachPoint> ?? points.ToList();
         var waitPickUp = list.FirstOrDefault(p =>
@@ -149,13 +158,14 @@ public static class RobotTeachPositions
         var pickUp = list.FirstOrDefault(p =>
             p.Name.Equals(PickUp, StringComparison.OrdinalIgnoreCase));
 
-        return pickUp == null ? null : RobotTeachPointOffsets.CreateWaitPickUp(pickUp);
+        return pickUp == null ? null : RobotTeachPointOffsets.CreateWaitPickUp(pickUp, joint234OffsetDegrees);
     }
 
-    /// <summary>Wait Place theo nhóm đích: OK → OK1, NG → NG1 (offset −20° J2–J4).</summary>
+    /// <summary>Wait Place theo nhóm đích: OK → OK1, NG → NG1 (offset J2–J4 từ cài đặt).</summary>
     public static RobotTeachPoint? CreateWaitPlaceForDestination(
         IEnumerable<RobotTeachPoint> points,
-        RobotTeachPoint destination)
+        RobotTeachPoint destination,
+        double joint234OffsetDegrees = RobotTeachPointOffsets.DefaultJoint234OffsetDegrees)
     {
         var list = points as IList<RobotTeachPoint> ?? points.ToList();
         var isNg = IsNgSlot(destination.Name);
@@ -167,13 +177,14 @@ public static class RobotTeachPositions
             return null;
 
         return isNg
-            ? RobotTeachPointOffsets.CreateWaitPlaceNg(reference)
-            : RobotTeachPointOffsets.CreateWaitPlaceOk(reference);
+            ? RobotTeachPointOffsets.CreateWaitPlaceNg(reference, joint234OffsetDegrees)
+            : RobotTeachPointOffsets.CreateWaitPlaceOk(reference, joint234OffsetDegrees);
     }
 
     public static RobotTeachPoint? FindWaitPlaceForDestination(
         IEnumerable<RobotTeachPoint> points,
-        RobotTeachPoint destination)
+        RobotTeachPoint destination,
+        double joint234OffsetDegrees = RobotTeachPointOffsets.DefaultJoint234OffsetDegrees)
     {
         var list = points as IList<RobotTeachPoint> ?? points.ToList();
         var name = IsNgSlot(destination.Name) ? WaitPlaceNg : WaitPlaceOk;
@@ -183,7 +194,7 @@ public static class RobotTeachPositions
         if (waitPlace != null && !IsUntaught(waitPlace))
             return waitPlace;
 
-        return CreateWaitPlaceForDestination(list, destination);
+        return CreateWaitPlaceForDestination(list, destination, joint234OffsetDegrees);
     }
 
     private static bool IsLegacyIgnoredName(string name)

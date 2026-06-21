@@ -182,7 +182,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         var selectedName = SelectedDestination?.Name;
         DestinationPoints.Clear();
 
-        foreach (var point in RobotTeachPositions.Normalize(_allTeachPoints))
+        foreach (var point in RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset))
         {
             if (point.Group is not ("OK" or "NG")) continue;
             DestinationPoints.Add(point);
@@ -329,7 +329,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var waitPickUp = RobotTeachPositions.ResolveWaitPickUp(
-            RobotTeachPositions.Normalize(_allTeachPoints));
+            RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset), WaitJoint234Offset);
         if (waitPickUp == null)
         {
             StatusText = "Không tìm thấy Wait PickUp — teach Wait PickUp hoặc PickUp.";
@@ -345,7 +345,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(
-            RobotTeachPositions.Normalize(_allTeachPoints), destination);
+            RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset), destination, WaitJoint234Offset);
         if (waitPlace == null)
         {
             StatusText = $"Không tính được Wait Place {(isNg ? "NG" : "OK")}.";
@@ -509,8 +509,10 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private double WaitJoint234Offset => _appSetting.WaitPointJoint234OffsetDegrees;
+
     private RobotTeachPoint? GetTeachPoint(string name)
-        => RobotTeachPositions.Normalize(_allTeachPoints)
+        => RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset)
             .FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     private IReadOnlyList<RobotTeachPoint> LoadAllTeachPoints()
@@ -518,12 +520,12 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         if (!_robotConfigService.TryLoadTeachPoints(out var dbPoints, out var error))
         {
             StatusText = $"Không tải được Database: {error}";
-            return RobotTeachPositions.CreateDefault();
+            return RobotTeachPositions.CreateDefault(WaitJoint234Offset);
         }
 
         return dbPoints.Count > 0
             ? dbPoints
-            : RobotTeachPositions.CreateDefault();
+            : RobotTeachPositions.CreateDefault(WaitJoint234Offset);
     }
 
     private void OnSerialFrameReceived(string frame)

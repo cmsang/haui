@@ -232,21 +232,32 @@
 
                     <!-- Jog settings -->
                     <Grid Grid.Row="1" Margin="0,0,0,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                            <TextBlock Text="Bước jog (°)" FontSize="11" Foreground="#666" Margin="0,0,0,4"/>
-                            <ComboBox x:Name="CboJogStep" SelectedValuePath="Content"
-                                      SelectionChanged="CboJogStep_SelectionChanged"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Margin="6,0,0,0">
-                            <TextBlock Text="Tốc độ Go To (%)" FontSize="11" Foreground="#666" Margin="0,0,0,4"/>
-                            <Slider x:Name="SldSpeed" Minimum="1" Maximum="100" TickFrequency="10"
-                                    IsSnapToTickEnabled="True"
-                                    ValueChanged="SldSpeed_ValueChanged"/>
-                            <TextBlock x:Name="TxtSpeed" HorizontalAlignment="Center" FontSize="11" Foreground="#666"/>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                <TextBlock Text="Bước jog (°)" FontSize="11" Foreground="#666" Margin="0,0,0,4"/>
+                                <ComboBox x:Name="CboJogStep" SelectedValuePath="Content"
+                                          SelectionChanged="CboJogStep_SelectionChanged"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                <TextBlock Text="Tốc độ Go To (%)" FontSize="11" Foreground="#666" Margin="0,0,0,4"/>
+                                <Slider x:Name="SldSpeed" Minimum="1" Maximum="100" TickFrequency="10"
+                                        IsSnapToTickEnabled="True"
+                                        ValueChanged="SldSpeed_ValueChanged"/>
+                                <TextBlock x:Name="TxtSpeed" HorizontalAlignment="Center" FontSize="11" Foreground="#666"/>
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel Grid.Row="1" Margin="0,12,0,0">
+                            <TextBlock Text="Offset Wait J2–J4 (°)" FontSize="11" Foreground="#666" Margin="0,0,0,4"
+                                       ToolTip="setting.json → waitPointJoint234OffsetDegrees — áp dụng khi teach PickUp/OK1/NG1"/>
+                            <TextBox x:Name="TxtWaitOffset" ToolTip="setting.json → waitPointJoint234OffsetDegrees"/>
                         </StackPanel>
                     </Grid>
 

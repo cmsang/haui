@@ -50,6 +50,7 @@ Tài liệu mô tả các luồng điều khiển robot 5 khớp RRRRR + gripper
 | `stepsPerDeg` | Bước motor / 1 độ | `100` |
 | `jogStepDegrees` | Bước jog trên màn Teaching | `15` |
 | `speedPercent` | Tốc độ Go To (0–100%) | `31` |
+| `waitPointJoint234OffsetDegrees` | Offset J2/J3/J4 cho Wait PickUp, Wait OK, Wait NG (độ) | `-20` |
 | `DatabaseConnection` | Chuỗi kết nối SQL Server | `SmartWarehouse` |
 
 **Lưu ý:** Cần `TrustServerCertificate=True` nếu SQL Express dùng chứng chỉ tự ký.
@@ -92,14 +93,14 @@ Mọi lệnh ASCII gửi qua `SendAscii(cmd)` được firmware nhận dạng **
 | Nhóm | Tên vị trí | Vai trò |
 |------|------------|---------|
 | Chung | `PickUp` | Điểm gắp PCB |
-| Chung | `Wait PickUp` | Chờ trước/sau gắp — lưu DB, teach được (seed: PickUp −20° J2–J4) |
+| Chung | `Wait PickUp` | Chờ trước/sau gắp — lưu DB, teach được (seed: PickUp + offset J2–J4 từ cài đặt) |
 | Chung | `Wait` | Hành lang giữa pick và place — lưu DB, teach được |
-| Chung | `Wait OK` | Chờ trước/sau đặt **Pass** — lưu DB (seed: OK1 −20° J2–J4) |
-| Chung | `Wait NG` | Chờ trước/sau đặt **Fail** — lưu DB (seed: NG1 −20° J2–J4) |
+| Chung | `Wait OK` | Chờ trước/sau đặt **Pass** — lưu DB (seed: OK1 + offset J2–J4) |
+| Chung | `Wait NG` | Chờ trước/sau đặt **Fail** — lưu DB (seed: NG1 + offset J2–J4) |
 | OK | `OK1` … `OK4` | Buffer hàng **Pass** |
 | NG | `NG1` … `NG4` | Buffer hàng **Fail** |
 
-Teach **PickUp** → tự offset và lưu **Wait PickUp**; teach **OK1** → **Wait OK**; teach **NG1** → **Wait NG** (−20° J2–J4). **Wait** (hành lang) teach thủ công. Pass dùng **Wait OK** (bước 8, 11); Fail dùng **Wait NG**.
+Teach **PickUp** → tự offset và lưu **Wait PickUp**; teach **OK1** → **Wait OK**; teach **NG1** → **Wait NG** (offset J2–J4 theo `waitPointJoint234OffsetDegrees`, mặc định −20°). **Wait** (hành lang) teach thủ công. Pass dùng **Wait OK** (bước 8, 11); Fail dùng **Wait NG**.
 
 Tọa độ J1–J5 lưu trong bảng `RobotConfig`. Gripper chỉ dùng trên UI/Serial, **không** lưu Database.
 
@@ -180,7 +181,7 @@ flowchart LR
 1. `ReloadTeachPoints()` — gọi `Get_RobotConfig_All` qua BL → DL.
 2. Người dùng chọn vị trí (PickUp, OK1, …), chỉnh khớp trên UI hoặc jog qua Serial.
 3. **Teach vị trí** — ghi J1–J5 của điểm đang chọn vào Database (không đổi `FullState`).
-4. **Lưu cấu hình** — ghi `jogStepDegrees`, `speedPercent`, COM… vào `setting.json`.
+4. **Lưu cấu hình** — ghi `jogStepDegrees`, `speedPercent`, `waitPointJoint234OffsetDegrees`, COM… vào `setting.json`.
 5. Nếu Database lỗi → hiển thị thông báo trên thanh trạng thái (không fallback file JSON).
 
 ---

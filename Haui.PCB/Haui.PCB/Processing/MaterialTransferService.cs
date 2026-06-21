@@ -57,7 +57,8 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
-        var points = RobotTeachPositions.Normalize(teachPoints);
+        var offset = _appSettingService.Load().WaitPointJoint234OffsetDegrees;
+        var points = RobotTeachPositions.Normalize(teachPoints, offset);
         var pickUp = FindPoint(points, RobotTeachPositions.PickUp);
         var wait = FindPoint(points, RobotTeachPositions.Wait);
 
@@ -73,7 +74,7 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
-        var waitPickUp = RobotTeachPositions.ResolveWaitPickUp(points);
+        var waitPickUp = RobotTeachPositions.ResolveWaitPickUp(points, offset);
         if (waitPickUp == null)
         {
             reportStatus("Không tìm thấy Wait PickUp — teach Wait PickUp hoặc PickUp.");
@@ -104,7 +105,7 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
-        var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(points, destination);
+        var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(points, destination, offset);
         if (waitPlace == null)
         {
             reportStatus($"Không tính được Wait Place {(isPass ? "OK" : "NG")}.");
@@ -135,7 +136,7 @@ public class MaterialTransferService : IMaterialTransferService
 
             if (_robotConfigService.TryLoadTeachPoints(out var updatedPoints, out _))
             {
-                var updated = RobotTeachPositions.Normalize(updatedPoints);
+                var updated = RobotTeachPositions.Normalize(updatedPoints, offset);
                 NotifyWarehouseIfBufferFull(updated, isPass, reportStatus);
             }
 
