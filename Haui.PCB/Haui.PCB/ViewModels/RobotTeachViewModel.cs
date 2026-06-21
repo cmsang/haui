@@ -142,6 +142,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasSelectedPoint));
             OnPropertyChanged(nameof(IsSelectedPointStandard));
+            OnPropertyChanged(nameof(CanTeachSelectedPoint));
 
             if (value != null)
                 ApplyPointToJoints(value);
@@ -152,6 +153,10 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
     public bool IsSelectedPointStandard =>
         SelectedPoint != null && RobotTeachPositions.IsStandard(SelectedPoint.Name);
+
+    /// <summary>Cho phép teach mọi vị trí chuẩn (gồm Wait PickUp / Wait OK / NG).</summary>
+    public bool CanTeachSelectedPoint =>
+        HasSelectedPoint && IsSelectedPointStandard;
 
     public bool IsSerialConnected
     {
@@ -402,7 +407,22 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        StatusText = $"Đã teach \"{SelectedPoint.Name}\" → lưu Database.";
+        var taughtName = SelectedPoint.Name;
+        var derivedWait = RobotTeachPositions.CreateDerivedWaitPoint(SelectedPoint);
+        if (derivedWait != null)
+        {
+            if (!_robotConfigService.TrySaveTeachPoint(derivedWait, out var waitError))
+            {
+                StatusText = $"Đã teach \"{taughtName}\" nhưng cập nhật \"{derivedWait.Name}\" thất bại — {waitError}";
+                return;
+            }
+
+            ReplaceTeachPointInGrid(derivedWait);
+            StatusText = $"Đã teach \"{taughtName}\" → \"{derivedWait.Name}\" offset −20° J2–J4 → Database.";
+            return;
+        }
+
+        StatusText = $"Đã teach \"{taughtName}\" → lưu Database.";
     }
 
     public void GoToSelectedPoint()
@@ -718,6 +738,22 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             TeachPoints[idx] = copy;
             SelectedPoint = copy;
         }
+    }
+
+    private void ReplaceTeachPointInGrid(RobotTeachPoint point)
+    {
+        for (var i = 0; i < TeachPoints.Count; i++)
+        {
+            if (!TeachPoints[i].Name.Equals(point.Name, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            TeachPoints[i] = point;
+            if (SelectedPoint?.Name.Equals(point.Name, StringComparison.OrdinalIgnoreCase) == true)
+                SelectedPoint = point;
+            return;
+        }
+
+        TeachPoints.Add(point);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)

@@ -69,7 +69,14 @@ public class MaterialTransferService : IMaterialTransferService
 
         if (wait == null)
         {
-            reportStatus("Không tìm thấy vị trí Wait trong Database.");
+            reportStatus("Không tìm thấy vị trí Wait trong Database — cần teach Wait.");
+            return;
+        }
+
+        var waitPickUp = RobotTeachPositions.ResolveWaitPickUp(points);
+        if (waitPickUp == null)
+        {
+            reportStatus("Không tìm thấy Wait PickUp — teach Wait PickUp hoặc PickUp.");
             return;
         }
 
@@ -90,6 +97,20 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
+        var referenceName = isPass ? RobotTeachPositions.Ok1 : RobotTeachPositions.Ng1;
+        if (FindPoint(points, referenceName) == null)
+        {
+            reportStatus($"Không tìm thấy {referenceName} — cần teach Wait Place {(isPass ? "OK" : "NG")} hoặc {referenceName}.");
+            return;
+        }
+
+        var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(points, destination);
+        if (waitPlace == null)
+        {
+            reportStatus($"Không tính được Wait Place {(isPass ? "OK" : "NG")}.");
+            return;
+        }
+
         if (!EnsureRobotSerialConnected(reportStatus))
             return;
 
@@ -103,7 +124,7 @@ public class MaterialTransferService : IMaterialTransferService
             reportStatus($"{label} — bắt đầu: PickUp → {slotName} (EMPTY)...");
 
             await _pickPlaceExecutor.RunPickUpToDestinationAsync(
-                pickUp, wait, destination, reportStatus, _cts.Token);
+                pickUp, waitPickUp, wait, waitPlace, destination, reportStatus, _cts.Token);
 
             if (!_robotConfigService.TryMarkSlotFull(slotName, out var markError))
             {

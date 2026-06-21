@@ -42,7 +42,8 @@
   },
   "PcbBoard": {
     "widthMm": 400,
-    "heightMm": 550
+    "heightMm": 550,
+    "hasAspectConstraint": true
   },
   "CameraBasler": {
     "deviceIp": "",

@@ -3,13 +3,12 @@ using Haui.PCB.Models;
 namespace Haui.PCB.Processing;
 
 /// <summary>
-/// Chu trình Pick &amp; Place: G90 → PickUp → G0 → Wait → Destination → G90 → Wait → G0.
-/// Mỗi bước chờ phản hồi Dx từ robot (giống Manual Control).
+/// Chu trình Pick &amp; Place 13 bước — không gọi H0x (homing chỉ lúc khởi động app).
 /// </summary>
 public class RobotPickPlaceExecutor
 {
-    private const int GripperOpenAngle = 90;
-    private const int GripperCloseAngle = 0;
+    private const int GripperOpenAngle = 40;
+    private const int GripperCloseAngle = 20;
     private static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(120);
 
     private readonly IRobotSerialService _serialService;
@@ -19,7 +18,6 @@ public class RobotPickPlaceExecutor
         _serialService = serialService;
     }
 
-    /// <summary>Di chuyển tới một vị trí teach và chờ Dx.</summary>
     public async Task MoveToPointAsync(
         RobotTeachPoint point,
         Action<string>? reportStatus,
@@ -32,7 +30,6 @@ public class RobotPickPlaceExecutor
         reportStatus?.Invoke($"Đã tới {point.Name}.");
     }
 
-    /// <summary>Homing tất cả trục (H0x) và chờ Dx.</summary>
     public async Task HomeAllAxesAsync(Action<string>? reportStatus, CancellationToken ct)
     {
         reportStatus?.Invoke("Homing tất cả trục (H0x) — gửi lệnh...");
@@ -42,43 +39,60 @@ public class RobotPickPlaceExecutor
         reportStatus?.Invoke("Homing hoàn tất — nhận Dx.");
     }
 
+    /// <summary>
+    /// Wait → mở gripper → Wait PickUp → PickUp → đóng → Wait PickUp → Wait → Wait Place
+    /// → Place → mở → Wait Place → Wait → đóng gripper.
+    /// </summary>
     public async Task RunPickUpToDestinationAsync(
         RobotTeachPoint pickUp,
+        RobotTeachPoint waitPickUp,
         RobotTeachPoint wait,
+        RobotTeachPoint waitPlace,
         RobotTeachPoint destination,
         Action<string> reportStatus,
         CancellationToken ct)
     {
-        await RunStepAsync("1/8 — Mở gripper 90° (G90x)",
+        await RunStepAsync("1/13 — Move → Wait",
+            () => SendMove(wait), reportStatus, ct);
+        await RunStepAsync("2/13 — Mở gripper (G90x)",
             () => SendGripper(GripperOpenAngle), reportStatus, ct);
-
-        await RunStepAsync("2/8 — Move → PickUp",
+        await RunStepAsync($"3/13 — Move → {waitPickUp.Name}",
+            () => SendMove(waitPickUp), reportStatus, ct);
+        await RunStepAsync("4/13 — Move → PickUp",
             () => SendMove(pickUp), reportStatus, ct);
-
-        await RunStepAsync("3/8 — Đóng gripper 0° (G0x)",
+        await RunStepAsync("5/13 — Đóng gripper (G0x)",
             () => SendGripper(GripperCloseAngle), reportStatus, ct);
-
-        await RunStepAsync("4/8 — Move → Wait",
+        await RunStepAsync($"6/13 — Move → {waitPickUp.Name} (rút lui)",
+            () => SendMove(waitPickUp), reportStatus, ct);
+        await RunStepAsync($"7/13 — Move → {wait.Name}",
             () => SendMove(wait), reportStatus, ct);
-
-        await RunStepAsync($"5/8 — Move → {destination.Name}",
+        await RunStepAsync($"8/13 — Move → {waitPlace.Name}",
+            () => SendMove(waitPlace), reportStatus, ct);
+        await RunStepAsync($"9/13 — Move → {destination.Name} (Place)",
             () => SendMove(destination), reportStatus, ct);
-
-        await RunStepAsync("6/8 — Mở gripper 90° (G90x)",
+        await RunStepAsync("10/13 — Mở gripper (G90x)",
             () => SendGripper(GripperOpenAngle), reportStatus, ct);
-
-        await RunStepAsync("7/8 — Move → Wait",
+        await RunStepAsync($"11/13 — Move → {waitPlace.Name} (rút lui)",
+            () => SendMove(waitPlace), reportStatus, ct);
+        await RunStepAsync($"12/13 — Move → {wait.Name}",
             () => SendMove(wait), reportStatus, ct);
-
-        await RunStepAsync("8/8 — Đóng gripper 0° (G0x)",
+        await RunStepAsync("13/13 — Đóng gripper (G0x)",
             () => SendGripper(GripperCloseAngle), reportStatus, ct);
     }
 
     public static bool IsDoneSignal(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return false;
-        var s = text.Trim();
-        return s.Length >= 2 && s[0] == 'D' && s[^1] == 'x';
+
+        foreach (var segment in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var s = segment.Trim();
+            if (s.Length >= 2 && s[0] == 'D')
+                return true;
+        }
+
+        var trimmed = text.Trim();
+        return trimmed.Length >= 2 && trimmed[0] == 'D';
     }
 
     private void SendGripper(int angleDegrees)

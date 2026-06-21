@@ -110,11 +110,9 @@
                            Foreground="#E74C3C" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 <Button Grid.Column="6" x:Name="BtnSerialToggle" Content="Kết nối"
                         Style="{StaticResource PrimaryBtn}" Padding="12,6" Margin="0,0,8,0"
-                        IsEnabled="{Binding CanOperateControls}"
                         Click="BtnSerialToggle_Click"/>
                 <Button Grid.Column="7" Content="↻" ToolTip="Quét lại cổng COM"
                         Style="{StaticResource SecondaryBtn}" Padding="10,6"
-                        IsEnabled="{Binding CanOperateControls}"
                         Click="BtnRefreshPorts_Click"/>
             </Grid>
         </Border>
@@ -131,7 +129,6 @@
                     <TextBlock Text="Vị trí đích (OK / NG)" Style="{StaticResource SectionHeader}"/>
                     <Button Content="↻ Tải lại teach" HorizontalAlignment="Right"
                             Style="{StaticResource SecondaryBtn}" Padding="10,6"
-                            IsEnabled="{Binding CanOperateControls}"
                             Click="BtnReloadTeach_Click"/>
                 </Grid>
 
@@ -142,7 +139,6 @@
                           SelectionMode="Single"
                           SelectionUnit="FullRow"
                           IsReadOnly="True"
-                          IsEnabled="{Binding CanOperateControls}"
                           GridLinesVisibility="Horizontal"
                           HeadersVisibility="Column"
                           SelectionChanged="DestinationGrid_SelectionChanged">
@@ -188,11 +184,9 @@
                     <TextBlock Text="Chạy test (PickUp → đích)" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
-            <Button x:Name="BtnGoPickUp" Content="Tới PickUp" Style="{StaticResource SecondaryBtn}" Margin="0,0,10,8"
-                    IsEnabled="{Binding CanGoToPickUp}"
+            <Button Content="Tới PickUp" Style="{StaticResource SecondaryBtn}" Margin="0,0,10,8"
                     Click="BtnGoPickUp_Click"/>
-            <Button x:Name="BtnGoDestination" Content="Tới vị trí đích" Style="{StaticResource SecondaryBtn}" Margin="0,0,10,8"
-                    IsEnabled="{Binding CanGoToDestination}"
+            <Button Content="Tới vị trí đích" Style="{StaticResource SecondaryBtn}" Margin="0,0,10,8"
                     Click="BtnGoDestination_Click"/>
         </WrapPanel>
 
