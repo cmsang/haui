@@ -11,6 +11,7 @@ public class MaterialTransferService : IMaterialTransferService
     private readonly IRobotConfigService _robotConfigService;
     private readonly IRobotSerialService _serialService;
     private readonly IAppSettingService _appSettingService;
+    private readonly WarehouseSerialService _warehouseSerialService;
     private readonly RobotPickPlaceExecutor _pickPlaceExecutor;
 
     private bool _isRunning;
@@ -24,6 +25,7 @@ public class MaterialTransferService : IMaterialTransferService
         _robotConfigService = robotConfigService;
         _serialService = serialService;
         _appSettingService = appSettingService;
+        _warehouseSerialService = new WarehouseSerialService(appSettingService);
         _pickPlaceExecutor = new RobotPickPlaceExecutor(serialService);
     }
 
@@ -112,9 +114,6 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
-        if (!EnsureRobotSerialConnected(reportStatus))
-            return;
-
         _cts = new CancellationTokenSource();
         _isRunning = true;
 
@@ -122,6 +121,11 @@ public class MaterialTransferService : IMaterialTransferService
 
         try
         {
+            await _warehouseSerialService.RequestMaterialTransferAsync(reportStatus, _cts.Token);
+
+            if (!EnsureRobotSerialConnected(reportStatus))
+                return;
+
             reportStatus($"{label} — bắt đầu: PickUp → {slotName} (EMPTY)...");
 
             await _pickPlaceExecutor.RunPickUpToDestinationAsync(
@@ -188,32 +192,7 @@ public class MaterialTransferService : IMaterialTransferService
     }
 
     private bool TrySendWarehouseCommand(string command, out string warehouseCom, out string? error)
-    {
-        warehouseCom = string.Empty;
-        error = null;
-
-        var setting = _appSettingService.Load();
-        warehouseCom = setting.WarehouseCom?.Trim() ?? string.Empty;
-
-        if (string.IsNullOrWhiteSpace(warehouseCom))
-        {
-            error = "Chưa cấu hình warehouseCom trong setting.json.";
-            return false;
-        }
-
-        try
-        {
-            using var warehouseSerial = new RobotSerialService();
-            warehouseSerial.Connect(warehouseCom, setting.BaudRate);
-            warehouseSerial.SendAscii(command);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-            return false;
-        }
-    }
+        => _warehouseSerialService.TrySendCommand(command, out warehouseCom, out error);
 
     private static bool AreAllSlotsFull(
         IEnumerable<RobotTeachPoint> points,
