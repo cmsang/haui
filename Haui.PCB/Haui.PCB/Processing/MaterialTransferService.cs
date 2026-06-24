@@ -114,9 +114,6 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
-        if (!EnsureRobotSerialConnected(reportStatus))
-            return;
-
         _cts = new CancellationTokenSource();
         _isRunning = true;
 
@@ -125,6 +122,9 @@ public class MaterialTransferService : IMaterialTransferService
         try
         {
             await _warehouseSerialService.RequestMaterialTransferAsync(reportStatus, _cts.Token);
+
+            if (!EnsureRobotSerialConnected(reportStatus))
+                return;
 
             reportStatus($"{label} — bắt đầu: PickUp → {slotName} (EMPTY)...");
 

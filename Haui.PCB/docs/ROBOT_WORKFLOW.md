@@ -24,7 +24,8 @@ Tài liệu mô tả các luồng điều khiển robot 5 khớp RRRRR + gripper
 ┌──────────────────────────▼──────────────────────────────────┐
 │  Processing (Haui.PCB)                                       │
 │  RobotSerialService · RobotPickPlaceExecutor                 │
-│  MaterialTransferService · RobotStartupHandshakeService      │
+│  MaterialTransferService · WarehouseSerialService            │
+│  RobotStartupHandshakeService                                │
 │  RobotConfigService (adapter)                                │
 └──────────────────────────┬──────────────────────────────────┘
                            │
@@ -223,28 +224,106 @@ Dùng để **test thủ công** chu trình gắp–đặt tới một slot OK h
 
 ## 9. Luồng Pass / Fail material (MainWindow)
 
-**Nút:** Pass / Fail trên sidebar `MainWindow`  
-**Service:** `MaterialTransferService` → `MainViewModel`
+**Service:** `MaterialTransferService` → `MainViewModel`  
+**Warehouse:** `WarehouseSerialService` (CMx/COx, C1x/C2x)
 
-### 9.1. Chọn slot đích
+Cả **nhận dạng tự động** và **nút Pass/Fail** đều hội tụ vào **một** hàm `MaterialTransferService.TransferAsync` — đảm bảo luôn gửi CMx và chờ COx trước khi chạy cánh tay robot.
 
-| Nút | Nhóm slot | Quy tắc chọn |
-|-----|-----------|--------------|
-| **Pass** | OK1–OK6 | Slot **đầu tiên** có `FullState = EMPTY` |
-| **Fail** | NG1–NG6 | Slot **đầu tiên** có `FullState = EMPTY` |
+### 9.1. Ba điểm kích hoạt
 
-Nếu tất cả slot nhóm đó đã `FULL` → không chạy robot, gửi warehouse (mục 9.3) và báo lỗi.
+```mermaid
+flowchart LR
+    subgraph UI["Kích hoạt (1 trong 3)"]
+        I1[Nhận dạng PASS/FAIL<br/>DashboardTabView]
+        I2[Nút Pass<br/>MainWindow sidebar]
+        I3[Nút Fail<br/>MainWindow sidebar]
+    end
 
-### 9.2. Chu trình sau khi chọn slot
+    subgraph VM["MainViewModel"]
+        V1[TransferMaterialByInspectionResultAsync]
+        V2[TransferPassMaterial]
+        V3[TransferFailMaterial]
+    end
+
+    SVC[MaterialTransferService.TransferAsync]
+
+    I1 --> V1 --> SVC
+    I2 --> V2 --> SVC
+    I3 --> V3 --> SVC
+```
+
+| Nguồn | File / sự kiện | Gọi tới |
+|-------|----------------|---------|
+| Nhận dạng PASS | `TestPipelineViewModel.InspectionCompleted` → `DashboardTabView` → `MainWindow.HandleInspectionCompletedAsync` | `TransferMaterialByInspectionResultAsync(true)` |
+| Nhận dạng FAIL | Cùng chuỗi trên | `TransferMaterialByInspectionResultAsync(false)` |
+| Nút **Pass** | `MainWindow.btnPass_Click` | `TransferPassMaterial()` |
+| Nút **Fail** | `MainWindow.btnFail_Click` | `TransferFailMaterial()` |
+
+**Manual Control** (`wdManualControl`) **không** đi qua luồng này — chỉ test robot thủ công, không gửi CMx/COx.
+
+### 9.2. Chọn slot đích
+
+| Nút / kết quả | Nhóm slot | Quy tắc chọn |
+|---------------|-----------|--------------|
+| **Pass** / nhận dạng PASS | OK1–OK4 | Slot **đầu tiên** có `FullState = EMPTY` |
+| **Fail** / nhận dạng FAIL | NG1–NG4 | Slot **đầu tiên** có `FullState = EMPTY` |
+
+Nếu tất cả slot nhóm đó đã `FULL` → **không** gửi CMx, không chạy robot; chỉ gửi C1x/C2x nếu buffer đầy (mục 9.4) và báo lỗi.
+
+### 9.3. Sơ đồ luồng xử lý (chi tiết)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  KÍCH HOẠT: nhận dạng PASS/FAIL · nút Pass · nút Fail      │
+└──────────────────────────┬──────────────────────────────────┘
+                           ▼
+              MaterialTransferService.TransferAsync
+                           │
+         ┌─────────────────┼─────────────────┐
+         ▼                 ▼                 ▼
+    Kiểm tra DB      Tìm slot EMPTY    Kiểm tra teach points
+    (PickUp, Wait,   (OK1–4 / NG1–4)  (Wait PickUp, Wait OK/NG)
+     Wait OK/NG…)         │                 │
+         └─────────────────┴─────────────────┘
+                           │
+              ┌────────────┴────────────┐
+              │  Còn slot EMPTY?        │
+              └────────────┬────────────┘
+                    Không  │  Có
+              ┌────────────┴────────────┐
+              ▼                         ▼
+    Gửi C1x/C2x (buffer đầy)    Gửi CMx → warehouseCom
+    Dừng — không chạy robot              │
+                                         ▼
+                              Chờ COx (timeout 120 s)
+                                         │
+                              ┌──────────┴──────────┐
+                         Timeout/lỗi            Nhận COx
+                              │                    │
+                              ▼                    ▼
+                    Dừng — không robot    Kết nối cổng robot (com)
+                                                   │
+                                                   ▼
+                              Chu trình 13 bước (RobotPickPlaceExecutor)
+                                                   │
+                                                   ▼
+                              Cập nhật FullState = FULL (slot vừa đặt)
+                                                   │
+                                                   ▼
+                              Tất cả OK/NG FULL? → gửi C1x/C2x
+```
 
 ```mermaid
 flowchart TD
-    A[Nhấn Pass/Fail hoặc kết quả nhận dạng] --> B[Load RobotConfig từ DB]
-    B --> C{Tìm slot EMPTY?}
-    C -->|Không| D[Gửi C1x hoặc C2x nếu buffer đầy]
-    C -->|Có| W[Gửi CMx → chờ COx]
+    A[Nhận dạng PASS/FAIL<br/>hoặc nút Pass/Fail] --> B[Load RobotConfig từ DB]
+    B --> V{Đủ teach points<br/>và slot EMPTY?}
+    V -->|Không — buffer đầy| D[Gửi C1x hoặc C2x nếu cần]
+    D --> Z[Dừng]
+    V -->|Không — lỗi khác| Z
+    V -->|Có| W[Gửi CMx → warehouseCom]
     W -->|Timeout / lỗi| X[Dừng — không chạy robot]
-    W -->|COx| E[Chạy chu trình 13 bước]
+    W -->|Nhận COx| R[Kết nối cổng robot com]
+    R --> E[Chu trình 13 bước Pick & Place]
     E --> F[Cập nhật FullState = FULL]
     F --> G{Tất cả OK/NG đều FULL?}
     G -->|Có| H[Gửi C1x hoặc C2x]
@@ -252,21 +331,61 @@ flowchart TD
     H --> I
 ```
 
-1. Load vị trí từ Database (PickUp, Wait, slot đích) — tính Wait PickUp / Wait OK hoặc NG.
-2. Kết nối robot COM nếu chưa online.
-3. **Gửi `CMx` → `warehouseCom`, chờ `COx`** (timeout 120 s). Chỉ khi nhận `COx` mới chạy robot.
-4. Chạy **cùng chu trình 13 bước** như Manual Control (`RobotPickPlaceExecutor`).
-5. Gọi `Update_RobotConfig_FullState` → đặt slot vừa đặt hàng = **`FULL`**.
-6. Nếu sau bước này **toàn bộ OK** (hoặc **toàn bộ NG**) đều `FULL` → gửi lệnh warehouse.
+**Thứ tự thực thi:**
+1. Load vị trí từ Database — tính Wait PickUp / Wait OK hoặc NG.
+2. **Gửi `CMx` → `warehouseCom`, chờ `COx`** (timeout 120 s). Chỉ khi nhận `COx` mới tiếp tục.
+3. Kết nối robot COM (`com`) nếu chưa online.
+4. Chạy **chu trình 13 bước** (`RobotPickPlaceExecutor`).
+5. Gọi `Update_RobotConfig_FullState` → slot vừa đặt = **`FULL`**.
+6. Nếu toàn bộ OK (hoặc NG) đều `FULL` → gửi `C1x` / `C2x`.
 
-### 9.3. Báo warehouse buffer đầy
+### 9.4. Handshake CMx / COx (sequence)
+
+```mermaid
+sequenceDiagram
+    participant App as Haui.PCB
+    participant WH as Warehouse (warehouseCom)
+    participant RB as Robot (com)
+
+    Note over App: Sau nhận dạng hoặc Pass/Fail — đã có slot EMPTY
+
+    App->>WH: CMx
+    alt Nhận COx trong 120 s
+        WH-->>App: COx
+        Note over App: Nhà kho sẵn sàng
+        App->>RB: Kết nối COM (nếu chưa)
+        loop 13 bước Pick & Place
+            App->>RB: M…x / G…x
+            RB-->>App: Dx
+        end
+        Note over App: Cập nhật FullState = FULL
+        opt Tất cả slot OK/NG đều FULL
+            App->>WH: C1x hoặc C2x
+        end
+    else Timeout / không COx
+        Note over App: Dừng — không gọi robot
+    end
+```
+
+| Bước | Lệnh | Hướng | Ghi chú |
+|------|------|-------|---------|
+| 1 | `CMx` | PC → warehouse | Yêu cầu chuyển material |
+| 2 | `COx` | warehouse → PC | **Bắt buộc** — mới được chạy robot |
+| 3 | M/G + chờ `Dx` | PC ↔ robot | Chu trình 13 bước |
+| 4 | `C1x` / `C2x` | PC → warehouse | Chỉ khi buffer đầy sau khi đặt hàng |
+
+Gửi warehouse qua cổng riêng (`warehouseCom`), mở COM → gửi/nhận → đóng — **không** dùng chung cổng robot.
+
+**DeveloperMode + VirtualSerialPort:** bỏ qua CMx/COx (coi như nhà kho OK) — chỉ dùng khi test không có thiết bị warehouse thật.
+
+### 9.5. Báo warehouse buffer đầy
 
 | Điều kiện | Lệnh gửi | Cổng |
 |-----------|----------|------|
-| OK1–OK6 đều `FULL` | `C1x` | `warehouseCom` |
-| NG1–NG6 đều `FULL` | `C2x` | `warehouseCom` |
+| OK1–OK4 đều `FULL` | `C1x` | `warehouseCom` |
+| NG1–NG4 đều `FULL` | `C2x` | `warehouseCom` |
 
-Gửi qua cổng riêng (`COM22`), mở COM → gửi → đóng (không dùng chung cổng robot).
+Xảy ra khi: (a) không còn slot trống trước khi chạy robot, hoặc (b) sau khi đặt hàng làm đầy toàn bộ buffer nhóm đó.
 
 ---
 
@@ -287,22 +406,31 @@ flowchart TB
         T1 --> T2
     end
 
-    subgraph Production
-        P1[Phát hiện PCB]
+    subgraph Production["Sản xuất — Pass/Fail / nhận dạng"]
+        P1[Nhận dạng PCB hoặc nút Pass/Fail]
         P2{Pass?}
-        P3[Pass → slot OK EMPTY]
-        P4[Fail → slot NG EMPTY]
-        P5[Pick & Place 13 bước]
-        P6[FullState = FULL]
-        P7[Buffer đầy? → C1x/C2x]
+        P3[Chọn slot OK EMPTY]
+        P4[Chọn slot NG EMPTY]
+        P5[CMx → chờ COx]
+        P6[Kết nối robot + Pick & Place 13 bước]
+        P7[FullState = FULL]
+        P8[Buffer đầy? → C1x/C2x]
         P1 --> P2
         P2 -->|Đạt| P3 --> P5
         P2 -->|Lỗi| P4 --> P5
-        P5 --> P6 --> P7
+        P5 -->|COx| P6 --> P7 --> P8
+        P5 -->|Timeout| P9[Dừng — không robot]
+    end
+
+    subgraph Manual["Manual Control (test)"]
+        M1[wdManualControl]
+        M2[Pick & Place 13 bước — không CMx/COx]
+        M1 --> M2
     end
 
     Startup --> Teaching
     Teaching --> Production
+    Teaching --> Manual
 ```
 
 ---
