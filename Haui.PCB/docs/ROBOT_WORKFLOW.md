@@ -9,7 +9,7 @@ Tài liệu mô tả các luồng điều khiển robot 5 khớp RRRRR + gripper
 | Thành phần | Mô tả |
 |------------|--------|
 | **Robot** | Cánh tay 5 DOF (J1–J5) + gripper, firmware nhận lệnh ASCII qua COM |
-| **Warehouse** | Thiết bị/PLC phụ trên cổng `warehouseCom`, nhận lệnh C1/C2 khi buffer đầy |
+| **Warehouse** | Thiết bị/PLC phụ trên cổng `warehouseCom` — CMx/COx trước khi robot gắp; C1/C2 khi buffer đầy |
 | **SQL Server** | Bảng `RobotConfig` — lưu tọa độ teach và trạng thái slot (`EMPTY` / `FULL`) |
 | **Ứng dụng** | WPF `Haui.PCB` — MainWindow, Robot Teaching, Manual Control |
 
@@ -81,10 +81,12 @@ Mọi lệnh ASCII gửi qua `SendAscii(cmd)` được firmware nhận dạng **
 
 ### Lệnh warehouse (cổng `warehouseCom`)
 
-| Lệnh | Điều kiện |
-|------|-----------|
-| `C1x` | Tất cả slot **OK1–OK6** có `FullState = FULL` |
-| `C2x` | Tất cả slot **NG1–NG6** có `FullState = FULL` |
+| Lệnh | Ý nghĩa |
+|------|---------|
+| `CMx` | PC yêu cầu chuyển material (trước khi robot gắp) |
+| `COx` | Nhà kho xác nhận sẵn sàng — PC mới chạy robot |
+| `C1x` | Tất cả slot **OK1–OK4** có `FullState = FULL` |
+| `C2x` | Tất cả slot **NG1–NG4** có `FullState = FULL` |
 
 ---
 
@@ -237,10 +239,12 @@ Nếu tất cả slot nhóm đó đã `FULL` → không chạy robot, gửi ware
 
 ```mermaid
 flowchart TD
-    A[Nhấn Pass hoặc Fail] --> B[Load RobotConfig từ DB]
+    A[Nhấn Pass/Fail hoặc kết quả nhận dạng] --> B[Load RobotConfig từ DB]
     B --> C{Tìm slot EMPTY?}
     C -->|Không| D[Gửi C1x hoặc C2x nếu buffer đầy]
-    C -->|Có| E[Chạy chu trình 13 bước]
+    C -->|Có| W[Gửi CMx → chờ COx]
+    W -->|Timeout / lỗi| X[Dừng — không chạy robot]
+    W -->|COx| E[Chạy chu trình 13 bước]
     E --> F[Cập nhật FullState = FULL]
     F --> G{Tất cả OK/NG đều FULL?}
     G -->|Có| H[Gửi C1x hoặc C2x]
@@ -250,9 +254,10 @@ flowchart TD
 
 1. Load vị trí từ Database (PickUp, Wait, slot đích) — tính Wait PickUp / Wait OK hoặc NG.
 2. Kết nối robot COM nếu chưa online.
-3. Chạy **cùng chu trình 13 bước** như Manual Control (`RobotPickPlaceExecutor`).
-4. Gọi `Update_RobotConfig_FullState` → đặt slot vừa đặt hàng = **`FULL`**.
-5. Nếu sau bước này **toàn bộ OK** (hoặc **toàn bộ NG**) đều `FULL` → gửi lệnh warehouse.
+3. **Gửi `CMx` → `warehouseCom`, chờ `COx`** (timeout 120 s). Chỉ khi nhận `COx` mới chạy robot.
+4. Chạy **cùng chu trình 13 bước** như Manual Control (`RobotPickPlaceExecutor`).
+5. Gọi `Update_RobotConfig_FullState` → đặt slot vừa đặt hàng = **`FULL`**.
+6. Nếu sau bước này **toàn bộ OK** (hoặc **toàn bộ NG**) đều `FULL` → gửi lệnh warehouse.
 
 ### 9.3. Báo warehouse buffer đầy
 
@@ -311,6 +316,7 @@ flowchart TB
 | `Haui.PCB/Processing/RobotStartupHandshakeService.cs` | Handshake Rx/Yx/H0 |
 | `Haui.PCB/Processing/RobotPickPlaceExecutor.cs` | Chu trình 13 bước + chờ Dx |
 | `Haui.PCB/Processing/MaterialTransferService.cs` | Pass/Fail + FULL + warehouse |
+| `Haui.PCB/Processing/WarehouseSerialService.cs` | CMx/COx handshake, C1x/C2x buffer đầy |
 | `Haui.PCB/Processing/RobotConfigService.cs` | Adapter UI → BL |
 | `BL.PCBDetect/RobotConfigBL.cs` | Nghiệp vụ RobotConfig |
 | `DL.PCBDetect/RobotConfigRepository.cs` | Gọi Stored Procedure |
@@ -329,6 +335,7 @@ flowchart TB
 | Handshake không xong | Robot chưa bật / sai COM | Kiểm tra `com`, xem log RX trên MainWindow |
 | Timeout chờ Dx | Robot không phản hồi sau lệnh move | Kiểm tra firmware, dây Serial, nguồn robot |
 | Tất cả slot FULL | Buffer đầy | Chờ warehouse xử lý (C1x/C2x đã gửi), reset `FullState` khi lấy hàng |
+| Timeout chờ COx | Nhà kho không phản hồi sau CMx | Kiểm tra `warehouseCom`, firmware warehouse, dây Serial |
 | Gửi C1x/C2x thất bại | Sai `warehouseCom` | Kiểm tra cổng COM22 và thiết bị warehouse |
 
 ---
