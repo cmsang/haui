@@ -2,6 +2,10 @@
 
 ## Current focus
 
+**YOLO missing-component detection (2026-06-26):** Replaced histogram/template matching with YOLO26 ONNX (`Microsoft.ML.OnnxRuntime` 1.27). `MissingComponentDetectionService` runs on warped board; each detection = missing component location (red box). PASS when `Missing.Count == 0`. Config section **`ComponentDetection`** in `setting.json`. Removed: template library, Create/Viewer windows, board orientation, white-circuit mode, `ComponentTemplates` settings.
+
+**OnnxYoloDetector gotchas (2026-06-26, fixed):** (1) **RGB order** — Ultralytics trains on RGB; OpenCV `Mat` is BGR. `PrepareInput` must `CvtColor(BGR2RGB)` before building the NCHW tensor (else detections are chaotic). (2) **End-to-end output** — `yolo26m_960x1280.onnx` exports NMS-free format **`[1, 300, 6]`** where each row = `[x1, y1, x2, y2, confidence, classId]` (xyxy, input-pixel space, already NMS'd + sorted). `Decode` branches: `DecodeEndToEnd` for `[1, N, 6]`, `DecodeRaw` (custom NMS) for legacy `[1, 4+nc, N]` (e.g. yolov8m). Input is `[1, 3, 1280, 960]` (H×W portrait).
+
 Stable layout: **Models** and **Processing** by domain subfolder; **Views** as `Windows/` · `Tabs/` · `Controls/`; config unified in **`Config/setting.json`**.
 
 Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments **English**; operator UI **Vietnamese** with `MaterialDesignFont` / `Segoe UI` (not Consolas for labels). Mojibake in 13 ViewModel/code-behind `.cs` files fixed (2026-06); child windows/tabs now set `MaterialDesignFont` on root.

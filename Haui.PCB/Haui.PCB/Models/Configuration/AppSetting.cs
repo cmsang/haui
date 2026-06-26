@@ -42,8 +42,8 @@ public class AppSetting
     public string DatabaseConnection { get; set; } =
         @"Data Source=.\SQLExpress;Initial Catalog=AGVControlSystem;Integrated Security=True;TrustServerCertificate=True";
 
-    [JsonPropertyName("ComponentTemplates")]
-    public ComponentTemplateSettings ComponentTemplates { get; set; } = new();
+    [JsonPropertyName("ComponentDetection")]
+    public ComponentDetectionSettings ComponentDetection { get; set; } = new();
 
     [JsonPropertyName("PcbBoard")]
     public PcbBoardSettings PcbBoard { get; set; } = new();

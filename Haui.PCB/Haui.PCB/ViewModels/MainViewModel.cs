@@ -42,7 +42,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _previewProcessing;
 
     public event Action<System.Windows.Media.Imaging.BitmapSource>? FrameReady;
-    public event Action<Mat>? TemplateFrameCaptured;
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public IReadOnlyList<CameraInfo> Cameras
@@ -368,29 +367,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
 
         return CropToSelectedRegion(frame);
-    }
-
-    public async Task CaptureTemplateFrameAsync()
-    {
-        StatusText = "Đang chụp ảnh để tạo mẫu...";
-
-        if (_cameraService is null)
-        {
-            StatusText = "Camera chưa khởi động.";
-            return;
-        }
-
-        var frame = await Task.Run(() => _cameraService.GrabFrame());
-
-        if (frame is null || frame.Empty())
-        {
-            frame?.Dispose();
-            StatusText = "Không thể chụp ảnh từ camera.";
-            return;
-        }
-
-        StatusText = "Đã mở form tạo mẫu.";
-        TemplateFrameCaptured?.Invoke(frame);
     }
 
     public async Task CaptureAndSaveFrameAsync()

@@ -8,12 +8,10 @@ internal static class AppSettingsStore
 {
     private static readonly AppSettingService Service = new();
 
-    public static ComponentTemplateSettings LoadComponentTemplates() => Service.LoadComponentTemplates();
+    public static ComponentDetectionSettings LoadComponentDetection() => Service.LoadComponentDetection();
 
-    public static void SaveComponentTemplates(ComponentTemplateSettings settings)
-        => Service.SaveComponentTemplates(settings);
-
-    public static double LoadMatchThresholdPercent() => Service.LoadMatchThresholdPercent();
+    public static void SaveComponentDetection(ComponentDetectionSettings settings)
+        => Service.SaveComponentDetection(settings);
 
     public static PcbBoardSettings LoadPcbBoard() => Service.LoadPcbBoard();
 

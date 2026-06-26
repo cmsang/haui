@@ -2,12 +2,12 @@
 
 ## Why this exists
 
-Operators inspect PCB boards against a visual template: capture under camera, auto-crop/straighten, then check whether defined regions match a reference image.
+Operators inspect PCB boards: capture under camera, auto-crop/straighten, then detect **missing component locations** with a trained YOLO model.
 
 ## Users
 
 - Lab/line operators with a camera over a work surface
-- Developers tuning segmentation and comparison
+- Developers tuning segmentation and YOLO thresholds
 
 ## UI language
 
@@ -15,21 +15,20 @@ Operators inspect PCB boards against a visual template: capture under camera, au
 
 ## Primary workflow
 
-1. **MainWindow** — camera, resolution (default 1280×720), live preview + FPS
+1. **MainWindow** — camera, resolution, live preview + FPS
 2. **Optional ROI** — rectangle on preview → `last_region.json`
-3. **Toolbar** (capture frame, open child window):
-   - **Test** → segment, compare all library templates, best match detail (camera capture)
-   - **Chọn ảnh** (DeveloperMode) → same inspection from a file on disk; result in `ResultImage` only — `CameraImage` stays live camera feed
-   - **Tạo mẫu** → segment, draw regions, save template
-   - **Xem mẫu** → browse library, edit/delete
+3. **Toolbar**:
+   - **Test** → segment board, YOLO missing-component detection (camera capture)
+   - **Chọn ảnh** (DeveloperMode) → same inspection from file; `ResultImage` shows annotated board
+   - **Chụp** → save frame to `CameraCapture.SaveFolder`
 
-## Comparison semantics
+## Inspection semantics
 
-- Per-region similarity (NCC + histogram); **`IsMatch` when ≥ `MinMatchSimilarityPercent`**
-- **Component library** (`TrainWhiteCircuit` off): match → **có linh kiện**; PASS when every region has a component
-- **White-circuit library** (`TrainWhiteCircuit` on): match → **không có linh kiện** (empty pad); PASS when every region has a component
-- UI: “Có linh kiện” / “Thiếu”; overlay green = present, red = missing
+- YOLO ONNX on warped board image; **each detection box = one missing component**
+- **PASS** when no missing locations detected (`MissingCount == 0`)
+- **FAIL** when ≥1 box; red overlay + list in **Danh sách linh kiện thiếu**
+- Thresholds: `ComponentDetection.confThreshold`, `iouThreshold` in `setting.json`
 
-## Template storage (operator-visible)
+## Model assets
 
-One library folder (`templates/` or custom via settings): each sample = PNG + `*_regions.json`. Create, Viewer, and Test share the same library.
+ONNX file (e.g. `yolo26m_960x1280.onnx`) under `Haui.PCB/Models/` or custom path in settings. Trained via `yolo/` (Ultralytics YOLO26).

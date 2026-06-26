@@ -30,7 +30,7 @@ Requirements: Windows x64, .NET 10 SDK, Basler pylon. Details → `memory-bank/t
 
 ## Critical gotcha
 
-**Test / Create / Viewer** share one template library (`*.png` + `*_regions.json` per sample). Path → `Config/setting.json` → `ComponentTemplates.CustomFolder` (empty → `templates/`). All use `ITemplateLibraryService`.
+**YOLO ONNX** must exist at path in `Config/setting.json` → `ComponentDetection.modelPath` (default `Models/yolo26m_960x1280.onnx`). Copy from `yolo/runs/pcb/onnx/` after training. Inspection runs on **warped board** image only (segmentation unchanged).
 
 ## After tasks
 

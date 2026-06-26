@@ -16,12 +16,12 @@ public partial class SettingTabView : UserControl
 
     private void UserControl_Loaded(object sender, RoutedEventArgs e) => _viewModel.Load();
 
-    private void BtnAddRegionName_Click(object sender, RoutedEventArgs e) => _viewModel.AddRegionName();
+    private void BtnAddClassName_Click(object sender, RoutedEventArgs e) => _viewModel.AddClassName();
 
-    private void BtnDeleteRegionName_Click(object sender, RoutedEventArgs e)
+    private void BtnDeleteClassName_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not FrameworkElement { Tag: AllowedRegionNameItem item }) return;
-        _viewModel.RemoveRegionName(item);
+        if (sender is not FrameworkElement { Tag: ClassNameItem item }) return;
+        _viewModel.RemoveClassName(item);
     }
 
     private void BtnSaveSettings_Click(object sender, RoutedEventArgs e) => _viewModel.Save();

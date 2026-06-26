@@ -9,33 +9,25 @@
   "speedPercent": 31,
   "waitPointJoint234OffsetDegrees": -20,
   "DatabaseConnection": "Data Source=.\\SQLExpress;Initial Catalog=SmartWarehouse;Integrated Security=True;TrustServerCertificate=True",
-  "ComponentTemplates": {
-    "customFolder": "../../../../pcb_templates",
-    "allowedRegionNames": [
-      "KF1",
-      "KF2",
-      "KF3",
+  "ComponentDetection": {
+    "modelPath": "Config/yolo26m_960x1280.onnx",
+    "inputWidth": 960,
+    "inputHeight": 1280,
+    "confThreshold": 0.25,
+    "iouThreshold": 0.45,
+    "classNames": [
+      "KF",
       "C2",
       "AMS1",
-      "L3",
-      "L2",
-      "R1",
-      "R2",
-      "C3",
-      "C6",
-      "C5",
-      "D2",
-      "D1",
+      "L23",
+      "R12",
+      "C365",
+      "D12",
       "C1",
       "LM1",
       "L1",
       "C4"
-    ],
-    "minMatchSimilarityPercent": 50,
-    "orientationComponentName": "KF3_LABEL",
-    "minOrientationMatchScore": 0.5,
-    "trainWhiteCircuit": true,
-    "whiteCircuitCustomFolder": "../../../../pcb_templates_empty"
+    ]
   },
   "PcbBoard": {
     "widthMm": 460,

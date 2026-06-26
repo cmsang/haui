@@ -6,7 +6,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using Haui.PCB.Processing.Templates;
+using Haui.PCB.Processing.Detection;
+using Haui.PCB.Processing.Segmentation;
 using Haui.PCB.ViewModels;
 using Haui.PCB.Views.Windows;
 
@@ -44,12 +45,9 @@ public partial class DashboardTabView : UserControl
         _owner = owner;
         _onInspectionCompleted = onInspectionCompleted;
 
-        var libraryService = new TemplateLibraryService();
-        var comparisonService = new RegionComparisonService();
         _inspectionViewModel = new TestPipelineViewModel(
             new PcbSegmentationService(),
-            new ModeAwareTemplateMatchService(libraryService, comparisonService),
-            new BoardOrientationDetectionService(libraryService));
+            new MissingComponentDetectionService());
 
         DataContext = _viewModel;
         InitializeComponent();
@@ -71,23 +69,6 @@ public partial class DashboardTabView : UserControl
                     FpsText.Text = _viewModel.CurrentFps > 0 ? $"FPS: {_viewModel.CurrentFps}" : string.Empty);
             else if (e.PropertyName == nameof(MainViewModel.StatusText))
                 Dispatcher.InvokeAsync(() => StatusText.Text = _viewModel.StatusText);
-        };
-
-        _viewModel.TemplateFrameCaptured += frame =>
-        {
-            Dispatcher.InvokeAsync(async () =>
-            {
-                var templateWindow = new CreateTemplateWindow { Owner = _owner };
-                try
-                {
-                    await templateWindow.LoadFrameAsync(frame);
-                }
-                finally
-                {
-                    frame.Dispose();
-                }
-                templateWindow.ShowDialog();
-            });
         };
     }
 
@@ -238,19 +219,8 @@ public partial class DashboardTabView : UserControl
         _developerMode = setting.DeveloperMode;
         _showInspectionResultAfterRecognition = setting.ShowInspectionResultAfterRecognition;
         var visibility = _developerMode ? Visibility.Visible : Visibility.Collapsed;
-        BtnCreateTemplate.Visibility = visibility;
         BtnSelectImage.Visibility = visibility;
-
-        if (!_developerMode)
-        {
-            BtnCreateTemplate.IsEnabled = false;
-        }
-
-        ApplyInspectionModeUi();
     }
-
-    private void ApplyInspectionModeUi()
-        => _inspectionViewModel.RefreshInspectionModeFromConfig();
 
     private async void UserControl_Loaded(object sender, RoutedEventArgs e)
     {
@@ -343,10 +313,6 @@ public partial class DashboardTabView : UserControl
             BtnStop.IsEnabled = true;
             BtnTest.IsEnabled = true;
             BtnSelectRegion.IsEnabled = true;
-            if (_developerMode)
-            {
-                BtnCreateTemplate.IsEnabled = true;
-            }
             BtnCapture.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
             ResetInspectionDisplay();
@@ -367,7 +333,6 @@ public partial class DashboardTabView : UserControl
         BtnStop.IsEnabled = false;
         BtnTest.IsEnabled = false;
         BtnSelectRegion.IsEnabled = false;
-        BtnCreateTemplate.IsEnabled = false;
         BtnCapture.IsEnabled = false;
         ExitSelectMode();
         CameraImage.Source = null;
@@ -420,25 +385,6 @@ public partial class DashboardTabView : UserControl
         {
             BtnSelectImage.IsEnabled = true;
         }
-    }
-
-    private async void BtnCreateTemplate_Click(object sender, RoutedEventArgs e)
-    {
-        BtnCreateTemplate.IsEnabled = false;
-        try
-        {
-            await _viewModel.CaptureTemplateFrameAsync();
-        }
-        finally
-        {
-            BtnCreateTemplate.IsEnabled = _viewModel.IsRunning;
-        }
-    }
-
-    private void BtnViewTemplates_Click(object sender, RoutedEventArgs e)
-    {
-        var viewerWindow = new TemplateViewerWindow { Owner = _owner };
-        viewerWindow.ShowDialog();
     }
 
     private async void BtnCapture_Click(object sender, RoutedEventArgs e)

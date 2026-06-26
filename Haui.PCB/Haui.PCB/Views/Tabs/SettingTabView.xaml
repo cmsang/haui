@@ -143,14 +143,10 @@
                 <!-- Right column -->
                 <StackPanel Grid.Column="2">
 
-                <!-- Component templates -->
+                <!-- YOLO component detection -->
                 <Border Style="{StaticResource SectionBorder}">
                     <StackPanel>
-                        <TextBlock Text="Thư viện mẫu linh kiện / mạch trắng" Style="{StaticResource SectionTitle}"/>
-
-                        <CheckBox Content="Train mạch trắng"
-                                  IsChecked="{Binding TrainWhiteCircuit, Mode=TwoWay}"
-                                  Margin="0,0,0,12"/>
+                        <TextBlock Text="Nhận diện linh kiện (YOLO)" Style="{StaticResource SectionTitle}"/>
 
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
@@ -164,37 +160,32 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Text="Thư mục mẫu linh kiện" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="0" Text="Đường dẫn model ONNX" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     IsEnabled="{Binding IsComponentRegionNamesVisible}"
-                                     Text="{Binding TemplateCustomFolder, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="1" Text="Thư mục mẫu mạch trắng" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     IsEnabled="{Binding TrainWhiteCircuit}"
-                                     Text="{Binding WhiteCircuitCustomFolder, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="2" Text="Ngưỡng giống (%)" Style="{StaticResource FieldLabel}"/>
+                                     Text="{Binding DetectionModelPath, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="1" Text="Kích thước đầu vào (W×H)" Style="{StaticResource FieldLabel}"/>
+                            <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
+                                <TextBox Width="80" Style="{StaticResource FieldTextBox}" Margin="0,0,8,0"
+                                         Text="{Binding DetectionInputWidth, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="×" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBox Width="80" Style="{StaticResource FieldTextBox}"
+                                         Text="{Binding DetectionInputHeight, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                            <TextBlock Grid.Row="2" Text="Ngưỡng tin cậy (conf)" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding MinMatchSimilarityPercent, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="3" Text="Thành phần xác định chiều"
-                                       Style="{StaticResource FieldLabel}"
-                                       ToolTip="Tên vùng dùng để xác định chiều mạch khi kiểm tra"/>
+                                     Text="{Binding DetectionConfThreshold, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="3" Text="Ngưỡng NMS (IoU)" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding OrientationComponentName, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="4" Text="Xác suất tối thiểu chiều"
-                                       Style="{StaticResource FieldLabel}"
-                                       ToolTip="Ngưỡng CCoeffNormed (0–1) khi so khớp chiều mạch"/>
-                            <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding MinOrientationMatchScore, UpdateSourceTrigger=PropertyChanged}"/>
+                                     Text="{Binding DetectionIouThreshold, UpdateSourceTrigger=PropertyChanged}"/>
                         </Grid>
 
-                        <StackPanel Visibility="{Binding IsComponentRegionNamesVisible, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Danh sách tên vùng được phép (AllowedRegionNames)"
+                        <TextBlock Text="Danh sách tên class (classNames)"
                                    FontWeight="SemiBold" FontSize="13" Margin="0,4,0,8"/>
                         <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11" Margin="0,0,0,8"
-                                   Text="Thứ tự trong bảng quyết định STT và số vùng bắt buộc khi tạo mẫu linh kiện."/>
+                                   Text="Thứ tự khớp file data.yaml khi train YOLO. Mỗi detection = một vị trí thiếu linh kiện."/>
 
-                        <DataGrid x:Name="AllowedRegionNamesGrid"
-                                  ItemsSource="{Binding AllowedRegionNames}"
+                        <DataGrid x:Name="ClassNamesGrid"
+                                  ItemsSource="{Binding ClassNames}"
                                   AutoGenerateColumns="False"
                                   CanUserAddRows="False"
                                   CanUserDeleteRows="False"
@@ -210,7 +201,7 @@
                                                     Binding="{Binding Index}"
                                                     Width="48"
                                                     IsReadOnly="True"/>
-                                <DataGridTextColumn Header="Tên vùng"
+                                <DataGridTextColumn Header="Tên class"
                                                     Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
                                                     Width="*"/>
                                 <DataGridTemplateColumn Header="" Width="Auto" MinWidth="44">
@@ -222,7 +213,7 @@
                                     </DataGridTemplateColumn.CellStyle>
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <controls:DeleteIconButton Click="BtnDeleteRegionName_Click"
+                                            <controls:DeleteIconButton Click="BtnDeleteClassName_Click"
                                                                        Tag="{Binding}"
                                                                        ToolTip="Xóa dòng"/>
                                         </DataTemplate>
@@ -232,9 +223,8 @@
                         </DataGrid>
 
                         <Button Content="Thêm dòng" Height="32" Width="110" HorizontalAlignment="Left"
-                                Click="BtnAddRegionName_Click"
+                                Click="BtnAddClassName_Click"
                                 Style="{StaticResource MaterialDesignOutlinedButton}"/>
-                        </StackPanel>
                     </StackPanel>
                 </Border>
 

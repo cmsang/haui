@@ -8,9 +8,8 @@ public interface IAppSettingService
     AppSetting Load();
     void Save(AppSetting setting);
 
-    ComponentTemplateSettings LoadComponentTemplates();
-    void SaveComponentTemplates(ComponentTemplateSettings settings);
-    double LoadMatchThresholdPercent();
+    ComponentDetectionSettings LoadComponentDetection();
+    void SaveComponentDetection(ComponentDetectionSettings settings);
 
     PcbBoardSettings LoadPcbBoard();
     void SavePcbBoard(PcbBoardSettings settings);

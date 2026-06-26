@@ -4,8 +4,8 @@ using System.Runtime.CompilerServices;
 
 namespace Haui.PCB.ViewModels;
 
-/// <summary>One row in the allowed region names editor (1-based index + name).</summary>
-public sealed class AllowedRegionNameItem : INotifyPropertyChanged
+/// <summary>One row in the YOLO class names editor.</summary>
+public sealed class ClassNameItem : INotifyPropertyChanged
 {
     private int _index;
     private string _name = string.Empty;
@@ -42,12 +42,11 @@ public sealed class SettingViewModel : INotifyPropertyChanged
     private double _jogStepDegrees = 10;
     private int _speedPercent = 50;
     private string _databaseConnection = string.Empty;
-    private string _templateCustomFolder = string.Empty;
-    private bool _trainWhiteCircuit;
-    private string _whiteCircuitCustomFolder = string.Empty;
-    private double _minMatchSimilarityPercent = ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
-    private string _orientationComponentName = string.Empty;
-    private double _minOrientationMatchScore = 0.55;
+    private string _detectionModelPath = ComponentDetectionSettings.DefaultModelPath;
+    private int _detectionInputWidth = ComponentDetectionSettings.DefaultInputWidth;
+    private int _detectionInputHeight = ComponentDetectionSettings.DefaultInputHeight;
+    private double _detectionConfThreshold = ComponentDetectionSettings.DefaultConfThreshold;
+    private double _detectionIouThreshold = ComponentDetectionSettings.DefaultIouThreshold;
     private double _holderQuadRectTolerancePercent = PcbBoardSettings.DefaultQuadRectTolerancePercent;
     private double _holderAspectRatioTolerancePercent = PcbBoardSettings.DefaultAspectRatioTolerancePercent;
     private double _holderQuadAngleToleranceDegrees = PcbBoardSettings.DefaultQuadAngleToleranceDegrees;
@@ -62,7 +61,7 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         Load();
     }
 
-    public ObservableCollection<AllowedRegionNameItem> AllowedRegionNames { get; } = [];
+    public ObservableCollection<ClassNameItem> ClassNames { get; } = [];
 
     public bool DeveloperMode
     {
@@ -128,48 +127,34 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         set { _databaseConnection = value; OnPropertyChanged(); }
     }
 
-    public string TemplateCustomFolder
+    public string DetectionModelPath
     {
-        get => _templateCustomFolder;
-        set { _templateCustomFolder = value; OnPropertyChanged(); }
+        get => _detectionModelPath;
+        set { _detectionModelPath = value; OnPropertyChanged(); }
     }
 
-    public bool TrainWhiteCircuit
+    public int DetectionInputWidth
     {
-        get => _trainWhiteCircuit;
-        set
-        {
-            if (_trainWhiteCircuit == value) return;
-            _trainWhiteCircuit = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(IsComponentRegionNamesVisible));
-        }
+        get => _detectionInputWidth;
+        set { _detectionInputWidth = value; OnPropertyChanged(); }
     }
 
-    public bool IsComponentRegionNamesVisible => !TrainWhiteCircuit;
-
-    public string WhiteCircuitCustomFolder
+    public int DetectionInputHeight
     {
-        get => _whiteCircuitCustomFolder;
-        set { _whiteCircuitCustomFolder = value; OnPropertyChanged(); }
+        get => _detectionInputHeight;
+        set { _detectionInputHeight = value; OnPropertyChanged(); }
     }
 
-    public double MinMatchSimilarityPercent
+    public double DetectionConfThreshold
     {
-        get => _minMatchSimilarityPercent;
-        set { _minMatchSimilarityPercent = value; OnPropertyChanged(); }
+        get => _detectionConfThreshold;
+        set { _detectionConfThreshold = value; OnPropertyChanged(); }
     }
 
-    public string OrientationComponentName
+    public double DetectionIouThreshold
     {
-        get => _orientationComponentName;
-        set { _orientationComponentName = value; OnPropertyChanged(); }
-    }
-
-    public double MinOrientationMatchScore
-    {
-        get => _minOrientationMatchScore;
-        set { _minOrientationMatchScore = value; OnPropertyChanged(); }
+        get => _detectionIouThreshold;
+        set { _detectionIouThreshold = value; OnPropertyChanged(); }
     }
 
     public double HolderQuadRectTolerancePercent
@@ -230,18 +215,18 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         SpeedPercent = setting.SpeedPercent;
         DatabaseConnection = setting.DatabaseConnection;
 
-        TemplateCustomFolder = setting.ComponentTemplates.CustomFolder;
-        TrainWhiteCircuit = setting.ComponentTemplates.TrainWhiteCircuit;
-        WhiteCircuitCustomFolder = setting.ComponentTemplates.WhiteCircuitCustomFolder;
-        MinMatchSimilarityPercent = setting.ComponentTemplates.MinMatchSimilarityPercent;
-        OrientationComponentName = setting.ComponentTemplates.OrientationComponentName;
-        MinOrientationMatchScore = setting.ComponentTemplates.MinOrientationMatchScore;
+        var detection = setting.ComponentDetection;
+        DetectionModelPath = detection.ModelPath;
+        DetectionInputWidth = detection.InputWidth;
+        DetectionInputHeight = detection.InputHeight;
+        DetectionConfThreshold = detection.ConfThreshold;
+        DetectionIouThreshold = detection.IouThreshold;
 
-        AllowedRegionNames.Clear();
-        var names = setting.ComponentTemplates.AllowedRegionNames;
+        ClassNames.Clear();
+        var names = detection.ClassNames;
         for (var i = 0; i < names.Count; i++)
         {
-            AllowedRegionNames.Add(new AllowedRegionNameItem
+            ClassNames.Add(new ClassNameItem
             {
                 Index = i + 1,
                 Name = names[i]
@@ -259,48 +244,35 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         SaveStatusText = string.Empty;
     }
 
-    /// <summary>Reload last saved values from disk, discarding unsaved edits.</summary>
     public void Reset()
     {
         Load();
         SaveStatusText = "Đã đặt lại cài đặt đã lưu gần nhất từ Config/setting.json.";
     }
 
-    public void AddRegionName()
+    public void AddClassName()
     {
-        AllowedRegionNames.Add(new AllowedRegionNameItem
+        ClassNames.Add(new ClassNameItem
         {
-            Index = AllowedRegionNames.Count + 1,
+            Index = ClassNames.Count + 1,
             Name = string.Empty
         });
     }
 
-    public void RemoveRegionName(AllowedRegionNameItem item)
+    public void RemoveClassName(ClassNameItem item)
     {
-        if (!AllowedRegionNames.Remove(item)) return;
-        ReindexRegionNames();
+        if (!ClassNames.Remove(item)) return;
+        ReindexClassNames();
     }
 
     public void Save()
     {
-        ReindexRegionNames();
+        ReindexClassNames();
 
-        var trimmedNames = AllowedRegionNames
+        var trimmedNames = ClassNames
             .Select(r => r.Name.Trim())
             .Where(n => !string.IsNullOrEmpty(n))
             .ToList();
-
-        var duplicateNames = trimmedNames
-            .GroupBy(n => n, StringComparer.Ordinal)
-            .Where(g => g.Count() > 1)
-            .Select(g => g.Key)
-            .ToList();
-
-        if (duplicateNames.Count > 0)
-        {
-            SaveStatusText = $"Không lưu được: tên vùng trùng lặp ({string.Join(", ", duplicateNames)}).";
-            return;
-        }
 
         var setting = _appSettingService.Load();
         setting.DeveloperMode = DeveloperMode;
@@ -313,13 +285,12 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         setting.SpeedPercent = Math.Clamp(SpeedPercent, 0, 100);
         setting.DatabaseConnection = DatabaseConnection.Trim();
 
-        setting.ComponentTemplates.CustomFolder = TemplateCustomFolder.Trim();
-        setting.ComponentTemplates.TrainWhiteCircuit = TrainWhiteCircuit;
-        setting.ComponentTemplates.WhiteCircuitCustomFolder = WhiteCircuitCustomFolder.Trim();
-        setting.ComponentTemplates.MinMatchSimilarityPercent = MinMatchSimilarityPercent;
-        setting.ComponentTemplates.OrientationComponentName = OrientationComponentName.Trim();
-        setting.ComponentTemplates.MinOrientationMatchScore = MinOrientationMatchScore;
-        setting.ComponentTemplates.AllowedRegionNames = trimmedNames;
+        setting.ComponentDetection.ModelPath = DetectionModelPath.Trim();
+        setting.ComponentDetection.InputWidth = Math.Max(1, DetectionInputWidth);
+        setting.ComponentDetection.InputHeight = Math.Max(1, DetectionInputHeight);
+        setting.ComponentDetection.ConfThreshold = DetectionConfThreshold;
+        setting.ComponentDetection.IouThreshold = DetectionIouThreshold;
+        setting.ComponentDetection.ClassNames = trimmedNames;
 
         setting.PcbBoard.WidthMm = Math.Max(0, PcbBoardWidthMm);
         setting.PcbBoard.HeightMm = Math.Max(0, PcbBoardHeightMm);
@@ -330,10 +301,8 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         setting.CameraCapture.SaveFolder = CameraCaptureSaveFolder.Trim();
 
         _appSettingService.Save(setting);
+        _appSettingService.SaveComponentDetection(setting.ComponentDetection);
 
-        MinMatchSimilarityPercent = setting.ComponentTemplates.MinMatchSimilarityPercent;
-        MinOrientationMatchScore = setting.ComponentTemplates.MinOrientationMatchScore;
-        OrientationComponentName = setting.ComponentTemplates.OrientationComponentName;
         SpeedPercent = setting.SpeedPercent;
         PcbBoardWidthMm = setting.PcbBoard.WidthMm;
         PcbBoardHeightMm = setting.PcbBoard.HeightMm;
@@ -341,27 +310,23 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         HolderAspectRatioTolerancePercent = setting.PcbBoard.AspectRatioTolerancePercent;
         HolderQuadAngleToleranceDegrees = setting.PcbBoard.QuadAngleToleranceDegrees;
 
-        AllowedRegionNames.Clear();
+        ClassNames.Clear();
         for (var i = 0; i < trimmedNames.Count; i++)
         {
-            AllowedRegionNames.Add(new AllowedRegionNameItem
+            ClassNames.Add(new ClassNameItem
             {
                 Index = i + 1,
                 Name = trimmedNames[i]
             });
         }
 
-        SaveStatusText = DeveloperMode
-            ? "Đã lưu vào Config/setting.json. Làm mới Dashboard để thấy nút tạo mẫu."
-            : TrainWhiteCircuit
-                ? "Đã lưu vào Config/setting.json. Chế độ train mạch trắng — làm mới Dashboard để cập nhật nút và kiểm tra."
-                : "Đã lưu vào Config/setting.json.";
+        SaveStatusText = "Đã lưu vào Config/setting.json.";
     }
 
-    private void ReindexRegionNames()
+    private void ReindexClassNames()
     {
-        for (var i = 0; i < AllowedRegionNames.Count; i++)
-            AllowedRegionNames[i].Index = i + 1;
+        for (var i = 0; i < ClassNames.Count; i++)
+            ClassNames[i].Index = i + 1;
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)
