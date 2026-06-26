@@ -1,0 +1,33 @@
+# Dataset path relative to this folder (resolved to absolute in train.py)
+data: "yolo_dataset/data.yaml"
+
+# Train multiple models in one run. Each produces its own run folder
+# named "{model_stem}_960x1280" and its own ONNX with a distinct name.
+models:
+  - "yolov8m.pt"
+  - "yolo26m.pt"
+
+epochs: 100
+imgsz: 1280
+rect: true
+patience: 20
+project: "runs/pcb"
+
+# Run/ONNX name template; {stem} = model filename without extension
+name_template: "{stem}_960x1280"
+
+# Defaults overridden by config.local.yaml from detect_hardware.py
+device: "cpu"
+batch: 1
+workers: 4
+amp: false
+cache: "disk"
+
+# Export ONNX (portrait 960 x 1280 → H x W = 1280 x 960)
+export_imgsz: [1280, 960]
+onnx_opset: 12
+onnx_simplify: true
+onnx_dynamic: false
+
+# Folder (under project) collecting renamed ONNX files for easy distinction
+onnx_output_subdir: "onnx"
