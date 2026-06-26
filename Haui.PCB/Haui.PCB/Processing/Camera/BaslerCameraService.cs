@@ -18,6 +18,7 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
     private readonly object _frameLock = new();
     private bool _disposed;
     private CameraParameters _pendingParameters = CameraDefaultsLoader.LoadRecommended();
+    private ImageDownscaleSettings _downscale = CameraDefaultsLoader.LoadDownscale();
     private string? _lastGrabError;
     private int _grabFailCount;
 
@@ -126,6 +127,8 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
     private void StartCore(CameraInfo camera, int width, int height)
     {
         Stop();
+
+        _downscale = CameraDefaultsLoader.LoadDownscale();
 
         var opened = OpenCamera(camera);
         _camera = opened;
@@ -488,15 +491,18 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
                 new Size(GrabGaussianBlurKernelSize, GrabGaussianBlurKernelSize),
                 0);
 
+            // Optionally downscale (preserving aspect ratio) before downstream processing.
+            using var processed = ApplyDownscale(blurred);
+
             _grabFailCount = 0;
 
             lock (_frameLock)
             {
                 _lastFrame?.Dispose();
-                _lastFrame = blurred.Clone();
+                _lastFrame = processed.Clone();
             }
 
-            FrameArrived?.Invoke(blurred);
+            FrameArrived?.Invoke(processed);
         }
         catch (Exception ex)
         {
@@ -508,6 +514,37 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
         {
             grabResult.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Scales <paramref name="source"/> down so it fits within the configured bounds
+    /// (<c>CameraDownscale</c>), keeping the aspect ratio. Returns a clone when the flag is
+    /// disabled or no downscaling is needed.
+    /// </summary>
+    private Mat ApplyDownscale(Mat source)
+    {
+        if (!_downscale.Enabled || source.Empty())
+            return source.Clone();
+
+        int maxWidth = _downscale.Width;
+        int maxHeight = _downscale.Height;
+        if (maxWidth <= 0 || maxHeight <= 0)
+            return source.Clone();
+
+        double scale = Math.Min(
+            (double)maxWidth / source.Width,
+            (double)maxHeight / source.Height);
+
+        // Only downscale; never upscale smaller frames.
+        if (scale >= 1.0)
+            return source.Clone();
+
+        int targetWidth = Math.Max(1, (int)Math.Round(source.Width * scale));
+        int targetHeight = Math.Max(1, (int)Math.Round(source.Height * scale));
+
+        var resized = new Mat();
+        Cv2.Resize(source, resized, new Size(targetWidth, targetHeight), 0, 0, InterpolationFlags.Area);
+        return resized;
     }
 
     private Mat ConvertGrabResultToMat(IGrabResult grabResult)

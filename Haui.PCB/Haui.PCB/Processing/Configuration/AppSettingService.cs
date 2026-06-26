@@ -108,6 +108,16 @@ public class AppSettingService : IAppSettingService
 
     public CameraCaptureSettings LoadCameraCapture() => Load().CameraCapture;
 
+    public ImageDownscaleSettings LoadCameraDownscale()
+    {
+        var settings = Load().CameraDownscale;
+        if (settings.Width <= 0)
+            settings.Width = ImageDownscaleSettings.DefaultWidth;
+        if (settings.Height <= 0)
+            settings.Height = ImageDownscaleSettings.DefaultHeight;
+        return settings;
+    }
+
     private static AppSetting CreateAndSaveDefault()
     {
         var setting = new AppSetting();

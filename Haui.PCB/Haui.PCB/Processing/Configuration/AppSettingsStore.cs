@@ -20,4 +20,6 @@ internal static class AppSettingsStore
     public static CameraParameters LoadCameraBasler() => Service.LoadCameraBasler();
 
     public static CameraCaptureSettings LoadCameraCapture() => Service.LoadCameraCapture();
+
+    public static ImageDownscaleSettings LoadCameraDownscale() => Service.LoadCameraDownscale();
 }

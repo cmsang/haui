@@ -30,6 +30,8 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Camera Mono8 pipeline (2026-06-21):** `BaslerCameraService` ép `Mono8` only → `Mat` `CV_8UC1`; Gaussian blur 5×5 ngay khi grab; segmentation bỏ bước Grayscale và **không blur lại** ảnh 1 kênh (gallery không có bước Gaussian Blur trùng); file màu vẫn BGR→gray + blur trong pipeline.
 
+**Configurable downscale on grab (2026-06-26):** `BaslerCameraService.OnImageGrabbed` — sau Gaussian blur (tiền xử lý), trước khi lưu `_lastFrame` / `FrameArrived`, gọi `ApplyDownscale`. Cấu hình qua section mới `CameraDownscale` trong `setting.json` (`ImageDownscaleSettings`: `enabled` mặc định **false**, `width` 1920, `height` 1080). Chỉ scale khi `enabled=true`; giữ tỉ lệ, chỉ thu nhỏ (`InterpolationFlags.Area`), không phóng to. Config nạp lại mỗi `StartCore`. Plumbing: `AppSetting.CameraDownscale` → `AppSettingService.LoadCameraDownscale` → `AppSettingsStore` → `CameraDefaultsLoader.LoadDownscale`; thêm vào `IAppSettingService`.
+
 **Edge AABB fiducial ROI (2026-06-20):** Sau Morphology Close, `PcbSegmentationService` tính ROI = `BoundingRect(FindNonZero)` trên pixel biên; `FiducialHoleDetectionService.Detect` chạy trên crop ROI; tọa độ lỗ cộng offset trước warp. `SegmentationPipelineResult.EdgeSearchRoi` + gallery Morphology Close vẽ khung cam.
 
 **Fiducial corner-first search (2026-06-20):** `FiducialSearchZones` — match theo vùng góc/cạnh từ ngoài vào trên ROI; early exit khi đủ quad hợp lệ; không fallback match toàn ROI.

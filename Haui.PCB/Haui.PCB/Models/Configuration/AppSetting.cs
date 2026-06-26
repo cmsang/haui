@@ -53,4 +53,7 @@ public class AppSetting
 
     [JsonPropertyName("CameraCapture")]
     public CameraCaptureSettings CameraCapture { get; set; } = new();
+
+    [JsonPropertyName("CameraDownscale")]
+    public ImageDownscaleSettings CameraDownscale { get; set; } = new();
 }
