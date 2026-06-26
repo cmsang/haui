@@ -1,6 +1,5 @@
 {
   "developerMode": true,
-  "virtualSerialPort": true,
   "showInspectionResultAfterRecognition": false,
   "com": "COM20",
   "warehouseCom": "COM22",

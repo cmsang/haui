@@ -34,7 +34,6 @@ public sealed class SettingViewModel : INotifyPropertyChanged
     private readonly IAppSettingService _appSettingService;
 
     private bool _developerMode;
-    private bool _virtualSerialPort;
     private bool _showInspectionResultAfterRecognition;
     private string _com = "COM3";
     private string _warehouseCom = string.Empty;
@@ -73,19 +72,8 @@ public sealed class SettingViewModel : INotifyPropertyChanged
             if (_developerMode == value) return;
             _developerMode = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(IsVirtualSerialVisible));
-            if (!value)
-                VirtualSerialPort = false;
         }
     }
-
-    public bool VirtualSerialPort
-    {
-        get => _virtualSerialPort;
-        set { _virtualSerialPort = value; OnPropertyChanged(); }
-    }
-
-    public bool IsVirtualSerialVisible => DeveloperMode;
 
     public bool ShowInspectionResultAfterRecognition
     {
@@ -233,7 +221,6 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         var setting = _appSettingService.Load();
 
         DeveloperMode = setting.DeveloperMode;
-        VirtualSerialPort = setting.VirtualSerialPort;
         ShowInspectionResultAfterRecognition = setting.ShowInspectionResultAfterRecognition;
         Com = setting.Com;
         WarehouseCom = setting.WarehouseCom;
@@ -317,7 +304,6 @@ public sealed class SettingViewModel : INotifyPropertyChanged
 
         var setting = _appSettingService.Load();
         setting.DeveloperMode = DeveloperMode;
-        setting.VirtualSerialPort = VirtualSerialPort;
         setting.ShowInspectionResultAfterRecognition = ShowInspectionResultAfterRecognition;
         setting.Com = Com.Trim();
         setting.WarehouseCom = WarehouseCom.Trim();
@@ -365,13 +351,11 @@ public sealed class SettingViewModel : INotifyPropertyChanged
             });
         }
 
-        SaveStatusText = DeveloperMode && VirtualSerialPort
-            ? "Đã lưu vào Config/setting.json. Serial ảo áp dụng ở lần kết nối tiếp theo."
-            : DeveloperMode
-                ? "Đã lưu vào Config/setting.json. Làm mới Dashboard để thấy nút tạo mẫu."
-                : TrainWhiteCircuit
-                    ? "Đã lưu vào Config/setting.json. Chế độ train mạch trắng — làm mới Dashboard để cập nhật nút và kiểm tra."
-                    : "Đã lưu vào Config/setting.json.";
+        SaveStatusText = DeveloperMode
+            ? "Đã lưu vào Config/setting.json. Làm mới Dashboard để thấy nút tạo mẫu."
+            : TrainWhiteCircuit
+                ? "Đã lưu vào Config/setting.json. Chế độ train mạch trắng — làm mới Dashboard để cập nhật nút và kiểm tra."
+                : "Đã lưu vào Config/setting.json.";
     }
 
     private void ReindexRegionNames()
