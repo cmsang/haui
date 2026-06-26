@@ -5,7 +5,7 @@ using Haui.PCB.Processing;
 namespace Haui.PCB.Processing.Configuration;
 
 /// <summary>
-/// Đọc / ghi <c>Config/setting.json</c> — robot, camera, thư viện mẫu, lỗ định vị.
+/// Đọc / ghi <c>Config/setting.json</c> — robot, camera, thư viện mẫu.
 /// </summary>
 public class AppSettingService : IAppSettingService
 {
@@ -13,7 +13,6 @@ public class AppSettingService : IAppSettingService
     private const string MigratedAppsettingsSuffix = ".migrated";
 
     private const string LegacyComponentFile = "component_template_settings.json";
-    private const string LegacyFiducialFile = "fiducial_settings.json";
     private const string LegacyCameraFile = "camera_basler_defaults.json";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -90,15 +89,6 @@ public class AppSettingService : IAppSettingService
     public double LoadMatchThresholdPercent()
         => NormalizeMatchThreshold(LoadComponentTemplates().MinMatchSimilarityPercent);
 
-    public FiducialHoleSettings LoadFiducialHoles() => Load().FiducialHoles;
-
-    public void SaveFiducialHoles(FiducialHoleSettings settings)
-    {
-        var app = Load();
-        app.FiducialHoles = settings;
-        Save(app);
-    }
-
     public PcbBoardSettings LoadPcbBoard() => Load().PcbBoard;
 
     public void SavePcbBoard(PcbBoardSettings settings)
@@ -133,19 +123,6 @@ public class AppSettingService : IAppSettingService
 
         setting.ComponentTemplates.MinMatchSimilarityPercent =
             NormalizeMatchThreshold(setting.ComponentTemplates.MinMatchSimilarityPercent);
-
-        setting.FiducialHoles.AspectRatioTolerance = Math.Clamp(
-            setting.FiducialHoles.AspectRatioTolerance,
-            0.01,
-            1.0);
-        setting.FiducialHoles.MaxQuadSearchCandidates = Math.Clamp(
-            setting.FiducialHoles.MaxQuadSearchCandidates,
-            4,
-            30);
-        setting.FiducialHoles.MinQuadRectangularity = Math.Clamp(
-            setting.FiducialHoles.MinQuadRectangularity,
-            0.1,
-            1.0);
 
         setting.WaitPointJoint234OffsetDegrees = Math.Clamp(
             setting.WaitPointJoint234OffsetDegrees,
@@ -224,12 +201,6 @@ public class AppSettingService : IAppSettingService
                     ?? new ComponentTemplateSettings());
 
             any |= TryImportLegacySection(
-                Path.Combine(searchDir, LegacyFiducialFile),
-                json => setting.FiducialHoles =
-                    JsonSerializer.Deserialize<FiducialHoleSettings>(json, JsonOptions)
-                    ?? new FiducialHoleSettings());
-
-            any |= TryImportLegacySection(
                 Path.Combine(searchDir, LegacyCameraFile),
                 json => setting.CameraBasler =
                     JsonSerializer.Deserialize<CameraParameters>(json, JsonOptions)
@@ -273,13 +244,6 @@ public class AppSettingService : IAppSettingService
             || !string.IsNullOrWhiteSpace(source.ComponentTemplates.CustomFolder))
         {
             target.ComponentTemplates = source.ComponentTemplates;
-        }
-
-        if (!string.IsNullOrWhiteSpace(source.FiducialHoles.TemplateFolder)
-            || source.FiducialHoles.MinMatchScore > 0
-            || source.FiducialHoles.MaxMatchDimension > 0)
-        {
-            target.FiducialHoles = source.FiducialHoles;
         }
 
         if (source.CameraBasler.Width > 0 && source.CameraBasler.Height > 0)

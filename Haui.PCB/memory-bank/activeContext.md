@@ -12,7 +12,7 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Shell Monitor panel (2026-06-14):** Load/Unload + AGV gauges extracted to `Views/Controls/MonitorView` — sticky above `MainContentHost`; state in `MonitorViewModel` owned by `MainWindow.Monitor`. Tabs receive via `LineMonitor` / `Initialize(..., lineMonitor)`.
 
-**Segmentation fiducial-only (2026-06-14):** Removed contour / MinAreaRect fallback from `PcbSegmentationService`; warp requires 4 matched fiducial holes. Debug pipeline drops Contour Detection and Bounding Quad steps.
+**Fiducial removal (2026-06-26):** Đã xóa toàn bộ logic nhận diện lỗ định vị (fiducial). Gỡ `Processing/Fiducial/*` (detection/template services, quad selector/ordering/geometry), `FiducialSearchZones`, models (`FiducialDetectionResult`, `FiducialTemplateEntry`, `FiducialTemplateRecognitionOutcome`, `FiducialHoleSettings`), UI (`FiducialTemplateWindow` + `FiducialTemplateViewModel`), và config plumbing (`AppSetting.FiducialHoles`, `IAppSettingService.Load/SaveFiducialHoles`, clamp + legacy `fiducial_settings.json` migration trong `AppSettingService`). Segmentation warp dùng `HolderContourDetectionService` (không liên quan fiducial). Đã xóa thư mục dữ liệu `fiducial_holes/` (243 file). `Config/setting.json` không còn section `FiducialHoles`. Các ghi chú fiducial cũ bên dưới đã lỗi thời.
 
 **Memory bank (2026-06-15):** Restored from `cmsang/pcb` + added **`memory-bank/baslerCamera.md`** (Haui.PCB implementation + official/community pylon samples).
 
