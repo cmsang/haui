@@ -13,7 +13,9 @@ public class CameraParameters
     public double Gamma { get; set; } = 1.0;
     public int Width { get; set; } = 1920;
     public int Height { get; set; } = 1200;
-    public string BalanceWhiteAuto { get; set; } = "Off";
+    public string PixelFormat { get; set; } = "Mono8";
+    public string GainAuto { get; set; } = "Continuous";
+    public string BalanceWhiteAuto { get; set; } = "Continuous";
 
     public CameraParameters Clone() => new()
     {
@@ -23,6 +25,8 @@ public class CameraParameters
         Gamma = Gamma,
         Width = Width,
         Height = Height,
+        PixelFormat = PixelFormat,
+        GainAuto = GainAuto,
         BalanceWhiteAuto = BalanceWhiteAuto
     };
 }

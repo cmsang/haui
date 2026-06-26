@@ -1,6 +1,7 @@
 {
   "developerMode": true,
   "virtualSerialPort": true,
+  "showInspectionResultAfterRecognition": false,
   "com": "COM20",
   "warehouseCom": "COM22",
   "baudRate": 115200,
@@ -31,19 +32,18 @@
       "L1",
       "C4"
     ],
-    "minMatchSimilarityPercent": 80
-  },
-  "FiducialHoles": {
-    "templateFolder": "../../../../fiducial_holes",
-    "minMatchScore": 0.55,
-    "maxMatchDimension": 1280,
-    "aspectRatioTolerance": 0.15,
-    "maxQuadSearchCandidates": 15,
-    "minQuadRectangularity": 0.75
+    "minMatchSimilarityPercent": 50,
+    "orientationComponentName": "KF3_LABEL",
+    "minOrientationMatchScore": 0.5,
+    "trainWhiteCircuit": true,
+    "whiteCircuitCustomFolder": "../../../../pcb_templates_empty"
   },
   "PcbBoard": {
-    "widthMm": 400,
-    "heightMm": 550,
+    "widthMm": 460,
+    "heightMm": 590,
+    "quadRectTolerancePercent": 5,
+    "aspectRatioTolerancePercent": 5,
+    "quadAngleToleranceDegrees": 5,
     "hasAspectConstraint": true
   },
   "CameraBasler": {
@@ -53,7 +53,9 @@
     "gamma": 1,
     "width": 2304,
     "height": 1536,
-    "balanceWhiteAuto": "Once"
+    "pixelFormat": "Mono8",
+    "gainAuto": "Continuous",
+    "balanceWhiteAuto": "Continuous"
   },
   "CameraCapture": {
     "saveFolder": "../../../../captures"

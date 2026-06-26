@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using Haui.PCB.Processing.Templates;
 using Haui.PCB.ViewModels;
 using Haui.PCB.Views.Windows;
 
@@ -29,6 +30,7 @@ public partial class DashboardTabView : UserControl
     private readonly Func<bool, Task>? _onInspectionCompleted;
     private readonly IAppSettingService _appSettingService = new AppSettingService();
     private bool _developerMode;
+    private bool _showInspectionResultAfterRecognition;
     private bool _isSelectingRegion;
     private bool _isDragging;
     private Point _dragStart;
@@ -46,7 +48,8 @@ public partial class DashboardTabView : UserControl
         var comparisonService = new RegionComparisonService();
         _inspectionViewModel = new TestPipelineViewModel(
             new PcbSegmentationService(),
-            new CompositeTemplateMatchService(libraryService, comparisonService));
+            new ModeAwareTemplateMatchService(libraryService, comparisonService),
+            new BoardOrientationDetectionService(libraryService));
 
         DataContext = _viewModel;
         InitializeComponent();
@@ -84,18 +87,6 @@ public partial class DashboardTabView : UserControl
                     frame.Dispose();
                 }
                 templateWindow.ShowDialog();
-            });
-        };
-
-        _viewModel.FiducialTemplateFrameCaptured += frame =>
-        {
-            Dispatcher.InvokeAsync(() =>
-            {
-                var fiducialWindow = new FiducialTemplateWindow { Owner = _owner };
-                fiducialWindow.Closed += (_, _) => _viewModel.RefreshFiducialTemplateStatus();
-                fiducialWindow.LoadFrame(frame);
-                frame.Dispose();
-                fiducialWindow.ShowDialog();
             });
         };
     }
@@ -150,9 +141,24 @@ public partial class DashboardTabView : UserControl
 
         _inspectionViewModel.InspectionCompleted += isPass =>
         {
-            if (_onInspectionCompleted is null) return;
-            _ = RunInspectionCompletedHandlerAsync(isPass);
+            Dispatcher.InvokeAsync(async () =>
+            {
+                if (_showInspectionResultAfterRecognition)
+                    ShowInspectionResultWindow();
+
+                if (_onInspectionCompleted is not null)
+                    await RunInspectionCompletedHandlerAsync(isPass);
+            });
         };
+    }
+
+    private void ShowInspectionResultWindow()
+    {
+        var window = new InspectionResultWindow(_inspectionViewModel)
+        {
+            Owner = _owner
+        };
+        window.ShowDialog();
     }
 
     private async Task RunInspectionCompletedHandlerAsync(bool isPass)
@@ -228,19 +234,23 @@ public partial class DashboardTabView : UserControl
 
     public void ApplyDeveloperModeUi()
     {
-        _developerMode = _appSettingService.Load().DeveloperMode;
+        var setting = _appSettingService.Load();
+        _developerMode = setting.DeveloperMode;
+        _showInspectionResultAfterRecognition = setting.ShowInspectionResultAfterRecognition;
         var visibility = _developerMode ? Visibility.Visible : Visibility.Collapsed;
         BtnCreateTemplate.Visibility = visibility;
-        BtnCreateFiducialTemplates.Visibility = visibility;
-        BtnSelectFiducialImage.Visibility = visibility;
         BtnSelectImage.Visibility = visibility;
 
         if (!_developerMode)
         {
             BtnCreateTemplate.IsEnabled = false;
-            BtnCreateFiducialTemplates.IsEnabled = false;
         }
+
+        ApplyInspectionModeUi();
     }
+
+    private void ApplyInspectionModeUi()
+        => _inspectionViewModel.RefreshInspectionModeFromConfig();
 
     private async void UserControl_Loaded(object sender, RoutedEventArgs e)
     {
@@ -336,7 +346,6 @@ public partial class DashboardTabView : UserControl
             if (_developerMode)
             {
                 BtnCreateTemplate.IsEnabled = true;
-                BtnCreateFiducialTemplates.IsEnabled = true;
             }
             BtnCapture.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
@@ -359,7 +368,6 @@ public partial class DashboardTabView : UserControl
         BtnTest.IsEnabled = false;
         BtnSelectRegion.IsEnabled = false;
         BtnCreateTemplate.IsEnabled = false;
-        BtnCreateFiducialTemplates.IsEnabled = false;
         BtnCapture.IsEnabled = false;
         ExitSelectMode();
         CameraImage.Source = null;
@@ -424,41 +432,6 @@ public partial class DashboardTabView : UserControl
         finally
         {
             BtnCreateTemplate.IsEnabled = _viewModel.IsRunning;
-        }
-    }
-
-    private async void BtnCreateFiducialTemplates_Click(object sender, RoutedEventArgs e)
-    {
-        BtnCreateFiducialTemplates.IsEnabled = false;
-        try
-        {
-            await _viewModel.CaptureFiducialTemplateFrameAsync();
-        }
-        finally
-        {
-            BtnCreateFiducialTemplates.IsEnabled = _viewModel.IsRunning;
-        }
-    }
-
-    private async void BtnSelectFiducialImage_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "Chọn ảnh để tạo mẫu lỗ định vị",
-            Filter = "Ảnh (*.png;*.jpg;*.jpeg;*.bmp;*.tif)|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff"
-        };
-
-        if (dialog.ShowDialog() != true)
-            return;
-
-        BtnSelectFiducialImage.IsEnabled = false;
-        try
-        {
-            await _viewModel.LoadFiducialTemplateFromFileAsync(dialog.FileName);
-        }
-        finally
-        {
-            BtnSelectFiducialImage.IsEnabled = true;
         }
     }
 

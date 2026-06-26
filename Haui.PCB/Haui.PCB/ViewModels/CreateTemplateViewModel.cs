@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Haui.PCB.Processing.Configuration;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
 
@@ -50,6 +51,20 @@ public class TemplateRegionItem : INotifyPropertyChanged
     public double RelWidth { get; set; }
     public double RelHeight { get; set; }
 
+    private bool _isOrientationMarker;
+
+    /// <summary>Marks this region as the board-orientation reference (only one allowed per template).</summary>
+    public bool IsOrientationMarker
+    {
+        get => _isOrientationMarker;
+        set
+        {
+            if (_isOrientationMarker == value) return;
+            _isOrientationMarker = value;
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>Màu hiển thị của vùng này trên canvas và trong grid.</summary>
     public Color RegionColor { get; set; } = Colors.LimeGreen;
 
@@ -73,7 +88,8 @@ public class TemplateRegionItem : INotifyPropertyChanged
         RelX = RelX,
         RelY = RelY,
         RelWidth = RelWidth,
-        RelHeight = RelHeight
+        RelHeight = RelHeight,
+        IsOrientationMarker = IsOrientationMarker
     };
 
     public static TemplateRegionItem FromModel(TemplateRegion m, Color color) => new()
@@ -83,6 +99,7 @@ public class TemplateRegionItem : INotifyPropertyChanged
         RelY = m.RelY,
         RelWidth = m.RelWidth,
         RelHeight = m.RelHeight,
+        IsOrientationMarker = m.IsOrientationMarker,
         RegionColor = color
     };
 }
@@ -102,7 +119,15 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     private readonly IReadOnlyList<string> _allowedRegionNamesOrdered;
     private readonly string _allowedNamesHint;
     private bool _disposed;
+    private bool _isWhiteCircuitMode;
+    private string _libraryFolderPath = string.Empty;
+    private string _modeDisplayText = "Linh kiện";
     private TemplateEntry? _editingEntry;
+    private string _orientationComponentName = string.Empty;
+    private TemplateRegionItem? _orientationRegion;
+    private bool _isSettingOrientationPosition;
+
+    internal static readonly Color OrientationRegionColor = Color.FromRgb(0, 200, 255);
 
     // ──── Events ──────────────────────────────────────────────────────────────
 
@@ -117,6 +142,75 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
 
     /// <summary>Danh sách tên vùng được phép — bind ComboBox chọn tên.</summary>
     public IReadOnlyList<string> AllowedRegionNames => _allowedRegionNamesOrdered;
+
+    public bool IsWhiteCircuitMode
+    {
+        get => _isWhiteCircuitMode;
+        private set
+        {
+            if (_isWhiteCircuitMode == value) return;
+            _isWhiteCircuitMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ModeBannerText));
+        }
+    }
+
+    public string ModeDisplayText
+    {
+        get => _modeDisplayText;
+        private set { _modeDisplayText = value; OnPropertyChanged(); }
+    }
+
+    public string LibraryFolderPath
+    {
+        get => _libraryFolderPath;
+        private set { _libraryFolderPath = value; OnPropertyChanged(); }
+    }
+
+    public string ModeBannerText =>
+        $"Chế độ train: {ModeDisplayText} — Thư viện: {LibraryFolderPath}";
+
+    /// <summary>Configured orientation component name — checkbox enabled when region name matches.</summary>
+    public string OrientationComponentName
+    {
+        get => _orientationComponentName;
+        private set { _orientationComponentName = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanSetOrientationPosition)); OnPropertyChanged(nameof(OrientationPositionHint)); }
+    }
+
+    /// <summary>When true, dragging on the board sets the orientation marker region.</summary>
+    public bool IsSettingOrientationPosition
+    {
+        get => _isSettingOrientationPosition;
+        set
+        {
+            if (_isSettingOrientationPosition == value) return;
+            _isSettingOrientationPosition = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(OrientationPositionHint));
+        }
+    }
+
+    public bool CanSetOrientationPosition =>
+        !string.IsNullOrEmpty(OrientationComponentName);
+
+    public bool HasOrientationRegion => _orientationRegion is not null;
+
+    public TemplateRegionItem? OrientationRegion => _orientationRegion;
+
+    public string OrientationPositionHint
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(OrientationComponentName))
+                return "Cấu hình tên thành phần xác định chiều trong tab Cài đặt.";
+
+            var placed = HasOrientationRegion ? "Đã đặt vị trí" : "Chưa đặt vị trí";
+            var mode = IsSettingOrientationPosition
+                ? " — kéo trên ảnh để đặt vùng"
+                : string.Empty;
+            return $"{OrientationComponentName}: {placed}{mode}";
+        }
+    }
 
     public string StatusText
     {
@@ -250,6 +344,25 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         _allowedNamesHint = ComponentTemplateRegionNames.FormatAllowedNamesHint(_allowedRegionNames);
 
         Regions.CollectionChanged += OnRegionsCollectionChanged;
+        RefreshModeFromConfig();
+    }
+
+    public void RefreshModeFromConfig()
+    {
+        var settings = AppSettingsStore.LoadComponentTemplates();
+        IsWhiteCircuitMode = TemplateLibraryPaths.IsWhiteCircuitMode(settings);
+        ModeDisplayText = IsWhiteCircuitMode ? "Mạch trắng" : "Linh kiện";
+        LibraryFolderPath = _libraryService.GetLibraryFolder();
+        OrientationComponentName = settings.OrientationComponentName.Trim();
+        OnPropertyChanged(nameof(ModeBannerText));
+        RefreshAllRegionNameValidation();
+    }
+
+    private void NotifyOrientationRegionChanged()
+    {
+        OnPropertyChanged(nameof(OrientationRegion));
+        OnPropertyChanged(nameof(HasOrientationRegion));
+        OnPropertyChanged(nameof(OrientationPositionHint));
     }
 
     private void OnRegionsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -333,14 +446,24 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         BoardImageReady?.Invoke(bitmap);
 
         Regions.Clear();
+        _orientationRegion = null;
         int idx = 0;
         foreach (var r in editingEntry.Regions)
         {
+            if (r.IsOrientationMarker)
+            {
+                _orientationRegion = TemplateRegionItem.FromModel(r, OrientationRegionColor);
+                _orientationRegion.IsOrientationMarker = true;
+                continue;
+            }
+
             var item = TemplateRegionItem.FromModel(r, RegionPalette[idx % RegionPalette.Length]);
             item.Stt = idx + 1;
             Regions.Add(item);
             idx++;
         }
+
+        NotifyOrientationRegionChanged();
 
         StatusText = CanSave
             ? $"Chế độ chỉnh sửa — {Regions.Count} vùng, có thể lưu."
@@ -353,7 +476,15 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     /// Trả về danh sách vùng hiện tại dưới dạng model (dùng khi cập nhật mẫu từ bên ngoài).
     /// </summary>
     public List<TemplateRegion> GetCurrentRegions()
-        => Regions.Select(r => r.ToModel()).ToList();
+        => BuildAllRegionModels();
+
+    private List<TemplateRegion> BuildAllRegionModels()
+    {
+        var models = Regions.Select(r => r.ToModel()).ToList();
+        if (_orientationRegion is not null)
+            models.Add(_orientationRegion.ToModel());
+        return models;
+    }
 
     /// <summary>Nạp ảnh chụp từ camera, cắt bo mạch, tải vùng đã lưu.</summary>
     public async Task LoadFrameAsync(Mat sourceFrame)
@@ -373,6 +504,8 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         BoardImageReady?.Invoke(bitmap);
 
         Regions.Clear();
+        _orientationRegion = null;
+        NotifyOrientationRegionChanged();
 
         StatusText =
             "Kéo thả trên ảnh để đánh dấu vùng linh kiện. Chọn tên vùng từ danh sách cấu hình.";
@@ -396,6 +529,14 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             region.RelX = 1.0 - region.RelX - region.RelWidth;
             region.RelY = 1.0 - region.RelY - region.RelHeight;
         }
+
+        if (_orientationRegion is not null)
+        {
+            _orientationRegion.RelX = 1.0 - _orientationRegion.RelX - _orientationRegion.RelWidth;
+            _orientationRegion.RelY = 1.0 - _orientationRegion.RelY - _orientationRegion.RelHeight;
+        }
+
+        NotifyOrientationRegionChanged();
 
         var bitmap = BitmapSourceConverter.ToBitmapSource(_boardImage);
         bitmap.Freeze();
@@ -426,6 +567,34 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         StatusText = RegionValidationStatusSuffix($"Đã thêm vùng {nameLabel}.");
     }
 
+    /// <summary>Creates or updates the orientation marker region from a canvas drag.</summary>
+    public void AddOrUpdateOrientationRegion(double relX, double relY, double relW, double relH)
+    {
+        if (string.IsNullOrEmpty(OrientationComponentName))
+            return;
+
+        if (_orientationRegion is null)
+        {
+            _orientationRegion = new TemplateRegionItem
+            {
+                Name = OrientationComponentName,
+                IsOrientationMarker = true,
+                RegionColor = OrientationRegionColor
+            };
+        }
+
+        _orientationRegion.RelX = relX;
+        _orientationRegion.RelY = relY;
+        _orientationRegion.RelWidth = relW;
+        _orientationRegion.RelHeight = relH;
+        _orientationRegion.Name = OrientationComponentName;
+        _orientationRegion.IsOrientationMarker = true;
+
+        NotifyOrientationRegionChanged();
+        StatusText = RegionValidationStatusSuffix(
+            $"Đã đặt vị trí thành phần xác định chiều \"{OrientationComponentName}\".");
+    }
+
     /// <summary>Xóa vùng được chọn.</summary>
     public void RemoveRegion(TemplateRegionItem item)
     {
@@ -454,7 +623,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             return false;
         }
 
-        if (!TryValidateRegionNames(Regions.Select(r => r.Name), out errorMessage))
+        if (!TryValidateForSave(out errorMessage))
             return false;
 
         SaveRegionsCore();
@@ -467,7 +636,7 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
         if (_boardImage is null)
             return;
 
-        var regionModels = Regions.Select(r => r.ToModel()).ToList();
+        var regionModels = BuildAllRegionModels();
 
         // Editing existing template: overwrite its board image + regions JSON.
         if (_editingEntry is not null)
@@ -521,16 +690,40 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Kiểm tra tên vùng theo cấu hình (dùng khi sửa từ thư viện).</summary>
     public bool ValidateRegions(IReadOnlyCollection<TemplateRegion> regions, out string? errorMessage)
     {
-        if (regions.Count == 0)
+        var componentRegions = regions.Where(r => !r.IsOrientationMarker).ToList();
+        var orientationRegions = regions.Where(r => r.IsOrientationMarker).ToList();
+
+        if (componentRegions.Count == 0)
         {
             errorMessage = "Cần ít nhất một vùng linh kiện trên ảnh mẫu.";
             return false;
         }
 
-        return TryValidateRegionNames(regions.Select(r => r.Name), out errorMessage);
+        if (!TryValidateComponentRegionNames(
+                componentRegions.Select(r => r.Name), out errorMessage))
+            return false;
+
+        if (!TryValidateOrientationRegions(orientationRegions, out errorMessage))
+            return false;
+
+        return true;
     }
 
-    private bool TryValidateRegionNames(
+    private bool TryValidateForSave(out string? errorMessage)
+    {
+        if (!TryValidateComponentRegionNames(Regions.Select(r => r.Name), out errorMessage))
+            return false;
+
+        if (!TryValidateOrientationRegions(
+                _orientationRegion is null ? [] : [_orientationRegion.ToModel()],
+                out errorMessage))
+            return false;
+
+        errorMessage = null;
+        return true;
+    }
+
+    private bool TryValidateComponentRegionNames(
         IEnumerable<string> regionNames,
         out string? errorMessage)
     {
@@ -548,6 +741,50 @@ public class CreateTemplateViewModel : INotifyPropertyChanged, IDisposable
             errorMessage =
                 $"Tên vùng trùng lặp: {string.Join(", ", duplicates)}. " +
                 "Mỗi tên chỉ được dùng một lần.";
+            return false;
+        }
+
+        var orientationName = OrientationComponentName;
+        if (!string.IsNullOrEmpty(orientationName)
+            && Regions.Any(r => string.Equals(r.Name.Trim(), orientationName, StringComparison.Ordinal)))
+        {
+            errorMessage =
+                $"Tên \"{orientationName}\" đã dùng cho vị trí xác định chiều — " +
+                "không thêm vùng linh kiện trùng tên.";
+            return false;
+        }
+
+        errorMessage = null;
+        return true;
+    }
+
+    private bool TryValidateOrientationRegions(
+        IReadOnlyList<TemplateRegion> orientationRegions,
+        out string? errorMessage)
+    {
+        if (orientationRegions.Count > 1)
+        {
+            errorMessage = "Chỉ được đánh dấu một vùng xác định chiều mạch.";
+            return false;
+        }
+
+        var orientationName = OrientationComponentName;
+        if (string.IsNullOrEmpty(orientationName))
+        {
+            errorMessage = null;
+            return true;
+        }
+
+        if (orientationRegions.Count == 0)
+        {
+            errorMessage = null;
+            return true;
+        }
+
+        if (!string.Equals(orientationRegions[0].Name.Trim(), orientationName, StringComparison.Ordinal))
+        {
+            errorMessage =
+                $"Vùng xác định chiều phải có tên \"{orientationName}\" theo cấu hình.";
             return false;
         }
 

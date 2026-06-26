@@ -1,7 +1,7 @@
-﻿namespace Haui.PCB.Models.Configuration;
+namespace Haui.PCB.Models.Configuration;
 
 /// <summary>
-/// Cấu hình mẫu lỗ định vị — section <c>FiducialHoles</c> trong <c>setting.json</c>.
+/// Fiducial hole template settings — <c>FiducialHoles</c> section in <c>setting.json</c>.
 /// </summary>
 public sealed class FiducialHoleSettings
 {
@@ -12,11 +12,11 @@ public sealed class FiducialHoleSettings
     public const int DefaultMaxQuadSearchCandidates = 15;
     public const double DefaultMinQuadRectangularity = 0.75;
 
-    /// <summary>Thư mục lưu <c>hole_*.png</c> — chỉnh trong <c>setting.json</c> → FiducialHoles.</summary>
+    /// <summary>Folder for <c>hole_*.png</c> templates — <c>setting.json</c> → FiducialHoles.</summary>
     public string TemplateFolder { get; set; } = DefaultTemplateFolder;
     public double MinMatchScore { get; set; } = DefaultMinMatchScore;
 
-    /// <summary>Cạnh dài nhất của ảnh dùng cho template matching (px); ảnh lớn hơn sẽ downscale.</summary>
+    /// <summary>Longest edge used for template matching (px); larger images are downscaled.</summary>
     public int MaxMatchDimension { get; set; } = DefaultMaxMatchDimension;
 
     /// <summary>Max relative aspect-ratio error when <see cref="PcbBoardSettings"/> dimensions are set.</summary>

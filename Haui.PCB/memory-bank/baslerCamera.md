@@ -39,9 +39,9 @@ _camera = new PylonCamera(serialNumber);
 _camera.Open();
 Basler.Pylon.Configuration.AcquireContinuous(_camera, null);
 ConfigureStream();          // GigE buffers
-TryConfigurePixelFormat();  // Bayer* → BGR8 → Mono8
+TryConfigurePixelFormat();  // setting.json pixelFormat, then fallback chain
 ConfigureRoi(width, height);
-ApplyExposureParameters(_pendingParameters);
+ApplyExposureParameters(_pendingParameters);  // gainAuto + balanceWhiteAuto from setting.json
 _camera.StreamGrabber.ImageGrabbed += OnImageGrabbed;
 _camera.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
 ```
@@ -57,9 +57,22 @@ _camera.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStream
 
 ### Pixel format priority (Haui.PCB)
 
-`BayerRG8` → `BayerBG8` → `BayerGR8` → `BayerGB8` → `BGR8` → `RGB8` → `Mono8`
+Configured `pixelFormat` in `setting.json` is tried first; if unavailable, fallback:
+
+`Mono8` → `BGR8` → `BayerRG8` → `BayerBG8` → `BayerGR8` → `BayerGB8` → `RGB8`
 
 Convert to OpenCV: `PixelDataConverter` with `OutputPixelFormat = PixelType.BGR8packed` → `Mat` CV_8UC3.
+
+### Auto parameters on connect (Haui.PCB)
+
+From `setting.json` → `CameraBasler` on every connect / `ApplyParameters`:
+
+| JSON key | GenICam | Default |
+|----------|---------|---------|
+| `gainAuto` | `GainAuto` | `Continuous` |
+| `balanceWhiteAuto` | `BalanceWhiteAuto` | `Continuous` (no-op if camera has no color balance) |
+
+Manual `Gain` is **not** written while `gainAuto` ≠ `Off`. Exposure and gamma still come from `setting.json` / UI.
 
 ### Grab strategy (Haui.PCB)
 
@@ -74,11 +87,13 @@ Convert to OpenCV: `PixelDataConverter` with `OutputPixelFormat = PixelType.BGR8
   "gamma": 1,
   "width": 2304,
   "height": 1536,
-  "balanceWhiteAuto": "Once"
+  "pixelFormat": "Mono8",
+  "gainAuto": "Continuous",
+  "balanceWhiteAuto": "Continuous"
 }
 ```
 
-GenICam mapping: `ExposureTime`, `Gain`, `Gamma`, `Width`/`Height`/`OffsetX`/`OffsetY`, `BalanceWhiteAuto` (`Off` | `Once` | `Continuous`).
+GenICam mapping: `PixelFormat`, `ExposureTime`, `Gain` (manual only when `gainAuto=Off`), `GainAuto`, `Gamma`, `Width`/`Height`/`OffsetX`/`OffsetY`, `BalanceWhiteAuto` (`Off` | `Once` | `Continuous`).
 
 ---
 

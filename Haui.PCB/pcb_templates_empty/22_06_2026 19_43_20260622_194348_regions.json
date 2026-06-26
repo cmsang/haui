@@ -1,0 +1,29 @@
+{
+  "Name": "22/06/2026 19:43",
+  "Regions": [
+    {
+      "Name": "R2",
+      "RelX": 0.7192927465530071,
+      "RelY": 0.5073819241125711,
+      "RelWidth": 0.019691593568025127,
+      "RelHeight": 0.031959561970325366,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "R1",
+      "RelX": 0.7694168029079802,
+      "RelY": 0.5117901395567539,
+      "RelWidth": 0.021481738437845593,
+      "RelHeight": 0.026449292665096852,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "KF3_LABEL",
+      "RelX": 0.4319744949468223,
+      "RelY": 0.6286078488275983,
+      "RelWidth": 0.08592695375138237,
+      "RelHeight": 0.0495924237470566,
+      "IsOrientationMarker": true
+    }
+  ]
+}

@@ -19,22 +19,21 @@ public static class PipelineStepMapper
         steps.Add(MakeStep(
             "Ảnh gốc",
             original,
-            "Ảnh đầu vào từ camera / vùng đã chọn",
+            source.Channels() == 1
+                ? "Ảnh Mono8 từ camera (đã làm mờ 5×5 khi grab)"
+                : "Ảnh đầu vào từ camera / vùng đã chọn",
             cloneSw.Elapsed));
 
         var timings = pipeline.StepTimings;
 
-        steps.Add(MakeStep(
-            "Grayscale",
-            pipeline.Gray.Clone(),
-            "Chuyển ảnh màu sang ảnh xám (BGR → GRAY)",
-            GetTiming(timings, SegmentationPipelineSteps.Grayscale)));
-
-        steps.Add(MakeStep(
-            "Gaussian Blur",
-            pipeline.Blurred.Clone(),
-            "Làm mờ để giảm nhiễu (kernel 5×5)",
-            GetTiming(timings, SegmentationPipelineSteps.GaussianBlur)));
+        if (source.Channels() != 1)
+        {
+            steps.Add(MakeStep(
+                "Gaussian Blur",
+                pipeline.Blurred.Clone(),
+                "Làm mờ để giảm nhiễu (kernel 5×5)",
+                GetTiming(timings, SegmentationPipelineSteps.GaussianBlur)));
+        }
 
         steps.Add(MakeStep(
             "Canny Edges",
@@ -44,47 +43,43 @@ public static class PipelineStepMapper
 
         steps.Add(MakeStep(
             "Morphology Close",
-            pipeline.Closed.Clone(),
-            "Đóng kín khoảng hở trên biên (Close, 3 lần lặp)",
+            BuildMorphologyCloseVisualization(pipeline),
+            BuildMorphologyCloseDescription(pipeline),
             GetTiming(timings, SegmentationPipelineSteps.MorphologyClose)));
 
-        if (!string.IsNullOrWhiteSpace(pipeline.FiducialDescription))
+        if (!string.IsNullOrWhiteSpace(pipeline.ContourDescription))
         {
-            const int maxFiducialDisplayDim = 1920;
-            Mat fiducialVis;
-            Point2f[] drawCenters;
-            double[]? drawScores = pipeline.FiducialMatchScores;
+            const int maxDisplayDim = 1920;
+            Mat holderVis;
+            Point2f[]? drawCorners = pipeline.WarpQuadCorners;
 
-            if (pipeline.FiducialCenters is { Length: > 0 } centers)
+            int maxDim = Math.Max(source.Width, source.Height);
+            if (maxDim > maxDisplayDim)
             {
-                int maxDim = Math.Max(source.Width, source.Height);
-                if (maxDim > maxFiducialDisplayDim)
+                double displayScale = maxDisplayDim / (double)maxDim;
+                using var bgrSource = EnsureBgr(source);
+                holderVis = new Mat();
+                Cv2.Resize(bgrSource, holderVis, new Size(), displayScale, displayScale, InterpolationFlags.Area);
+                if (drawCorners is { Length: 4 } scaledCorners)
                 {
-                    double displayScale = maxFiducialDisplayDim / (double)maxDim;
-                    fiducialVis = new Mat();
-                    Cv2.Resize(source, fiducialVis, new Size(), displayScale, displayScale, InterpolationFlags.Area);
-                    drawCenters = centers
+                    drawCorners = scaledCorners
                         .Select(c => new Point2f((float)(c.X * displayScale), (float)(c.Y * displayScale)))
                         .ToArray();
                 }
-                else
-                {
-                    fiducialVis = source.Clone();
-                    drawCenters = centers;
-                }
-
-                DrawFiducialHoles(fiducialVis, drawCenters, drawScores);
             }
             else
             {
-                fiducialVis = source.Clone();
+                holderVis = EnsureBgr(source);
             }
 
+            if (drawCorners is { Length: 4 } corners)
+                DrawHolderQuad(holderVis, corners, success: pipeline.Warped is not null);
+
             steps.Add(MakeStep(
-                "Lỗ định vị",
-                fiducialVis,
-                pipeline.FiducialDescription,
-                GetTiming(timings, SegmentationPipelineSteps.Fiducial)));
+                "Khung hộp đỡ",
+                holderVis,
+                pipeline.ContourDescription,
+                GetTiming(timings, SegmentationPipelineSteps.HolderContour)));
         }
 
         if (pipeline.Warped is not null)
@@ -107,6 +102,43 @@ public static class PipelineStepMapper
         return steps;
     }
 
+    private static Mat EnsureBgr(Mat source)
+    {
+        if (source.Channels() != 1)
+            return source.Clone();
+
+        var bgr = new Mat();
+        Cv2.CvtColor(source, bgr, ColorConversionCodes.GRAY2BGR);
+        return bgr;
+    }
+
+    private static Mat BuildMorphologyCloseVisualization(SegmentationPipelineResult pipeline)
+    {
+        using var closed = pipeline.Closed.Clone();
+        var vis = new Mat();
+        if (closed.Channels() == 1)
+            Cv2.CvtColor(closed, vis, ColorConversionCodes.GRAY2BGR);
+        else
+            closed.CopyTo(vis);
+
+        if (pipeline.EdgeSearchRoi is { } roi)
+        {
+            int thickness = Math.Clamp(Math.Min(vis.Width, vis.Height) / 180, 2, 6);
+            Cv2.Rectangle(vis, roi, new Scalar(0, 165, 255), thickness);
+        }
+
+        return vis;
+    }
+
+    private static string BuildMorphologyCloseDescription(SegmentationPipelineResult pipeline)
+    {
+        const string baseText = "Đóng kín khoảng hở trên biên (Close, 3 lần lặp)";
+        if (pipeline.EdgeSearchRoi is not { } roi)
+            return baseText;
+
+        return $"{baseText}. ROI biên: {roi.Width}×{roi.Height} px tại ({roi.X},{roi.Y})";
+    }
+
     private static TimeSpan GetTiming(IReadOnlyDictionary<string, TimeSpan> timings, string key)
         => timings.TryGetValue(key, out var elapsed) ? elapsed : TimeSpan.Zero;
 
@@ -118,9 +150,8 @@ public static class PipelineStepMapper
         return PipelineStep.WithTiming(name, bitmap, description, elapsed);
     }
 
-    private static void DrawQuad(Mat img, Point2f[] pts, Scalar color)
+    private static void DrawQuad(Mat img, Point2f[] pts, Scalar color, int thickness)
     {
-        int thickness = Math.Clamp(Math.Min(img.Width, img.Height) / 180, 2, 6);
         for (int i = 0; i < 4; i++)
         {
             var p1 = new Point((int)pts[i].X, (int)pts[i].Y);
@@ -129,38 +160,25 @@ public static class PipelineStepMapper
         }
     }
 
-    private static void DrawFiducialHoles(Mat img, Point2f[] centers, double[]? matchScores)
+    private static void DrawHolderQuad(Mat img, Point2f[] corners, bool success)
     {
-        const int RequiredHoleCount = 4;
         int minDim = Math.Min(img.Width, img.Height);
-        int radius = Math.Clamp(minDim / 22, 20, 120);
-        int thickness = Math.Clamp(minDim / 70, 4, 16);
+        int thickness = Math.Clamp(minDim / 180, 2, 6);
         double fontScale = Math.Clamp(minDim / 900.0, 0.9, 3.0);
-        int fontThickness = Math.Clamp(thickness - 1, 2, 8);
+        int fontThickness = Math.Clamp(thickness, 2, 8);
+        var quadColor = success ? new Scalar(0, 220, 0) : new Scalar(0, 200, 255);
 
-        bool complete = centers.Length >= RequiredHoleCount;
-        var holeColor = complete ? new Scalar(0, 220, 0) : new Scalar(0, 200, 255);
-        var quadColor = new Scalar(0, 165, 255);
+        DrawQuad(img, corners, quadColor, thickness);
 
-        for (int i = 0; i < centers.Length; i++)
+        for (int i = 0; i < 4; i++)
         {
-            var center = new Point((int)centers[i].X, (int)centers[i].Y);
-            Cv2.Circle(img, center, radius + 2, Scalar.All(0), thickness + 2);
-            Cv2.Circle(img, center, radius, holeColor, thickness);
-            Cv2.Circle(img, center, Math.Max(4, radius / 5), holeColor, -1);
-
+            var center = new Point((int)corners[i].X, (int)corners[i].Y);
             var label = (i + 1).ToString();
-            if (matchScores is not null && i < matchScores.Length)
-                label += $" {matchScores[i]:P0}";
-
-            var labelPos = new Point(center.X + radius + 6, center.Y + radius / 3);
+            var labelPos = new Point(center.X + 8, center.Y - 8);
             Cv2.PutText(img, label, labelPos,
                 HersheyFonts.HersheySimplex, fontScale, Scalar.All(0), fontThickness + 2, LineTypes.AntiAlias);
             Cv2.PutText(img, label, labelPos,
-                HersheyFonts.HersheySimplex, fontScale, holeColor, fontThickness, LineTypes.AntiAlias);
+                HersheyFonts.HersheySimplex, fontScale, quadColor, fontThickness, LineTypes.AntiAlias);
         }
-
-        if (complete)
-            DrawQuad(img, centers, quadColor);
     }
 }

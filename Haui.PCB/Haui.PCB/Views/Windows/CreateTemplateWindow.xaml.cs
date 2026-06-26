@@ -1,7 +1,8 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Haui.PCB.ViewModels;
 using OpenCvSharp;
@@ -16,12 +17,24 @@ public partial class CreateTemplateWindow : System.Windows.Window
 {
     private readonly CreateTemplateViewModel _viewModel;
 
+    private const double MinZoom = 0.25;
+    private const double MaxZoom = 8.0;
+    private const double ZoomStep = 1.15;
+
     // Trạng thái kéo thả
     private bool _isDragging;
     private System.Windows.Point _dragStart;
 
+    // Zoom: 1.0 = vừa khung viewport
+    private double _zoomFactor = 1.0;
+
+    // Kích thước hiển thị cơ sở (zoom = 1); canvas luôn dùng hệ tọa độ này
+    private double _boardDisplayWidth;
+    private double _boardDisplayHeight;
+
     // Danh sách hình chữ nhật vùng đã vẽ (ánh xạ 1-1 với Regions)
     private readonly List<Rectangle> _regionRects = [];
+    private Rectangle? _orientationRect;
 
     public CreateTemplateWindow()
     {
@@ -32,6 +45,9 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
         DataContext = _viewModel;
         RegionsGrid.ItemsSource = _viewModel.Regions;
+        _viewModel.RefreshModeFromConfig();
+
+        BoardScrollViewer.Loaded += (_, _) => UpdateBoardLayout();
 
         // Lắng nghe ảnh bo mạch sẵn sàng
         _viewModel.BoardImageReady += bitmap =>
@@ -39,8 +55,11 @@ public partial class CreateTemplateWindow : System.Windows.Window
             {
                 BoardImage.Source = bitmap;
                 BoardPlaceholder.Visibility = Visibility.Collapsed;
-                RedrawRegionRects();
-            });
+                _zoomFactor = 1.0;
+                UpdateBoardLayout();
+            }, System.Windows.Threading.DispatcherPriority.Loaded);
+
+        BoardScrollViewer.SizeChanged += (_, _) => UpdateBoardLayout();
 
         // Lắng nghe thay đổi StatusText
         _viewModel.PropertyChanged += (_, e) =>
@@ -50,6 +69,9 @@ public partial class CreateTemplateWindow : System.Windows.Window
             if (e.PropertyName is nameof(CreateTemplateViewModel.CanSave)
                 or nameof(CreateTemplateViewModel.RegionProgressText))
                 Dispatcher.InvokeAsync(() => BtnSave.IsEnabled = _viewModel.CanSave);
+            if (e.PropertyName is nameof(CreateTemplateViewModel.OrientationRegion)
+                or nameof(CreateTemplateViewModel.IsSettingOrientationPosition))
+                Dispatcher.InvokeAsync(RedrawRegionRects);
         };
 
         // Vẽ lại khi danh sách vùng thay đổi
@@ -70,22 +92,29 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
     // ──── Kéo thả tạo vùng ───────────────────────────────────────────────────
 
-    private void RegionCanvas_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private System.Windows.Point GetAnnotationPoint(MouseEventArgs e)
+        => e.GetPosition(BoardViewHost);
+
+    private void BoardViewHost_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        _dragStart = e.GetPosition(RegionCanvas);
+        if (_boardDisplayWidth <= 0 || _boardDisplayHeight <= 0)
+            return;
+
+        _dragStart = GetAnnotationPoint(e);
         _isDragging = true;
         Canvas.SetLeft(DragRect, _dragStart.X);
         Canvas.SetTop(DragRect, _dragStart.Y);
         DragRect.Width = 0;
         DragRect.Height = 0;
         DragRect.Visibility = Visibility.Visible;
-        RegionCanvas.CaptureMouse();
+        BoardViewHost.CaptureMouse();
+        e.Handled = true;
     }
 
-    private void RegionCanvas_MouseMove(object sender, MouseEventArgs e)
+    private void BoardViewHost_MouseMove(object sender, MouseEventArgs e)
     {
         if (!_isDragging) return;
-        var pos = e.GetPosition(RegionCanvas);
+        var pos = GetAnnotationPoint(e);
         double x = Math.Min(pos.X, _dragStart.X);
         double y = Math.Min(pos.Y, _dragStart.Y);
         double w = Math.Abs(pos.X - _dragStart.X);
@@ -96,14 +125,27 @@ public partial class CreateTemplateWindow : System.Windows.Window
         DragRect.Height = h;
     }
 
-    private void RegionCanvas_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private void BoardViewHost_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        FinishRegionDrag(e);
+    }
+
+    private void BoardViewHost_LostMouseCapture(object sender, MouseEventArgs e)
     {
         if (!_isDragging) return;
-        RegionCanvas.ReleaseMouseCapture();
+        FinishRegionDrag(e);
+    }
+
+    private void FinishRegionDrag(MouseEventArgs e)
+    {
+        if (!_isDragging) return;
         _isDragging = false;
         DragRect.Visibility = Visibility.Collapsed;
 
-        var pos = e.GetPosition(RegionCanvas);
+        if (BoardViewHost.IsMouseCaptured)
+            BoardViewHost.ReleaseMouseCapture();
+
+        var pos = GetAnnotationPoint(e);
         double rx = Math.Min(pos.X, _dragStart.X);
         double ry = Math.Min(pos.Y, _dragStart.Y);
         double rw = Math.Abs(pos.X - _dragStart.X);
@@ -127,7 +169,12 @@ public partial class CreateTemplateWindow : System.Windows.Window
         relH = Math.Clamp(relH, 0, 1 - relY);
 
         if (relW > 0.001 && relH > 0.001)
-            _viewModel.AddRegion(relX, relY, relW, relH);
+        {
+            if (_viewModel.IsSettingOrientationPosition)
+                _viewModel.AddOrUpdateOrientationRegion(relX, relY, relW, relH);
+            else
+                _viewModel.AddRegion(relX, relY, relW, relH);
+        }
     }
 
     // ──── Vẽ lại các hình chữ nhật vùng đã chọn ─────────────────────────────
@@ -157,6 +204,7 @@ public partial class CreateTemplateWindow : System.Windows.Window
 
             var rect = new Rectangle
             {
+                IsHitTestVisible = false,
                 Stroke = new SolidColorBrush(isSelected
                     ? Color.FromRgb(255, 255, 255)
                     : color),
@@ -170,35 +218,173 @@ public partial class CreateTemplateWindow : System.Windows.Window
             RegionCanvas.Children.Add(rect);
             _regionRects.Add(rect);
         }
+
+        if (_orientationRect is not null)
+        {
+            RegionCanvas.Children.Remove(_orientationRect);
+            _orientationRect = null;
+        }
+
+        var orientation = _viewModel.OrientationRegion;
+        if (orientation is not null)
+        {
+            double ox = renderRect.X + orientation.RelX * renderRect.Width;
+            double oy = renderRect.Y + orientation.RelY * renderRect.Height;
+            double ow = orientation.RelWidth * renderRect.Width;
+            double oh = orientation.RelHeight * renderRect.Height;
+
+            var color = CreateTemplateViewModel.OrientationRegionColor;
+            _orientationRect = new Rectangle
+            {
+                IsHitTestVisible = false,
+                Stroke = new SolidColorBrush(color),
+                StrokeThickness = 3,
+                StrokeDashArray = [6, 3],
+                Fill = new SolidColorBrush(Color.FromArgb(40, color.R, color.G, color.B)),
+                Width = ow,
+                Height = oh
+            };
+            Canvas.SetLeft(_orientationRect, ox);
+            Canvas.SetTop(_orientationRect, oy);
+            RegionCanvas.Children.Add(_orientationRect);
+        }
     }
 
     /// <summary>
-    /// Tính toán hình chữ nhật hiển thị thực sự của ảnh bo mạch trên canvas (Stretch=Uniform).
+    /// Hình chữ nhật ảnh bo mạch trên canvas (hệ tọa độ cố định trước LayoutTransform zoom).
     /// </summary>
     private System.Windows.Rect GetImageRenderRect()
     {
-        int imgW = _viewModel.BoardWidth;
-        int imgH = _viewModel.BoardHeight;
-        if (imgW <= 0 || imgH <= 0) return System.Windows.Rect.Empty;
-
-        double canvasW = RegionCanvas.ActualWidth;
-        double canvasH = RegionCanvas.ActualHeight;
-        if (canvasW <= 0 || canvasH <= 0) return System.Windows.Rect.Empty;
-
-        double scale = Math.Min(canvasW / imgW, canvasH / imgH);
-        double renderW = imgW * scale;
-        double renderH = imgH * scale;
-        double offsetX = (canvasW - renderW) / 2;
-        double offsetY = (canvasH - renderH) / 2;
-        return new System.Windows.Rect(offsetX, offsetY, renderW, renderH);
+        if (_boardDisplayWidth <= 0 || _boardDisplayHeight <= 0)
+            return System.Windows.Rect.Empty;
+        return new System.Windows.Rect(0, 0, _boardDisplayWidth, _boardDisplayHeight);
     }
 
-    // ──── Vẽ lại khi canvas thay đổi kích thước ──────────────────────────────
+    private void UpdateBoardLayout()
+    {
+        if (BoardImage.Source is not BitmapSource bitmap)
+        {
+            _boardDisplayWidth = 0;
+            _boardDisplayHeight = 0;
+            UpdateZoomLabel();
+            return;
+        }
+
+        int imgW = bitmap.PixelWidth;
+        int imgH = bitmap.PixelHeight;
+        if (imgW <= 0 || imgH <= 0)
+        {
+            UpdateZoomLabel();
+            return;
+        }
+
+        double viewportW = BoardScrollViewer.ViewportWidth > 0
+            ? BoardScrollViewer.ViewportWidth
+            : BoardScrollViewer.ActualWidth;
+        double viewportH = BoardScrollViewer.ViewportHeight > 0
+            ? BoardScrollViewer.ViewportHeight
+            : BoardScrollViewer.ActualHeight;
+        if (viewportW <= 0 || viewportH <= 0)
+        {
+            Dispatcher.BeginInvoke(UpdateBoardLayout, System.Windows.Threading.DispatcherPriority.Loaded);
+            UpdateZoomLabel();
+            return;
+        }
+
+        double fitScale = Math.Min(viewportW / imgW, viewportH / imgH);
+        _boardDisplayWidth = imgW * fitScale;
+        _boardDisplayHeight = imgH * fitScale;
+
+        BoardViewHost.Width = _boardDisplayWidth;
+        BoardViewHost.Height = _boardDisplayHeight;
+        BoardImage.Width = _boardDisplayWidth;
+        BoardImage.Height = _boardDisplayHeight;
+        RegionCanvas.Width = _boardDisplayWidth;
+        RegionCanvas.Height = _boardDisplayHeight;
+
+        BoardZoomTransform.ScaleX = _zoomFactor;
+        BoardZoomTransform.ScaleY = _zoomFactor;
+
+        UpdateZoomLabel();
+        RedrawRegionRects();
+    }
+
+    private void ApplyBoardZoomTransform()
+    {
+        BoardZoomTransform.ScaleX = _zoomFactor;
+        BoardZoomTransform.ScaleY = _zoomFactor;
+        BoardViewHost.InvalidateMeasure();
+        BoardScrollViewer.UpdateLayout();
+    }
+
+    private void UpdateZoomLabel()
+        => ZoomLevelText.Text = $"{(int)Math.Round(_zoomFactor * 100)}%";
+
+    private void ApplyZoom(double newZoom, System.Windows.Point zoomCenterInScrollViewer)
+    {
+        newZoom = Math.Clamp(newZoom, MinZoom, MaxZoom);
+        if (Math.Abs(newZoom - _zoomFactor) < 0.001)
+            return;
+
+        var contentBefore = new System.Windows.Point(
+            BoardScrollViewer.HorizontalOffset + zoomCenterInScrollViewer.X,
+            BoardScrollViewer.VerticalOffset + zoomCenterInScrollViewer.Y);
+
+        double ratio = newZoom / _zoomFactor;
+        _zoomFactor = newZoom;
+        ApplyBoardZoomTransform();
+        UpdateZoomLabel();
+
+        BoardScrollViewer.ScrollToHorizontalOffset(contentBefore.X * ratio - zoomCenterInScrollViewer.X);
+        BoardScrollViewer.ScrollToVerticalOffset(contentBefore.Y * ratio - zoomCenterInScrollViewer.Y);
+    }
+
+    private void ZoomInAtCenter()
+    {
+        var center = new System.Windows.Point(
+            BoardScrollViewer.ViewportWidth / 2,
+            BoardScrollViewer.ViewportHeight / 2);
+        ApplyZoom(_zoomFactor * ZoomStep, center);
+    }
+
+    private void ZoomOutAtCenter()
+    {
+        var center = new System.Windows.Point(
+            BoardScrollViewer.ViewportWidth / 2,
+            BoardScrollViewer.ViewportHeight / 2);
+        ApplyZoom(_zoomFactor / ZoomStep, center);
+    }
+
+    private void BoardScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (Keyboard.Modifiers != ModifierKeys.Control || BoardImage.Source is null)
+            return;
+
+        e.Handled = true;
+        var zoomCenter = e.GetPosition(BoardScrollViewer);
+        double factor = e.Delta > 0 ? ZoomStep : 1.0 / ZoomStep;
+        ApplyZoom(_zoomFactor * factor, zoomCenter);
+    }
+
+    private void BtnZoomIn_Click(object sender, RoutedEventArgs e) => ZoomInAtCenter();
+
+    private void BtnZoomOut_Click(object sender, RoutedEventArgs e) => ZoomOutAtCenter();
+
+    private void BtnZoomFit_Click(object sender, RoutedEventArgs e)
+    {
+        _zoomFactor = 1.0;
+        ApplyBoardZoomTransform();
+        BoardScrollViewer.ScrollToHorizontalOffset(0);
+        BoardScrollViewer.ScrollToVerticalOffset(0);
+        UpdateZoomLabel();
+    }
+
+    // ──── Vẽ lại khi cửa sổ thay đổi kích thước ──────────────────────────────
 
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
     {
         base.OnRenderSizeChanged(sizeInfo);
-        RedrawRegionRects();
+        UpdateBoardLayout();
     }
 
     // ──── Event Handlers ──────────────────────────────────────────────────────

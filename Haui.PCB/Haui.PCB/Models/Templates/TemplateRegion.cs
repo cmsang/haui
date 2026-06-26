@@ -1,4 +1,4 @@
-﻿namespace Haui.PCB.Models.Templates;
+namespace Haui.PCB.Models.Templates;
 
 /// <summary>
 /// Một vùng mẫu trên ảnh bo mạch.
@@ -19,4 +19,7 @@ public class TemplateRegion
 
     /// <summary>Chiều cao tương đối (0..1).</summary>
     public double RelHeight { get; set; }
+
+    /// <summary>Marks this region as the board-orientation reference on the template image.</summary>
+    public bool IsOrientationMarker { get; set; }
 }

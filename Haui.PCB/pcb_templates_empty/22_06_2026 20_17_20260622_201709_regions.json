@@ -1,0 +1,157 @@
+{
+  "Name": "22/06/2026 20:17",
+  "Regions": [
+    {
+      "Name": "KF1",
+      "RelX": 0.12596233663515577,
+      "RelY": 0.7619563660141283,
+      "RelWidth": 0.12699883453783084,
+      "RelHeight": 0.05730680077437651,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "KF2",
+      "RelX": 0.31037160322433477,
+      "RelY": 0.7663645814583111,
+      "RelWidth": 0.11395100907161534,
+      "RelHeight": 0.048490369886010895,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "KF3",
+      "RelX": 0.47564405912973107,
+      "RelY": 0.7652625275972654,
+      "RelWidth": 0.11656057416485843,
+      "RelHeight": 0.06722528552378783,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C2",
+      "RelX": 0.6426562250972895,
+      "RelY": 0.6947310804903405,
+      "RelWidth": 0.09307448832567054,
+      "RelHeight": 0.10359306293829601,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "AMS1",
+      "RelX": 0.7948808555364703,
+      "RelY": 0.7399152887932143,
+      "RelWidth": 0.08698550310810331,
+      "RelHeight": 0.02975545424823396,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C1",
+      "RelX": 0.14098381081429953,
+      "RelY": 0.21600927179368268,
+      "RelWidth": 0.079561102172428,
+      "RelHeight": 0.10225295133630041,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "LM1",
+      "RelX": 0.2985759939635319,
+      "RelY": 0.3134161116922437,
+      "RelWidth": 0.11742912676411248,
+      "RelHeight": 0.0940145618921435,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "L1",
+      "RelX": 0.4989964937623332,
+      "RelY": 0.21562354137183426,
+      "RelWidth": 0.16256801050202419,
+      "RelHeight": 0.11527195702211561,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C4",
+      "RelX": 0.7465280323868144,
+      "RelY": 0.230880123918879,
+      "RelWidth": 0.06489340336912074,
+      "RelHeight": 0.11866230869923662,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C3",
+      "RelX": 0.3922849560166715,
+      "RelY": 0.6107195539624741,
+      "RelWidth": 0.013839093905141124,
+      "RelHeight": 0.021368706089545494,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C6",
+      "RelX": 0.3524975610393907,
+      "RelY": 0.6074320607179285,
+      "RelWidth": 0.014704037274212456,
+      "RelHeight": 0.024656199334091,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "R1",
+      "RelX": 0.779622207181321,
+      "RelY": 0.4971372815526564,
+      "RelWidth": 0.02293980239710898,
+      "RelHeight": 0.04002165689011876,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "R2",
+      "RelX": 0.7262213556995265,
+      "RelY": 0.4966608332563455,
+      "RelWidth": 0.026700425740897232,
+      "RelHeight": 0.03954520859380771,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C5",
+      "RelX": 0.3126491711018633,
+      "RelY": 0.6057673070957127,
+      "RelWidth": 0.014666431040774579,
+      "RelHeight": 0.02763400118603448,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "D2",
+      "RelX": 0.15727711775407294,
+      "RelY": 0.4070950227574122,
+      "RelWidth": 0.042622896522970626,
+      "RelHeight": 0.047388316024965196,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "D1",
+      "RelX": 0.15901682781623502,
+      "RelY": 0.4809326314474743,
+      "RelWidth": 0.04610231664729476,
+      "RelHeight": 0.056204746913330814,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "L3",
+      "RelX": 0.8558121393909521,
+      "RelY": 0.5160283843449882,
+      "RelWidth": 0.01929363280726192,
+      "RelHeight": 0.017815023253365477,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "L2",
+      "RelX": 0.8267081848172857,
+      "RelY": 0.5168569900777029,
+      "RelWidth": 0.020928686434996163,
+      "RelHeight": 0.016572114654293483,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "KF3_LABEL",
+      "RelX": 0.442131140294547,
+      "RelY": 0.6199229788685191,
+      "RelWidth": 0.0863015364393461,
+      "RelHeight": 0.05085527515681563,
+      "IsOrientationMarker": true
+    }
+  ]
+}

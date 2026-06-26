@@ -15,6 +15,10 @@ public class AppSetting
     [JsonPropertyName("virtualSerialPort")]
     public bool VirtualSerialPort { get; set; }
 
+    /// <summary>Show <c>InspectionResultWindow</c> after Dashboard inspection completes (before robot sort).</summary>
+    [JsonPropertyName("showInspectionResultAfterRecognition")]
+    public bool ShowInspectionResultAfterRecognition { get; set; }
+
     /// <summary>Cổng COM robot (vd: COM3).</summary>
     public string Com { get; set; } = "COM3";
 

@@ -6,8 +6,8 @@
 /// </summary>
 public sealed class SegmentationParameters
 {
-    public const double DefaultCannyThreshold1 = 50;
-    public const double DefaultCannyThreshold2 = 150;
+    public const double DefaultCannyThreshold1 = 30;
+    public const double DefaultCannyThreshold2 = 100;
 
     public double CannyThreshold1 { get; set; } = DefaultCannyThreshold1;
     public double CannyThreshold2 { get; set; } = DefaultCannyThreshold2;

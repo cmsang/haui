@@ -173,21 +173,6 @@
                         Margin="0,0,8,0"
                         Click="BtnCreateTemplate_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
-                <Button x:Name="BtnCreateFiducialTemplates"
-                        Content="⭕ Thêm mẫu lỗ"
-                        Height="30" Width="130"
-                        IsEnabled="False"
-                        Visibility="Collapsed"
-                        Margin="0,0,8,0"
-                        Click="BtnCreateFiducialTemplates_Click"
-                        Style="{StaticResource SecondaryButtonStyle}" />
-                <Button x:Name="BtnSelectFiducialImage"
-                        Content="📂 Chọn ảnh lỗ"
-                        Height="30" Width="130"
-                        Visibility="Collapsed"
-                        Margin="0,0,8,0"
-                        Click="BtnSelectFiducialImage_Click"
-                        Style="{StaticResource SecondaryButtonStyle}" />
                 <Button x:Name="BtnViewTemplates"
                         Content="🖼 Xem mẫu"
                         Height="30" Width="110"
@@ -324,22 +309,40 @@
                                 <Run Text="/" />
                                 <Run Text="{Binding SearchedComponentCount, Mode=OneWay}" />
                             </TextBlock>
-                            <Border x:Name="PassFailPanel"
-                                    Grid.Column="2"
-                                    BorderBrush="#CFCFCF"
-                                    BorderThickness="1"
-                                    CornerRadius="2"
-                                    Background="#FAFAFA"
-                                    Padding="12,2"
-                                    Margin="0,1,0,1">
-                                <TextBlock x:Name="PassFailText"
-                                           Text="—"
-                                           FontSize="18"
-                                           FontWeight="SemiBold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           Foreground="#888888" />
-                            </Border>
+                            <StackPanel Grid.Column="2"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <Border x:Name="InspectionTimingPanel"
+                                        BorderBrush="#CFCFCF"
+                                        BorderThickness="1"
+                                        CornerRadius="2"
+                                        Background="#FAFAFA"
+                                        Padding="12,2"
+                                        Margin="0,1,8,1">
+                                    <TextBlock Text="{Binding TotalInspectionElapsedText}"
+                                               FontFamily="Consolas"
+                                               FontSize="14"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#666666" />
+                                </Border>
+                                <Border x:Name="PassFailPanel"
+                                        BorderBrush="#CFCFCF"
+                                        BorderThickness="1"
+                                        CornerRadius="2"
+                                        Background="#FAFAFA"
+                                        Padding="12,2"
+                                        Margin="0,1,0,1">
+                                    <TextBlock x:Name="PassFailText"
+                                               Text="—"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#888888" />
+                                </Border>
+                            </StackPanel>
                         </Grid>
 
                         <Border Grid.Row="0"
@@ -375,6 +378,14 @@
                                 BorderBrush="#DCDCDC"
                                 BorderThickness="0,0,0,1" />
 
+                        <TextBlock Grid.Row="2"
+                                   Margin="2,6,2,4"
+                                   Text="{Binding WhiteCircuitSummaryText}"
+                                   TextWrapping="Wrap"
+                                   FontSize="13"
+                                   Foreground="#333333"
+                                   Visibility="{Binding HasWhiteCircuitSummary, Converter={StaticResource BoolToVis}}" />
+
                         <Grid Grid.Row="3" Margin="0,0,0,2">
                             <DataGrid ItemsSource="{Binding DifferentRegions}"
                                       AutoGenerateColumns="False"
@@ -392,13 +403,13 @@
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="STT"
                                                         Binding="{Binding Stt}"
-                                                        Width="52" />
+                                                        Width="64" />
                                     <DataGridTextColumn Header="Tên linh kiện"
                                                         Binding="{Binding Name}"
                                                         Width="*" />
                                     <DataGridTextColumn Header="Độ tương đồng"
                                                         Binding="{Binding SimilarityDisplayText}"
-                                                        Width="110" />
+                                                        Width="132" />
                                 </DataGrid.Columns>
                             </DataGrid>
                             <TextBlock Text="Chưa kiểm tra"

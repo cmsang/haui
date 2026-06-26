@@ -20,11 +20,14 @@ public sealed class CompositeTemplateMatchService : ICompositeTemplateMatchServi
         _comparisonService = comparisonService;
     }
 
-    public CompositeTemplateMatchResult? Match(Mat newBoard)
+    public CompositeTemplateMatchResult? Match(Mat newBoard, TemplateEntry? restrictToTemplate = null)
     {
         var entries = _libraryService.LoadAll();
         if (entries.Count == 0)
             return null;
+
+        if (restrictToTemplate is not null)
+            entries = [restrictToTemplate];
 
         var allowedOrder = ComponentTemplateRegionNames.LoadAllowedNamesInOrder();
         if (allowedOrder.Count == 0)
@@ -130,6 +133,9 @@ public sealed class CompositeTemplateMatchService : ICompositeTemplateMatchServi
 
             foreach (var region in entry.Regions)
             {
+                if (region.IsOrientationMarker)
+                    continue;
+
                 var name = region.Name.Trim();
                 if (string.IsNullOrEmpty(name) || !allowedNames.Contains(name))
                     continue;

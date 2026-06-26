@@ -10,6 +10,8 @@ namespace Haui.PCB.Processing.Camera;
 /// </summary>
 public class BaslerCameraService : ICameraService, ICameraParameterService
 {
+    private const int GrabGaussianBlurKernelSize = 5;
+
     private PylonCamera? _camera;
     private Mat? _lastFrame;
     private PixelDataConverter? _converter;
@@ -202,22 +204,8 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
         var pixelFormat = _camera.Parameters[PLCamera.PixelFormat];
         if (!pixelFormat.IsWritable) return;
 
-        ReadOnlySpan<string> preferred =
-        [
-            PLCamera.PixelFormat.BayerRG8,
-            PLCamera.PixelFormat.BayerBG8,
-            PLCamera.PixelFormat.BayerGR8,
-            PLCamera.PixelFormat.BayerGB8,
-            PLCamera.PixelFormat.BGR8,
-            PLCamera.PixelFormat.RGB8,
-            PLCamera.PixelFormat.Mono8
-        ];
-
-        foreach (string format in preferred)
-        {
-            if (pixelFormat.TrySetValue(format))
-                return;
-        }
+        if (!pixelFormat.TrySetValue(PLCamera.PixelFormat.Mono8))
+            GrabStatusChanged?.Invoke("Không thể đặt pixel format Mono8.");
     }
 
     private void ConfigureRoi(int targetWidth, int targetHeight)
@@ -361,6 +349,14 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
         if (balanceWhite.IsReadable)
             p.BalanceWhiteAuto = balanceWhite.GetValue();
 
+        var gainAuto = parameters[PLCamera.GainAuto];
+        if (gainAuto.IsReadable)
+            p.GainAuto = gainAuto.GetValue();
+
+        var pixelFormat = parameters[PLCamera.PixelFormat];
+        if (pixelFormat.IsReadable)
+            p.PixelFormat = pixelFormat.GetValue();
+
         return p;
     }
 
@@ -401,12 +397,34 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
         if (_camera is null || !_camera.IsOpen) return;
 
         var cameraParams = _camera.Parameters;
+        SetGainAuto(settings.GainAuto);
         if (includeAutoWhiteBalance)
             SetBalanceWhiteAuto(settings.BalanceWhiteAuto);
 
         SetDoubleParameter(cameraParams[PLCamera.ExposureTime], settings.ExposureTimeUs);
-        SetDoubleParameter(cameraParams[PLCamera.Gain], settings.GainDb);
         SetDoubleParameter(cameraParams[PLCamera.Gamma], settings.Gamma);
+
+        var gainAuto = cameraParams[PLCamera.GainAuto];
+        if (gainAuto.IsReadable
+            && string.Equals(gainAuto.GetValue(), PLCamera.GainAuto.Off, StringComparison.OrdinalIgnoreCase))
+        {
+            SetDoubleParameter(cameraParams[PLCamera.Gain], settings.GainDb);
+        }
+    }
+
+    private void SetGainAuto(string value)
+    {
+        if (_camera is null) return;
+        var param = _camera.Parameters[PLCamera.GainAuto];
+        if (!param.IsWritable) return;
+
+        string normalized = value.Trim();
+        if (string.Equals(normalized, PLCamera.GainAuto.Once, StringComparison.OrdinalIgnoreCase))
+            param.SetValue(PLCamera.GainAuto.Once);
+        else if (string.Equals(normalized, PLCamera.GainAuto.Continuous, StringComparison.OrdinalIgnoreCase))
+            param.SetValue(PLCamera.GainAuto.Continuous);
+        else
+            param.SetValue(PLCamera.GainAuto.Off);
     }
 
     private void SetBalanceWhiteAuto(string value)
@@ -416,9 +434,9 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
         if (!param.IsWritable) return;
 
         string normalized = value.Trim();
-        if (string.Equals(normalized, "Once", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(normalized, PLCamera.BalanceWhiteAuto.Once, StringComparison.OrdinalIgnoreCase))
             param.SetValue(PLCamera.BalanceWhiteAuto.Once);
-        else if (string.Equals(normalized, "Continuous", StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(normalized, PLCamera.BalanceWhiteAuto.Continuous, StringComparison.OrdinalIgnoreCase))
             param.SetValue(PLCamera.BalanceWhiteAuto.Continuous);
         else
             param.SetValue(PLCamera.BalanceWhiteAuto.Off);
@@ -459,19 +477,26 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
                 return;
             }
 
-            using var mat = ConvertGrabResultToMat(grabResult);
-            if (mat.Empty())
+            using var raw = ConvertGrabResultToMat(grabResult);
+            if (raw.Empty())
                 return;
+
+            using var blurred = new Mat();
+            Cv2.GaussianBlur(
+                raw,
+                blurred,
+                new Size(GrabGaussianBlurKernelSize, GrabGaussianBlurKernelSize),
+                0);
 
             _grabFailCount = 0;
 
             lock (_frameLock)
             {
                 _lastFrame?.Dispose();
-                _lastFrame = mat.Clone();
+                _lastFrame = blurred.Clone();
             }
 
-            FrameArrived?.Invoke(mat);
+            FrameArrived?.Invoke(blurred);
         }
         catch (Exception ex)
         {
@@ -488,11 +513,11 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
     private Mat ConvertGrabResultToMat(IGrabResult grabResult)
     {
         _converter ??= new PixelDataConverter();
-        _converter.OutputPixelFormat = PixelType.BGR8packed;
+        _converter.OutputPixelFormat = PixelType.Mono8;
 
         int width = grabResult.Width;
         int height = grabResult.Height;
-        var mat = new Mat(height, width, MatType.CV_8UC3);
+        var mat = new Mat(height, width, MatType.CV_8UC1);
         int bufferSize = (int)_converter.GetBufferSizeForConversion(grabResult);
         if (bufferSize <= 0)
             bufferSize = (int)(mat.Step() * mat.Rows);

@@ -15,9 +15,8 @@ Haui.PCB/                 # WPF app project
 ├── Processing/           # Services + I* theo domain
 │   ├── Configuration/    # AppSettingService, AppConfigPaths, …
 │   ├── Camera/           # BaslerCameraService, CameraCaptureService, …
-│   ├── Segmentation/     # PcbSegmentationService, PipelineStepMapper
-│   ├── Templates/        # TemplateLibraryService, RegionComparisonService, …
-│   ├── Fiducial/         # FiducialHoleDetectionService, …
+│   ├── Segmentation/     # PcbSegmentationService, HolderContourDetectionService, QuadGeometry, PipelineStepMapper
+│   ├── Templates/        # TemplateLibraryService, RegionComparisonService, BoardOrientationDetectionService, …
 │   └── Robot/            # RobotSerialService, RobotConfigService, …
 ├── ViewModels/           # INotifyPropertyChanged, business logic
 │   └── Pipeline/         # PipelineStep (WPF BitmapSource)
@@ -39,7 +38,7 @@ Haui.PCB/                 # WPF app project
 |-----------|----------------|------|
 | `ICameraService` | `BaslerCameraService` | Basler pylon; frames as `Mat` |
 | `ICameraParameterService` | `BaslerCameraService` | GenICam Apply / Reset (Basler only) |
-| `IPcbSegmentationService` | `PcbSegmentationService` | Canny + fiducial holes + perspective warp → straight board |
+| `IPcbSegmentationService` | `PcbSegmentationService` | Canny + holder contour + perspective warp → straight board |
 | `ITemplateLibraryService` | `TemplateLibraryService` | Thư viện mẫu: quét `*.png` + `*_regions.json` |
 | `IRegionComparisonService` | `RegionComparisonService` | Per-region histogram compare |
 

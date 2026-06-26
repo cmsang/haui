@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Text.Json;
+using Haui.PCB.Processing.Configuration;
 using OpenCvSharp;
 
 namespace Haui.PCB.Processing.Templates;
@@ -18,12 +19,8 @@ public class TemplateLibraryService : ITemplateLibraryService
     public string GetLibraryFolder()
         => ResolveLibraryFolder(AppSettingsStore.LoadComponentTemplates());
 
-    private static string ResolveLibraryFolder(ComponentTemplateSettings settings)
-    {
-        if (!string.IsNullOrWhiteSpace(settings.CustomFolder))
-            return settings.CustomFolder.Trim();
-        return ComponentTemplateSettings.DefaultLibraryFolder;
-    }
+    internal static string ResolveLibraryFolder(ComponentTemplateSettings settings)
+        => TemplateLibraryPaths.ResolveActiveFolder(settings);
 
     public IReadOnlyList<TemplateEntry> LoadAll()
     {
@@ -77,6 +74,8 @@ public class TemplateLibraryService : ITemplateLibraryService
                 SaveRegions(regionsPath, entry.Name, entry.Regions);
                 entry.RegionsFilePath = regionsPath;
             }
+
+            OrientationMarkerCache.Invalidate();
         }
         catch { /* bỏ qua lỗi ghi file */ }
     }
@@ -90,6 +89,7 @@ public class TemplateLibraryService : ITemplateLibraryService
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
         var filePath = Path.Combine(folder, $"{safeName}_{timestamp}.png");
         Cv2.ImWrite(filePath, boardImage);
+        OrientationMarkerCache.Invalidate();
         return filePath;
     }
 
@@ -130,6 +130,7 @@ public class TemplateLibraryService : ITemplateLibraryService
             };
             var json = JsonSerializer.Serialize(document, JsonOptions);
             File.WriteAllText(regionsFilePath, json);
+            OrientationMarkerCache.Invalidate();
         }
         catch { /* bỏ qua lỗi ghi file */ }
     }
@@ -151,6 +152,8 @@ public class TemplateLibraryService : ITemplateLibraryService
 
             if (!string.IsNullOrWhiteSpace(regionsPath) && File.Exists(regionsPath))
                 File.Delete(regionsPath);
+
+            OrientationMarkerCache.Invalidate();
         }
         catch
         {

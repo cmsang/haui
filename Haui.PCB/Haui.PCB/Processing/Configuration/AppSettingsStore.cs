@@ -15,10 +15,6 @@ internal static class AppSettingsStore
 
     public static double LoadMatchThresholdPercent() => Service.LoadMatchThresholdPercent();
 
-    public static FiducialHoleSettings LoadFiducialHoles() => Service.LoadFiducialHoles();
-
-    public static void SaveFiducialHoles(FiducialHoleSettings settings) => Service.SaveFiducialHoles(settings);
-
     public static PcbBoardSettings LoadPcbBoard() => Service.LoadPcbBoard();
 
     public static CameraParameters LoadCameraBasler() => Service.LoadCameraBasler();

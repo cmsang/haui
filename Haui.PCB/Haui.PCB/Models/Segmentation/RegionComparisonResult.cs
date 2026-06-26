@@ -33,13 +33,34 @@ public class RegionComparisonResult
 
     public RegionMatchOutcome Outcome { get; init; } = RegionMatchOutcome.BelowThreshold;
 
-    /// <summary>True when the component is recognized at or above the configured threshold.</summary>
+    /// <summary>True when similarity to the active template library meets the configured threshold.</summary>
     public bool IsMatch => Outcome == RegionMatchOutcome.Matched;
 
+    /// <summary>
+    /// Resolves component presence from template match.
+    /// Component library: match means present; white-circuit library: match means absent.
+    /// </summary>
+    public bool HasComponent(bool matchMeansAbsent)
+    {
+        if (Outcome is RegionMatchOutcome.NoTemplateInLibrary or RegionMatchOutcome.NotComparable)
+            return false;
+
+        return matchMeansAbsent ? !IsMatch : IsMatch;
+    }
+
+    public string FormatSimilarityDisplayText(bool invertWhiteCircuitMatch)
+    {
+        if (Outcome is RegionMatchOutcome.NoTemplateInLibrary or RegionMatchOutcome.NotComparable)
+            return "—";
+
+        if (!invertWhiteCircuitMatch)
+            return SimilarityText;
+
+        return $"{100.0 - Similarity:F1}%";
+    }
+
     public string SimilarityDisplayText =>
-        Outcome is RegionMatchOutcome.NoTemplateInLibrary or RegionMatchOutcome.NotComparable
-            ? "—"
-            : SimilarityText;
+        FormatSimilarityDisplayText(invertWhiteCircuitMatch: false);
 
     public string StatusNote => Outcome switch
     {

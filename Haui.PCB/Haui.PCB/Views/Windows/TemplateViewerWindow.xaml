@@ -12,6 +12,7 @@
         FontFamily="{DynamicResource MaterialDesignFont}">
 
     <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <Style x:Key="HeaderBorderStyle" TargetType="Border">
             <Setter Property="Background" Value="#F0F4FA"/>
             <Setter Property="BorderBrush" Value="#C0CCE0"/>
@@ -71,12 +72,25 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <Border Grid.Row="0"
+                Background="#E8EEF5"
+                BorderBrush="#B0C4DE"
+                BorderThickness="0,0,0,1"
+                Padding="10,8"
+                Margin="8,8,8,0">
+            <TextBlock Text="{Binding ModeBannerText}"
+                       FontSize="13"
+                       Foreground="#1A3A6B"
+                       TextWrapping="Wrap"/>
+        </Border>
+
         <!-- ===== CONTENT ===== -->
-        <Grid Grid.Row="0" Margin="8">
+        <Grid Grid.Row="1" Margin="8">
             <Grid.ColumnDefinitions>
                 <!-- Cột trái: 2 grid -->
                 <ColumnDefinition Width="420" MinWidth="300"/>
@@ -246,7 +260,7 @@
         </Grid>
 
         <!-- ===== BOTTOM BAR ===== -->
-        <Border Grid.Row="1"
+        <Border Grid.Row="2"
                 Background="#F3F3F3"
                 BorderBrush="#DDDDDD"
                 BorderThickness="0,1,0,0"

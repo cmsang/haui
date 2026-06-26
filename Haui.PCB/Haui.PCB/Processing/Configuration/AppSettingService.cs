@@ -33,7 +33,9 @@ public class AppSettingService : IAppSettingService
         Gamma = 1.0,
         Width = 1920,
         Height = 1200,
-        BalanceWhiteAuto = "Off"
+        PixelFormat = "Mono8",
+        GainAuto = "Continuous",
+        BalanceWhiteAuto = "Continuous"
     };
 
     public AppSetting Load()
@@ -98,6 +100,13 @@ public class AppSettingService : IAppSettingService
     }
 
     public PcbBoardSettings LoadPcbBoard() => Load().PcbBoard;
+
+    public void SavePcbBoard(PcbBoardSettings settings)
+    {
+        var app = Load();
+        app.PcbBoard = settings;
+        Save(app);
+    }
 
     public CameraParameters LoadCameraBasler()
     {
