@@ -11,9 +11,9 @@ public class AppSetting
     [JsonPropertyName("developerMode")]
     public bool DeveloperMode { get; set; }
 
-    /// <summary>Simulate robot serial without opening a COM port (requires <see cref="DeveloperMode"/>).</summary>
-    [JsonPropertyName("virtualSerialPort")]
-    public bool VirtualSerialPort { get; set; }
+    /// <summary>Show <c>InspectionResultWindow</c> after Dashboard inspection completes (before robot sort).</summary>
+    [JsonPropertyName("showInspectionResultAfterRecognition")]
+    public bool ShowInspectionResultAfterRecognition { get; set; }
 
     /// <summary>Cổng COM robot (vd: COM3).</summary>
     public string Com { get; set; } = "COM3";
@@ -45,9 +45,6 @@ public class AppSetting
     [JsonPropertyName("ComponentTemplates")]
     public ComponentTemplateSettings ComponentTemplates { get; set; } = new();
 
-    [JsonPropertyName("FiducialHoles")]
-    public FiducialHoleSettings FiducialHoles { get; set; } = new();
-
     [JsonPropertyName("PcbBoard")]
     public PcbBoardSettings PcbBoard { get; set; } = new();
 
@@ -57,6 +54,6 @@ public class AppSetting
     [JsonPropertyName("CameraCapture")]
     public CameraCaptureSettings CameraCapture { get; set; } = new();
 
-    /// <summary>True when virtual serial simulation is active.</summary>
-    public bool UseVirtualSerial() => DeveloperMode && VirtualSerialPort;
+    [JsonPropertyName("CameraDownscale")]
+    public ImageDownscaleSettings CameraDownscale { get; set; } = new();
 }

@@ -34,7 +34,7 @@ public sealed class SettingViewModel : INotifyPropertyChanged
     private readonly IAppSettingService _appSettingService;
 
     private bool _developerMode;
-    private bool _virtualSerialPort;
+    private bool _showInspectionResultAfterRecognition;
     private string _com = "COM3";
     private string _warehouseCom = string.Empty;
     private int _baudRate = 115200;
@@ -43,10 +43,14 @@ public sealed class SettingViewModel : INotifyPropertyChanged
     private int _speedPercent = 50;
     private string _databaseConnection = string.Empty;
     private string _templateCustomFolder = string.Empty;
+    private bool _trainWhiteCircuit;
+    private string _whiteCircuitCustomFolder = string.Empty;
     private double _minMatchSimilarityPercent = ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
-    private string _fiducialTemplateFolder = FiducialHoleSettings.DefaultTemplateFolder;
-    private double _fiducialMinMatchScore = FiducialHoleSettings.DefaultMinMatchScore;
-    private int _fiducialMaxMatchDimension = FiducialHoleSettings.DefaultMaxMatchDimension;
+    private string _orientationComponentName = string.Empty;
+    private double _minOrientationMatchScore = 0.55;
+    private double _holderQuadRectTolerancePercent = PcbBoardSettings.DefaultQuadRectTolerancePercent;
+    private double _holderAspectRatioTolerancePercent = PcbBoardSettings.DefaultAspectRatioTolerancePercent;
+    private double _holderQuadAngleToleranceDegrees = PcbBoardSettings.DefaultQuadAngleToleranceDegrees;
     private double _pcbBoardWidthMm = PcbBoardSettings.DefaultWidthMm;
     private double _pcbBoardHeightMm = PcbBoardSettings.DefaultHeightMm;
     private string _cameraCaptureSaveFolder = string.Empty;
@@ -68,19 +72,19 @@ public sealed class SettingViewModel : INotifyPropertyChanged
             if (_developerMode == value) return;
             _developerMode = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(IsVirtualSerialVisible));
-            if (!value)
-                VirtualSerialPort = false;
         }
     }
 
-    public bool VirtualSerialPort
+    public bool ShowInspectionResultAfterRecognition
     {
-        get => _virtualSerialPort;
-        set { _virtualSerialPort = value; OnPropertyChanged(); }
+        get => _showInspectionResultAfterRecognition;
+        set
+        {
+            if (_showInspectionResultAfterRecognition == value) return;
+            _showInspectionResultAfterRecognition = value;
+            OnPropertyChanged();
+        }
     }
-
-    public bool IsVirtualSerialVisible => DeveloperMode;
 
     public string Com
     {
@@ -130,28 +134,60 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         set { _templateCustomFolder = value; OnPropertyChanged(); }
     }
 
+    public bool TrainWhiteCircuit
+    {
+        get => _trainWhiteCircuit;
+        set
+        {
+            if (_trainWhiteCircuit == value) return;
+            _trainWhiteCircuit = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsComponentRegionNamesVisible));
+        }
+    }
+
+    public bool IsComponentRegionNamesVisible => !TrainWhiteCircuit;
+
+    public string WhiteCircuitCustomFolder
+    {
+        get => _whiteCircuitCustomFolder;
+        set { _whiteCircuitCustomFolder = value; OnPropertyChanged(); }
+    }
+
     public double MinMatchSimilarityPercent
     {
         get => _minMatchSimilarityPercent;
         set { _minMatchSimilarityPercent = value; OnPropertyChanged(); }
     }
 
-    public string FiducialTemplateFolder
+    public string OrientationComponentName
     {
-        get => _fiducialTemplateFolder;
-        set { _fiducialTemplateFolder = value; OnPropertyChanged(); }
+        get => _orientationComponentName;
+        set { _orientationComponentName = value; OnPropertyChanged(); }
     }
 
-    public double FiducialMinMatchScore
+    public double MinOrientationMatchScore
     {
-        get => _fiducialMinMatchScore;
-        set { _fiducialMinMatchScore = value; OnPropertyChanged(); }
+        get => _minOrientationMatchScore;
+        set { _minOrientationMatchScore = value; OnPropertyChanged(); }
     }
 
-    public int FiducialMaxMatchDimension
+    public double HolderQuadRectTolerancePercent
     {
-        get => _fiducialMaxMatchDimension;
-        set { _fiducialMaxMatchDimension = value; OnPropertyChanged(); }
+        get => _holderQuadRectTolerancePercent;
+        set { _holderQuadRectTolerancePercent = value; OnPropertyChanged(); }
+    }
+
+    public double HolderAspectRatioTolerancePercent
+    {
+        get => _holderAspectRatioTolerancePercent;
+        set { _holderAspectRatioTolerancePercent = value; OnPropertyChanged(); }
+    }
+
+    public double HolderQuadAngleToleranceDegrees
+    {
+        get => _holderQuadAngleToleranceDegrees;
+        set { _holderQuadAngleToleranceDegrees = value; OnPropertyChanged(); }
     }
 
     public double PcbBoardWidthMm
@@ -185,7 +221,7 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         var setting = _appSettingService.Load();
 
         DeveloperMode = setting.DeveloperMode;
-        VirtualSerialPort = setting.VirtualSerialPort;
+        ShowInspectionResultAfterRecognition = setting.ShowInspectionResultAfterRecognition;
         Com = setting.Com;
         WarehouseCom = setting.WarehouseCom;
         BaudRate = setting.BaudRate;
@@ -195,7 +231,11 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         DatabaseConnection = setting.DatabaseConnection;
 
         TemplateCustomFolder = setting.ComponentTemplates.CustomFolder;
+        TrainWhiteCircuit = setting.ComponentTemplates.TrainWhiteCircuit;
+        WhiteCircuitCustomFolder = setting.ComponentTemplates.WhiteCircuitCustomFolder;
         MinMatchSimilarityPercent = setting.ComponentTemplates.MinMatchSimilarityPercent;
+        OrientationComponentName = setting.ComponentTemplates.OrientationComponentName;
+        MinOrientationMatchScore = setting.ComponentTemplates.MinOrientationMatchScore;
 
         AllowedRegionNames.Clear();
         var names = setting.ComponentTemplates.AllowedRegionNames;
@@ -208,12 +248,11 @@ public sealed class SettingViewModel : INotifyPropertyChanged
             });
         }
 
-        FiducialTemplateFolder = setting.FiducialHoles.TemplateFolder;
-        FiducialMinMatchScore = setting.FiducialHoles.MinMatchScore;
-        FiducialMaxMatchDimension = setting.FiducialHoles.MaxMatchDimension;
-
         PcbBoardWidthMm = setting.PcbBoard.WidthMm;
         PcbBoardHeightMm = setting.PcbBoard.HeightMm;
+        HolderQuadRectTolerancePercent = setting.PcbBoard.QuadRectTolerancePercent;
+        HolderAspectRatioTolerancePercent = setting.PcbBoard.AspectRatioTolerancePercent;
+        HolderQuadAngleToleranceDegrees = setting.PcbBoard.QuadAngleToleranceDegrees;
 
         CameraCaptureSaveFolder = setting.CameraCapture.SaveFolder;
 
@@ -265,7 +304,7 @@ public sealed class SettingViewModel : INotifyPropertyChanged
 
         var setting = _appSettingService.Load();
         setting.DeveloperMode = DeveloperMode;
-        setting.VirtualSerialPort = VirtualSerialPort;
+        setting.ShowInspectionResultAfterRecognition = ShowInspectionResultAfterRecognition;
         setting.Com = Com.Trim();
         setting.WarehouseCom = WarehouseCom.Trim();
         setting.BaudRate = BaudRate;
@@ -275,25 +314,32 @@ public sealed class SettingViewModel : INotifyPropertyChanged
         setting.DatabaseConnection = DatabaseConnection.Trim();
 
         setting.ComponentTemplates.CustomFolder = TemplateCustomFolder.Trim();
+        setting.ComponentTemplates.TrainWhiteCircuit = TrainWhiteCircuit;
+        setting.ComponentTemplates.WhiteCircuitCustomFolder = WhiteCircuitCustomFolder.Trim();
         setting.ComponentTemplates.MinMatchSimilarityPercent = MinMatchSimilarityPercent;
+        setting.ComponentTemplates.OrientationComponentName = OrientationComponentName.Trim();
+        setting.ComponentTemplates.MinOrientationMatchScore = MinOrientationMatchScore;
         setting.ComponentTemplates.AllowedRegionNames = trimmedNames;
-
-        setting.FiducialHoles.TemplateFolder = FiducialTemplateFolder.Trim();
-        setting.FiducialHoles.MinMatchScore = FiducialMinMatchScore;
-        setting.FiducialHoles.MaxMatchDimension = Math.Max(1, FiducialMaxMatchDimension);
 
         setting.PcbBoard.WidthMm = Math.Max(0, PcbBoardWidthMm);
         setting.PcbBoard.HeightMm = Math.Max(0, PcbBoardHeightMm);
+        setting.PcbBoard.QuadRectTolerancePercent = HolderQuadRectTolerancePercent;
+        setting.PcbBoard.AspectRatioTolerancePercent = HolderAspectRatioTolerancePercent;
+        setting.PcbBoard.QuadAngleToleranceDegrees = HolderQuadAngleToleranceDegrees;
 
         setting.CameraCapture.SaveFolder = CameraCaptureSaveFolder.Trim();
 
         _appSettingService.Save(setting);
 
         MinMatchSimilarityPercent = setting.ComponentTemplates.MinMatchSimilarityPercent;
+        MinOrientationMatchScore = setting.ComponentTemplates.MinOrientationMatchScore;
+        OrientationComponentName = setting.ComponentTemplates.OrientationComponentName;
         SpeedPercent = setting.SpeedPercent;
-        FiducialMaxMatchDimension = setting.FiducialHoles.MaxMatchDimension;
         PcbBoardWidthMm = setting.PcbBoard.WidthMm;
         PcbBoardHeightMm = setting.PcbBoard.HeightMm;
+        HolderQuadRectTolerancePercent = setting.PcbBoard.QuadRectTolerancePercent;
+        HolderAspectRatioTolerancePercent = setting.PcbBoard.AspectRatioTolerancePercent;
+        HolderQuadAngleToleranceDegrees = setting.PcbBoard.QuadAngleToleranceDegrees;
 
         AllowedRegionNames.Clear();
         for (var i = 0; i < trimmedNames.Count; i++)
@@ -305,10 +351,10 @@ public sealed class SettingViewModel : INotifyPropertyChanged
             });
         }
 
-        SaveStatusText = DeveloperMode && VirtualSerialPort
-            ? "Đã lưu vào Config/setting.json. Serial ảo áp dụng ở lần kết nối tiếp theo."
-            : DeveloperMode
-                ? "Đã lưu vào Config/setting.json. Làm mới Dashboard để thấy nút tạo mẫu và thêm mẫu lỗ."
+        SaveStatusText = DeveloperMode
+            ? "Đã lưu vào Config/setting.json. Làm mới Dashboard để thấy nút tạo mẫu."
+            : TrainWhiteCircuit
+                ? "Đã lưu vào Config/setting.json. Chế độ train mạch trắng — làm mới Dashboard để cập nhật nút và kiểm tra."
                 : "Đã lưu vào Config/setting.json.";
     }
 

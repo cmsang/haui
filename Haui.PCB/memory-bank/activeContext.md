@@ -12,7 +12,7 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Shell Monitor panel (2026-06-14):** Load/Unload + AGV gauges extracted to `Views/Controls/MonitorView` — sticky above `MainContentHost`; state in `MonitorViewModel` owned by `MainWindow.Monitor`. Tabs receive via `LineMonitor` / `Initialize(..., lineMonitor)`.
 
-**Segmentation fiducial-only (2026-06-14):** Removed contour / MinAreaRect fallback from `PcbSegmentationService`; warp requires 4 matched fiducial holes. Debug pipeline drops Contour Detection and Bounding Quad steps.
+**Fiducial removal (2026-06-26):** Đã xóa toàn bộ logic nhận diện lỗ định vị (fiducial). Gỡ `Processing/Fiducial/*` (detection/template services, quad selector/ordering/geometry), `FiducialSearchZones`, models (`FiducialDetectionResult`, `FiducialTemplateEntry`, `FiducialTemplateRecognitionOutcome`, `FiducialHoleSettings`), UI (`FiducialTemplateWindow` + `FiducialTemplateViewModel`), và config plumbing (`AppSetting.FiducialHoles`, `IAppSettingService.Load/SaveFiducialHoles`, clamp + legacy `fiducial_settings.json` migration trong `AppSettingService`). Segmentation warp dùng `HolderContourDetectionService` (không liên quan fiducial). Đã xóa thư mục dữ liệu `fiducial_holes/` (243 file). `Config/setting.json` không còn section `FiducialHoles`. Các ghi chú fiducial cũ bên dưới đã lỗi thời.
 
 **Memory bank (2026-06-15):** Restored from `cmsang/pcb` + added **`memory-bank/baslerCamera.md`** (Haui.PCB implementation + official/community pylon samples).
 
@@ -20,9 +20,23 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Pipeline step timing (2026-06-15):** Dashboard gallery shows per-step elapsed ms (`Stopwatch` in `PcbSegmentationService` → `SegmentationPipelineResult.StepTimings`); description moved to tooltip. Dashboard gallery row height **248px** (was 220) so elapsed-time footer is not clipped when horizontal scrollbar shows.
 
+**Component recognition timing (2026-06-21):** `TestPipelineViewModel` — gallery bước **Nhận diện linh kiện** (ảnh annotate trên bo mạch đã cắt, footer = thời gian `CompositeTemplateMatchService.Match`); PASS/FAIL panel hiển thị `TotalInspectionElapsedText` (tổng segmentation + nhận diện linh kiện).
+
 **UI thread / preview perf (2026-06-15):** Camera preview resize + `ToBitmapSource` moved off pylon grab thread with frame drop; Dashboard coalesces `CameraImage` updates (`DispatcherPriority.Render`); Test runs inspection then pipeline steps sequentially; `TestPipelineViewModel` bitmap conversion on thread pool.
 
 **GigE connect speed (2026-06-15):** `CameraBasler.deviceIp` → announce + `ICameraInfo` connect (not `new Camera(ip)`); GigE-only enumerate; resolution probe cached per serial; `StartAsync` off UI thread. Fix: open by serial/`ICameraInfo`, restore `WidthMax`/`HeightMax` probe.
+
+**Basler connect defaults (2026-06-20):** `CameraBasler` trong `setting.json` — `pixelFormat` (mặc định `Mono8`, fallback `BGR8` → Bayer*), `gainAuto` và `balanceWhiteAuto` (`Continuous`); `BaslerCameraService` đọc từ config khi kết nối; bỏ ghi `Gain` thủ công khi `gainAuto` ≠ `Off`.
+
+**Camera Mono8 pipeline (2026-06-21):** `BaslerCameraService` ép `Mono8` only → `Mat` `CV_8UC1`; Gaussian blur 5×5 ngay khi grab; segmentation bỏ bước Grayscale và **không blur lại** ảnh 1 kênh (gallery không có bước Gaussian Blur trùng); file màu vẫn BGR→gray + blur trong pipeline.
+
+**Configurable downscale on grab (2026-06-26):** `BaslerCameraService.OnImageGrabbed` — sau Gaussian blur (tiền xử lý), trước khi lưu `_lastFrame` / `FrameArrived`, gọi `ApplyDownscale`. Cấu hình qua section mới `CameraDownscale` trong `setting.json` (`ImageDownscaleSettings`: `enabled` mặc định **false**, `width` 1920, `height` 1080). Chỉ scale khi `enabled=true`; giữ tỉ lệ, chỉ thu nhỏ (`InterpolationFlags.Area`), không phóng to. Config nạp lại mỗi `StartCore`. Plumbing: `AppSetting.CameraDownscale` → `AppSettingService.LoadCameraDownscale` → `AppSettingsStore` → `CameraDefaultsLoader.LoadDownscale`; thêm vào `IAppSettingService`.
+
+**Edge AABB fiducial ROI (2026-06-20):** Sau Morphology Close, `PcbSegmentationService` tính ROI = `BoundingRect(FindNonZero)` trên pixel biên; `FiducialHoleDetectionService.Detect` chạy trên crop ROI; tọa độ lỗ cộng offset trước warp. `SegmentationPipelineResult.EdgeSearchRoi` + gallery Morphology Close vẽ khung cam.
+
+**Fiducial corner-first search (2026-06-20):** `FiducialSearchZones` — match theo vùng góc/cạnh từ ngoài vào trên ROI; early exit khi đủ quad hợp lệ; không fallback match toàn ROI.
+
+**Fiducial template form ROI (2026-06-20):** `FiducialTemplateWindow` / `LoadFrame` crop Morphology Close → Edge AABB ROI (`EdgeSearchRoiHelper`); operator chọn vùng trên ảnh ROI.
 
 **Dashboard cleanup (2026-06-16):** Removed Test 2 + `PipelineStepsWindow` / `PipelineDebugService`. DeveloperMode **Chọn ảnh** runs `TestPipelineViewModel.InspectFromFileAsync` — results in `ResultImage` + gallery only; `CameraImage` remains live camera feed.
 
@@ -30,7 +44,7 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Delete icon button (2026-06-16):** Inline row delete actions use shared `Views/Controls/DeleteIconButton` + app-wide `DeleteIconButtonStyle` (`App.xaml`); used in FiducialTemplateWindow, CreateTemplateWindow, SettingTabView AllowedRegionNames grid. TemplateViewerWindow cũng dùng DeleteIconButton cho cột xóa theo từng dòng (bỏ nút Lưu thư viện). Delete buttons right-aligned per row (`StretchListBoxItemStyle` on ListBoxes; DataGrid cell `HorizontalContentAlignment=Right`).
 
-**Dashboard component panel (2026-06-16):** Đã vẽ lại panel kết quả dạng bảng theo mẫu vận hành: dòng **Kết quả** (`x/y` + PASS/FAIL), dòng **D/s linh kiện thiếu**, tiêu đề đỏ gạch chân **Danh sách linh kiện thiếu**, và DataGrid danh sách thiếu ngay bên dưới. Vẫn bind `TestPipelineViewModel` qua `ComponentResultsPanel.DataContext`; `PassFailPanel`/`PassFailText` giữ nguyên để code-behind đổi màu theo PASS/FAIL.
+**Dashboard component panel (2026-06-16):** Đã vẽ lại panel kết quả dạng bảng theo mẫu vận hành: dòng **Kết quả** (`x/y` + PASS/FAIL + tổng thời gian pipeline), dòng **D/s linh kiện thiếu**, tiêu đề đỏ gạch chân **Danh sách linh kiện thiếu**, và DataGrid danh sách thiếu ngay bên dưới. Vẫn bind `TestPipelineViewModel` qua `ComponentResultsPanel.DataContext`; `PassFailPanel`/`PassFailText` giữ nguyên để code-behind đổi màu theo PASS/FAIL; thời gian bind `TotalInspectionElapsedText`. **2026-06-21:** PASS/FAIL và tổng thời gian xử lý nằm ngang hàng — hai `Border` riêng (`InspectionTimingPanel` trước, `PassFailPanel` sau) trong `StackPanel` ngang.
 
 **Result overlay border thickness (2026-06-16):** `TestPipelineViewModel.DrawAnnotations` tăng độ dày viền vùng linh kiện trên ảnh kết quả từ `2` lên `6` (x3) để dễ quan sát PASS/FAIL theo từng vùng.
 
@@ -44,11 +58,25 @@ Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments 
 
 **Fiducial geometric quad selection (2026-06-16):** `FiducialQuadSelector` + `FiducialQuadGeometry` — combinatorial search trong pool ứng viên (dedupe, max 15); lọc tứ giác lồi + rectangularity; ràng buộc tỷ lệ cạnh từ `PcbBoard` (mặc định **400×550 mm**); width/height = 0 → fallback diện tích lớn nhất. `FiducialHoles`: `aspectRatioTolerance`, `maxQuadSearchCandidates`, `minQuadRectangularity`. Setting tab: chiều rộng/cao bo mạch (mm).
 
+**Orientation marker cache (2026-06-22):** `OrientationMarkerCache` — preload grayscale crop vùng xác định chiều (`KF3_LABEL` / `orientationComponentName`) một lần theo thư mục thư viện; `BoardOrientationDetectionService` chỉ crop bo mạch đang kiểm tra + `CompareGrayscale`. Invalidate khi lưu/xóa mẫu (`TemplateLibraryService`) hoặc mtime PNG/JSON đổi. Giảm ~21× `ImRead` PNG đầy đủ mỗi lần Kiểm tra.
+
+**Orientation marker cache (2026-06-22):** `OrientationMarkerCache` — preload grayscale crop vùng xác định chiều (`KF3_LABEL` / `orientationComponentName`) một lần theo thư mục thư viện; `BoardOrientationDetectionService` chỉ crop bo mạch đang kiểm tra + `CompareGrayscale`. Invalidate khi lưu/xóa mẫu (`TemplateLibraryService`) hoặc mtime PNG/JSON đổi. Giảm ~21× `ImRead` PNG đầy đủ mỗi lần Kiểm tra.
+
 **Create template region validation (2026-06-17):** Trước khi lưu mẫu PCB — tên vùng phải ∈ `ComponentTemplates.AllowedRegionNames` và không trùng; `CanSave`, validate trước lưu. UI: ComboBox chọn tên từ danh sách cấu hình (không gõ tự do); vùng mới tự gán tên chưa dùng.
+
+**Create template zoom (2026-06-21):** `CreateTemplateWindow` — ScrollViewer + zoom 25%–800% (Ctrl+cuộn chuột hoặc nút −/+ / **Vừa khung**); zoom qua `LayoutTransform` (canvas giữ hệ tọa độ cố định, ảnh + overlay scale đồng bộ); kéo vùng map `GetPosition(BoardViewHost)` → tọa độ tương đối.
 
 **Template windows fullscreen (2026-06-18):** `CreateTemplateWindow` và `TemplateViewerWindow` mở `WindowState=Maximized` (giống `MainWindow`).
 
 **Inspection rotation removed (2026-06-18):** `TestPipelineViewModel` không còn xoay bo mạch 180° tự động khi so khớp linh kiện; bo mạch phải đúng hướng mẫu mới PASS. Nút **Xoay 180°** trong Tạo mẫu (`CreateTemplateViewModel.RotateBoard180`) vẫn giữ cho chỉnh mẫu thủ công.
+
+**Pipeline fiducial annotation (2026-06-16):** Bước gallery **Lỗ định vị** vẽ annotation trên ảnh gốc màu: vòng tròn + số thứ tự + % khớp; tứ giác cam khi đủ 4 lỗ (xanh), vàng khi thiếu lỗ. Partial detect trả về tâm lỗ để hiển thị debug.
+
+**Fiducial quad ordering fix (2026-06-16):** `FiducialQuadOrdering.OrderCorners` thay `OrderPoints` cũ (IndexOf trùng góc) — warp không còn suy biến; gallery downscale max 1920px + marker lớn hơn để thấy trên thumbnail.
+
+**Fiducial geometric quad selection (2026-06-16):** `FiducialQuadSelector` + `FiducialQuadGeometry` — combinatorial search trong pool ứng viên (dedupe, max 15); lọc tứ giác lồi + rectangularity; ràng buộc tỷ lệ cạnh từ `PcbBoard` (mặc định **400×550 mm**); width/height = 0 → fallback diện tích lớn nhất. `FiducialHoles`: `aspectRatioTolerance`, `maxQuadSearchCandidates`, `minQuadRectangularity`. Setting tab: chiều rộng/cao bo mạch (mm).
+
+**Create template region validation (2026-06-17):** Trước khi lưu mẫu PCB — tên vùng phải ∈ `ComponentTemplates.AllowedRegionNames` và không trùng; `CanSave`, validate trước lưu. UI: ComboBox chọn tên từ danh sách cấu hình (không gõ tự do); vùng mới tự gán tên chưa dùng.
 
 ## Configuration (single file)
 

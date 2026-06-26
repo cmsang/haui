@@ -1,0 +1,21 @@
+{
+  "Name": "21/06/2026 15:56",
+  "Regions": [
+    {
+      "Name": "R2",
+      "RelX": 0.719387529145103,
+      "RelY": 0.4941572777800226,
+      "RelWidth": 0.02185134752441265,
+      "RelHeight": 0.03526572355346247,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "R1",
+      "RelX": 0.7692086015007639,
+      "RelY": 0.4941572777800226,
+      "RelWidth": 0.024473509227342167,
+      "RelHeight": 0.03746983127555387,
+      "IsOrientationMarker": false
+    }
+  ]
+}

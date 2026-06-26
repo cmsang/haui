@@ -7,4 +7,6 @@ namespace Haui.PCB.Processing.Configuration;
 public static class CameraDefaultsLoader
 {
     public static CameraParameters LoadRecommended() => AppSettingsStore.LoadCameraBasler();
+
+    public static ImageDownscaleSettings LoadDownscale() => AppSettingsStore.LoadCameraDownscale();
 }

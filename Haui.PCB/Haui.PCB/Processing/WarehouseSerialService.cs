@@ -21,12 +21,6 @@ public class WarehouseSerialService
     {
         var setting = _appSettingService.Load();
 
-        if (setting.UseVirtualSerial())
-        {
-            reportStatus("Virtual serial — bỏ qua CMx/COx (coi như nhà kho OK).");
-            return;
-        }
-
         var warehouseCom = setting.WarehouseCom?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(warehouseCom))
             throw new InvalidOperationException("Chưa cấu hình warehouseCom trong setting.json.");
@@ -88,9 +82,6 @@ public class WarehouseSerialService
             error = "Chưa cấu hình warehouseCom trong setting.json.";
             return false;
         }
-
-        if (setting.UseVirtualSerial())
-            return true;
 
         try
         {

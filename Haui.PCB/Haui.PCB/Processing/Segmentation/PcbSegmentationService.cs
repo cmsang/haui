@@ -4,34 +4,31 @@ using OpenCvSharp;
 namespace Haui.PCB.Processing.Segmentation;
 
 /// <summary>
-/// Segments and straightens a PCB board from the camera frame using fiducial hole template matching.
-/// Canny + morphology close prepare the search image; four matched hole centers define the warp quad.
+/// Segments and straightens a PCB board from the camera frame using the holder support frame contour.
+/// Canny + morphology close prepare the search image; the largest valid external quad defines the warp.
 /// Implements <see cref="IPcbSegmentationService"/>.
 /// </summary>
 public class PcbSegmentationService : IPcbSegmentationService
 {
     private readonly SegmentationParameters _parameters;
-    private readonly IFiducialHoleTemplateService? _fiducialTemplates;
-    private readonly IFiducialHoleDetectionService? _fiducialDetection;
+    private readonly IHolderContourDetectionService _holderContourDetection;
 
     public PcbSegmentationService()
-        : this(SegmentationSettings.Current, FiducialHoleServices.TemplateService, new FiducialHoleDetectionService())
+        : this(SegmentationSettings.Current, new HolderContourDetectionService())
     {
     }
 
     public PcbSegmentationService(SegmentationParameters parameters)
-        : this(parameters, FiducialHoleServices.TemplateService, new FiducialHoleDetectionService())
+        : this(parameters, new HolderContourDetectionService())
     {
     }
 
     public PcbSegmentationService(
         SegmentationParameters parameters,
-        IFiducialHoleTemplateService? fiducialTemplates,
-        IFiducialHoleDetectionService? fiducialDetection)
+        IHolderContourDetectionService holderContourDetection)
     {
         _parameters = parameters;
-        _fiducialTemplates = fiducialTemplates;
-        _fiducialDetection = fiducialDetection;
+        _holderContourDetection = holderContourDetection;
     }
 
     private const int MorphKernelSize = 5;
@@ -63,86 +60,82 @@ public class PcbSegmentationService : IPcbSegmentationService
             MorphShapes.Rect,
             new Size(MorphKernelSize, MorphKernelSize));
 
-        sw.Restart();
-        Cv2.CvtColor(source, grayWork, ColorConversionCodes.BGR2GRAY);
-        RecordTiming(timings, SegmentationPipelineSteps.Grayscale, sw.Elapsed);
+        if (source.Channels() == 1)
+            source.CopyTo(grayWork);
+        else
+            Cv2.CvtColor(source, grayWork, ColorConversionCodes.BGR2GRAY);
 
-        sw.Restart();
-        Cv2.GaussianBlur(grayWork, blurredWork, new Size(5, 5), 0);
-        RecordTiming(timings, SegmentationPipelineSteps.GaussianBlur, sw.Elapsed);
+        Mat cannyInput;
+        if (source.Channels() == 1)
+        {
+            // Mono8 frames are pre-blurred in BaslerCameraService.
+            cannyInput = grayWork;
+        }
+        else
+        {
+            sw.Restart();
+            Cv2.GaussianBlur(grayWork, blurredWork, new Size(5, 5), 0);
+            RecordTiming(timings, SegmentationPipelineSteps.GaussianBlur, sw.Elapsed);
+            cannyInput = blurredWork;
+        }
 
         double t1 = _parameters.CannyThreshold1;
         double t2 = _parameters.CannyThreshold2;
 
         sw.Restart();
-        Cv2.Canny(blurredWork, edgesWork, t1, t2);
+        Cv2.Canny(cannyInput, edgesWork, t1, t2);
         RecordTiming(timings, SegmentationPipelineSteps.Canny, sw.Elapsed);
 
         sw.Restart();
         Cv2.MorphologyEx(edgesWork, closedWork, MorphTypes.Close, kernel, iterations: 3);
         RecordTiming(timings, SegmentationPipelineSteps.MorphologyClose, sw.Elapsed);
 
-        Point2f[]? fiducialCenters = null;
-        double[]? fiducialMatchScores = null;
-        string? fiducialDescription = null;
+        Point2f[]? warpQuadCorners = null;
+        string? contourDescription = null;
+        Rect? edgeSearchRoi = null;
         Mat? warped = null;
 
-        if (_fiducialTemplates?.HasTemplates() == true && _fiducialDetection is not null)
+        edgeSearchRoi = EdgeSearchRoiHelper.ComputeBoundingRect(closedWork);
+
+        if (edgeSearchRoi is null)
         {
-            var fiducialSettings = _fiducialTemplates.LoadSettings();
-            var boardSettings = AppSettingsStore.LoadPcbBoard();
-            var entries = _fiducialTemplates.LoadTemplateEntries();
-            try
-            {
-                sw.Restart();
-                var fiducialResult = _fiducialDetection.Detect(
-                    closedWork,
-                    entries,
-                    fiducialSettings,
-                    boardSettings);
-                RecordTiming(timings, SegmentationPipelineSteps.Fiducial, sw.Elapsed);
-
-                if (fiducialResult.TemplateOutcomes is { Count: > 0 } outcomes)
-                    _fiducialTemplates.UpdateRecognitionStats(outcomes);
-
-                fiducialDescription = fiducialResult.Message ?? "Không nhận diện được 4 lỗ định vị.";
-
-                if (fiducialResult.Centers is { Length: > 0 } centers)
-                {
-                    fiducialCenters = centers;
-                    fiducialMatchScores = fiducialResult.MatchScores;
-                }
-
-                if (fiducialResult.Success && fiducialCenters is not null)
-                {
-                    sw.Restart();
-                    warped = WarpPerspective(source, fiducialCenters);
-                    RecordTiming(timings, SegmentationPipelineSteps.Warp, sw.Elapsed);
-                }
-            }
-            finally
-            {
-                foreach (var entry in entries)
-                    entry.Template.Dispose();
-            }
+            contourDescription = "Không có pixel biên sau Morphology Close.";
+            RecordTiming(timings, SegmentationPipelineSteps.HolderContour, TimeSpan.Zero);
         }
         else
         {
-            fiducialDescription = "Chưa có mẫu lỗ định vị.";
-            RecordTiming(timings, SegmentationPipelineSteps.Fiducial, TimeSpan.Zero);
+            var holderSettings = AppSettingsStore.LoadPcbBoard();
+
+            sw.Restart();
+            var contourResult = _holderContourDetection.Detect(
+                closedWork,
+                edgeSearchRoi,
+                holderSettings);
+            RecordTiming(timings, SegmentationPipelineSteps.HolderContour, sw.Elapsed);
+
+            contourDescription = contourResult.Message ?? "Không tìm được khung hộp đỡ.";
+
+            if (contourResult.Success && contourResult.Corners is { Length: 4 } corners)
+            {
+                warpQuadCorners = corners;
+
+                sw.Restart();
+                warped = WarpPerspective(source, warpQuadCorners);
+                RecordTiming(timings, SegmentationPipelineSteps.Warp, sw.Elapsed);
+            }
         }
 
         return new SegmentationPipelineResult
         {
             Gray = includeDebugMats ? grayWork.Clone() : new Mat(),
-            Blurred = includeDebugMats ? blurredWork.Clone() : new Mat(),
+            Blurred = includeDebugMats && source.Channels() != 1 ? blurredWork.Clone() : new Mat(),
             Edges = includeDebugMats ? edgesWork.Clone() : new Mat(),
             Closed = includeDebugMats ? closedWork.Clone() : new Mat(),
             CannyThreshold1 = t1,
             CannyThreshold2 = t2,
-            FiducialCenters = fiducialCenters,
-            FiducialMatchScores = fiducialMatchScores,
-            FiducialDescription = fiducialDescription,
+            WarpQuadCorners = warpQuadCorners,
+            ContourDescription = contourDescription,
+            EdgeSearchRoi = edgeSearchRoi,
             Warped = warped,
             StepTimings = timings ?? new Dictionary<string, TimeSpan>()
         };
@@ -159,7 +152,7 @@ public class PcbSegmentationService : IPcbSegmentationService
 
     private static Mat WarpPerspective(Mat source, Point2f[] quad)
     {
-        var ordered = FiducialQuadOrdering.OrderCorners(quad);
+        var ordered = QuadOrdering.OrderCorners(quad);
 
         float width = Math.Max(
             Distance(ordered[0], ordered[1]),

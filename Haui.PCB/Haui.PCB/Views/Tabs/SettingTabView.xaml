@@ -62,18 +62,23 @@
                 <Border Style="{StaticResource SectionBorder}">
                     <StackPanel>
                         <TextBlock Text="Chế độ phát triển" Style="{StaticResource SectionTitle}"/>
-                        <CheckBox Content="Bật DeveloperMode (hiện nút tạo mẫu và thêm mẫu lỗ trên Dashboard)"
+                        <CheckBox Content="Bật DeveloperMode (hiện nút tạo mẫu trên Dashboard)"
                                   IsChecked="{Binding DeveloperMode, Mode=TwoWay}"
                                   Margin="0,0,0,8"/>
-                        <StackPanel Visibility="{Binding IsVirtualSerialVisible, Converter={StaticResource BoolToVis}}">
-                            <CheckBox Content="Virtual Serial Port (không cần kết nối cổng COM)"
-                                      IsChecked="{Binding VirtualSerialPort, Mode=TwoWay}"
-                                      Margin="0,0,0,8"/>
-                            <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11"
-                                       Text="Chỉ có hiệu lực khi DeveloperMode bật. Robot và warehouse chạy giả lập."/>
-                        </StackPanel>
                         <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11" Margin="0,4,0,0"
-                                   Text="Mặc định tắt trên máy vận hành. Bật để tạo/sửa mẫu linh kiện và mẫu lỗ định vị."/>
+                                   Text="Mặc định tắt trên máy vận hành. Bật để tạo/sửa mẫu linh kiện."/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Inspection -->
+                <Border Style="{StaticResource SectionBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Kiểm tra (Dashboard)" Style="{StaticResource SectionTitle}"/>
+                        <CheckBox Content="Hiện cửa sổ kết quả nhận diện sau khi kiểm tra xong"
+                                  IsChecked="{Binding ShowInspectionResultAfterRecognition, Mode=TwoWay}"
+                                  Margin="0,0,0,8"/>
+                        <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11"
+                                   Text="Mặc định tắt — kết quả vẫn hiển thị trên Dashboard. Bật để mở popup chi tiết trước khi robot phân loại."/>
                     </StackPanel>
                 </Border>
 
@@ -141,7 +146,12 @@
                 <!-- Component templates -->
                 <Border Style="{StaticResource SectionBorder}">
                     <StackPanel>
-                        <TextBlock Text="Thư viện mẫu linh kiện" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="Thư viện mẫu linh kiện / mạch trắng" Style="{StaticResource SectionTitle}"/>
+
+                        <CheckBox Content="Train mạch trắng"
+                                  IsChecked="{Binding TrainWhiteCircuit, Mode=TwoWay}"
+                                  Margin="0,0,0,12"/>
+
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="180"/>
@@ -150,19 +160,38 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Text="Thư mục mẫu" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="0" Text="Thư mục mẫu linh kiện" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     IsEnabled="{Binding IsComponentRegionNamesVisible}"
                                      Text="{Binding TemplateCustomFolder, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="1" Text="Ngưỡng giống (%)" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="1" Text="Thư mục mẫu mạch trắng" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     IsEnabled="{Binding TrainWhiteCircuit}"
+                                     Text="{Binding WhiteCircuitCustomFolder, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="2" Text="Ngưỡng giống (%)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
                                      Text="{Binding MinMatchSimilarityPercent, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="3" Text="Thành phần xác định chiều"
+                                       Style="{StaticResource FieldLabel}"
+                                       ToolTip="Tên vùng dùng để xác định chiều mạch khi kiểm tra"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding OrientationComponentName, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="4" Text="Xác suất tối thiểu chiều"
+                                       Style="{StaticResource FieldLabel}"
+                                       ToolTip="Ngưỡng CCoeffNormed (0–1) khi so khớp chiều mạch"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding MinOrientationMatchScore, UpdateSourceTrigger=PropertyChanged}"/>
                         </Grid>
 
+                        <StackPanel Visibility="{Binding IsComponentRegionNamesVisible, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Danh sách tên vùng được phép (AllowedRegionNames)"
                                    FontWeight="SemiBold" FontSize="13" Margin="0,4,0,8"/>
                         <TextBlock TextWrapping="Wrap" Foreground="#666666" FontSize="11" Margin="0,0,0,8"
-                                   Text="Thứ tự trong bảng quyết định STT và số vùng bắt buộc khi tạo mẫu."/>
+                                   Text="Thứ tự trong bảng quyết định STT và số vùng bắt buộc khi tạo mẫu linh kiện."/>
 
                         <DataGrid x:Name="AllowedRegionNamesGrid"
                                   ItemsSource="{Binding AllowedRegionNames}"
@@ -205,13 +234,14 @@
                         <Button Content="Thêm dòng" Height="32" Width="110" HorizontalAlignment="Left"
                                 Click="BtnAddRegionName_Click"
                                 Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- Fiducial -->
+                <!-- Holder support frame -->
                 <Border Style="{StaticResource SectionBorder}">
                     <StackPanel>
-                        <TextBlock Text="Lỗ định vị (FiducialHoles)" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="Hộp đỡ PCB (PcbBoard)" Style="{StaticResource SectionTitle}"/>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="180"/>
@@ -224,21 +254,27 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Text="Thư mục mẫu lỗ" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="0" Text="Chiều rộng hộp đỡ (mm)" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding FiducialTemplateFolder, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="1" Text="Min match score" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding FiducialMinMatchScore, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="2" Text="Max match dimension (px)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding FiducialMaxMatchDimension, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="3" Text="Chiều rộng bo mạch (mm)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource FieldTextBox}"
                                      Text="{Binding PcbBoardWidthMm, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="4" Text="Chiều cao bo mạch (mm)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                            <TextBlock Grid.Row="1" Text="Chiều cao hộp đỡ (mm)" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource FieldTextBox}"
                                      Text="{Binding PcbBoardHeightMm, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="2" Text="Sai số hình chữ nhật (%)"
+                                       Style="{StaticResource FieldLabel}"
+                                       ToolTip="Sai số tối đa giữa hai cạnh đối của khung hộp đỡ"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding HolderQuadRectTolerancePercent, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="3" Text="Sai số tỷ lệ hộp đỡ (%)"
+                                       Style="{StaticResource FieldLabel}"
+                                       ToolTip="Sai số tỷ lệ rộng/cao so với kích thước hộp đỡ (mm)"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding HolderAspectRatioTolerancePercent, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Grid.Row="4" Text="Sai số góc (°)"
+                                       Style="{StaticResource FieldLabel}"
+                                       ToolTip="Sai số tối đa so với góc vuông 90° tại mỗi góc khung hộp đỡ"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource FieldTextBox}"
+                                     Text="{Binding HolderQuadAngleToleranceDegrees, UpdateSourceTrigger=PropertyChanged}"/>
                         </Grid>
                     </StackPanel>
                 </Border>

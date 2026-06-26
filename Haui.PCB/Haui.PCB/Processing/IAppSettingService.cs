@@ -12,11 +12,10 @@ public interface IAppSettingService
     void SaveComponentTemplates(ComponentTemplateSettings settings);
     double LoadMatchThresholdPercent();
 
-    FiducialHoleSettings LoadFiducialHoles();
-    void SaveFiducialHoles(FiducialHoleSettings settings);
-
     PcbBoardSettings LoadPcbBoard();
+    void SavePcbBoard(PcbBoardSettings settings);
 
     CameraParameters LoadCameraBasler();
     CameraCaptureSettings LoadCameraCapture();
+    ImageDownscaleSettings LoadCameraDownscale();
 }

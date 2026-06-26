@@ -32,7 +32,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private double _gamma = 1.0;
 
     private readonly SegmentationParameters _pipelineParameters = SegmentationSettings.Current;
-    private readonly IFiducialHoleTemplateService _fiducialTemplateService = FiducialHoleServices.TemplateService;
     private readonly CameraCaptureService _cameraCaptureService = new();
 
     private OpenCvSharp.Rect? _selectedRegion;
@@ -44,7 +43,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public event Action<System.Windows.Media.Imaging.BitmapSource>? FrameReady;
     public event Action<Mat>? TemplateFrameCaptured;
-    public event Action<Mat>? FiducialTemplateFrameCaptured;
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public IReadOnlyList<CameraInfo> Cameras
@@ -132,8 +130,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public int LastFrameWidth => _lastFrameWidth;
     public int LastFrameHeight => _lastFrameHeight;
-
-    public bool HasFiducialTemplates => _fiducialTemplateService.HasTemplates();
 
     public bool IsMaterialTransferRunning => _materialTransfer?.IsRunning ?? false;
 
@@ -397,65 +393,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         TemplateFrameCaptured?.Invoke(frame);
     }
 
-    public async Task CaptureFiducialTemplateFrameAsync()
-    {
-        StatusText = "Đang chụp ảnh và chạy Morphology Close...";
-
-        if (_cameraService is null)
-        {
-            StatusText = "Camera chưa khởi động.";
-            return;
-        }
-
-        var frame = await Task.Run(() => _cameraService.GrabFrame());
-
-        if (frame is null || frame.Empty())
-        {
-            frame?.Dispose();
-            StatusText = "Không thể chụp ảnh từ camera.";
-            return;
-        }
-
-        frame = CropToSelectedRegion(frame);
-
-        var closedImage = await BuildMorphologyCloseForFiducialAsync(frame, disposeSource: true);
-
-        if (closedImage is null || closedImage.Empty())
-        {
-            closedImage?.Dispose();
-            StatusText = "Không tạo được ảnh Morphology Close.";
-            return;
-        }
-
-        StatusText = "Đã mở form tạo mẫu 4 lỗ tròn (Morphology Close).";
-        FiducialTemplateFrameCaptured?.Invoke(closedImage);
-    }
-
-    public async Task LoadFiducialTemplateFromFileAsync(string filePath)
-    {
-        StatusText = "Đang đọc ảnh và chạy Morphology Close...";
-
-        using var frame = await Task.Run(() => Cv2.ImRead(filePath, ImreadModes.Color));
-
-        if (frame.Empty())
-        {
-            StatusText = "Không thể đọc ảnh.";
-            return;
-        }
-
-        var closedImage = await BuildMorphologyCloseForFiducialAsync(frame, disposeSource: false);
-
-        if (closedImage is null || closedImage.Empty())
-        {
-            closedImage?.Dispose();
-            StatusText = "Không tạo được ảnh Morphology Close.";
-            return;
-        }
-
-        StatusText = "Đã mở form tạo mẫu lỗ (Morphology Close).";
-        FiducialTemplateFrameCaptured?.Invoke(closedImage);
-    }
-
     public async Task CaptureAndSaveFrameAsync()
     {
         StatusText = "Đang chụp và lưu ảnh...";
@@ -485,20 +422,21 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public void RefreshFiducialTemplateStatus()
+    private CameraParameters BuildParametersFromUi(int width, int height)
     {
-        OnPropertyChanged(nameof(HasFiducialTemplates));
+        var defaults = CameraDefaultsLoader.LoadRecommended();
+        return new()
+        {
+            ExposureTimeUs = ExposureTimeUs,
+            GainDb = GainDb,
+            Gamma = Gamma,
+            Width = width,
+            Height = height,
+            PixelFormat = defaults.PixelFormat,
+            GainAuto = defaults.GainAuto,
+            BalanceWhiteAuto = defaults.BalanceWhiteAuto
+        };
     }
-
-    private CameraParameters BuildParametersFromUi(int width, int height) => new()
-    {
-        ExposureTimeUs = ExposureTimeUs,
-        GainDb = GainDb,
-        Gamma = Gamma,
-        Width = width,
-        Height = height,
-        BalanceWhiteAuto = CameraDefaultsLoader.LoadRecommended().BalanceWhiteAuto
-    };
 
     private void SyncParametersFromCamera()
     {
@@ -523,24 +461,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
 
         var defaults = CameraDefaultsLoader.LoadRecommended();
         return (defaults.Width, defaults.Height);
-    }
-
-    private async Task<Mat?> BuildMorphologyCloseForFiducialAsync(Mat source, bool disposeSource)
-    {
-        try
-        {
-            return await Task.Run(() =>
-            {
-                var segmentation = new PcbSegmentationService(_pipelineParameters);
-                using var pipeline = segmentation.RunPipeline(source);
-                return pipeline.Closed.Clone();
-            });
-        }
-        finally
-        {
-            if (disposeSource)
-                source.Dispose();
-        }
     }
 
     private Mat CropToSelectedRegion(Mat frame)
@@ -639,7 +559,9 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
                 displaySource = previewMat;
             }
 
-            using var annotated = displaySource.Clone();
+            using var annotated = displaySource.Channels() == 1
+                ? EnsureBgr(displaySource)
+                : displaySource.Clone();
 
             if (selectedRegion.HasValue)
             {
@@ -664,6 +586,13 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             previewMat?.Dispose();
         }
+    }
+
+    private static Mat EnsureBgr(Mat source)
+    {
+        var bgr = new Mat();
+        Cv2.CvtColor(source, bgr, ColorConversionCodes.GRAY2BGR);
+        return bgr;
     }
 
     private static OpenCvSharp.Rect ClampRect(OpenCvSharp.Rect r, int w, int h)

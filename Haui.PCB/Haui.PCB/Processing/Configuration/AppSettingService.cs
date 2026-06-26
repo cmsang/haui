@@ -5,7 +5,7 @@ using Haui.PCB.Processing;
 namespace Haui.PCB.Processing.Configuration;
 
 /// <summary>
-/// Đọc / ghi <c>Config/setting.json</c> — robot, camera, thư viện mẫu, lỗ định vị.
+/// Đọc / ghi <c>Config/setting.json</c> — robot, camera, thư viện mẫu.
 /// </summary>
 public class AppSettingService : IAppSettingService
 {
@@ -13,7 +13,6 @@ public class AppSettingService : IAppSettingService
     private const string MigratedAppsettingsSuffix = ".migrated";
 
     private const string LegacyComponentFile = "component_template_settings.json";
-    private const string LegacyFiducialFile = "fiducial_settings.json";
     private const string LegacyCameraFile = "camera_basler_defaults.json";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -33,7 +32,9 @@ public class AppSettingService : IAppSettingService
         Gamma = 1.0,
         Width = 1920,
         Height = 1200,
-        BalanceWhiteAuto = "Off"
+        PixelFormat = "Mono8",
+        GainAuto = "Continuous",
+        BalanceWhiteAuto = "Continuous"
     };
 
     public AppSetting Load()
@@ -88,16 +89,14 @@ public class AppSettingService : IAppSettingService
     public double LoadMatchThresholdPercent()
         => NormalizeMatchThreshold(LoadComponentTemplates().MinMatchSimilarityPercent);
 
-    public FiducialHoleSettings LoadFiducialHoles() => Load().FiducialHoles;
+    public PcbBoardSettings LoadPcbBoard() => Load().PcbBoard;
 
-    public void SaveFiducialHoles(FiducialHoleSettings settings)
+    public void SavePcbBoard(PcbBoardSettings settings)
     {
         var app = Load();
-        app.FiducialHoles = settings;
+        app.PcbBoard = settings;
         Save(app);
     }
-
-    public PcbBoardSettings LoadPcbBoard() => Load().PcbBoard;
 
     public CameraParameters LoadCameraBasler()
     {
@@ -109,6 +108,16 @@ public class AppSettingService : IAppSettingService
 
     public CameraCaptureSettings LoadCameraCapture() => Load().CameraCapture;
 
+    public ImageDownscaleSettings LoadCameraDownscale()
+    {
+        var settings = Load().CameraDownscale;
+        if (settings.Width <= 0)
+            settings.Width = ImageDownscaleSettings.DefaultWidth;
+        if (settings.Height <= 0)
+            settings.Height = ImageDownscaleSettings.DefaultHeight;
+        return settings;
+    }
+
     private static AppSetting CreateAndSaveDefault()
     {
         var setting = new AppSetting();
@@ -119,24 +128,8 @@ public class AppSettingService : IAppSettingService
 
     private static void Normalize(AppSetting setting)
     {
-        if (!setting.DeveloperMode)
-            setting.VirtualSerialPort = false;
-
         setting.ComponentTemplates.MinMatchSimilarityPercent =
             NormalizeMatchThreshold(setting.ComponentTemplates.MinMatchSimilarityPercent);
-
-        setting.FiducialHoles.AspectRatioTolerance = Math.Clamp(
-            setting.FiducialHoles.AspectRatioTolerance,
-            0.01,
-            1.0);
-        setting.FiducialHoles.MaxQuadSearchCandidates = Math.Clamp(
-            setting.FiducialHoles.MaxQuadSearchCandidates,
-            4,
-            30);
-        setting.FiducialHoles.MinQuadRectangularity = Math.Clamp(
-            setting.FiducialHoles.MinQuadRectangularity,
-            0.1,
-            1.0);
 
         setting.WaitPointJoint234OffsetDegrees = Math.Clamp(
             setting.WaitPointJoint234OffsetDegrees,
@@ -215,12 +208,6 @@ public class AppSettingService : IAppSettingService
                     ?? new ComponentTemplateSettings());
 
             any |= TryImportLegacySection(
-                Path.Combine(searchDir, LegacyFiducialFile),
-                json => setting.FiducialHoles =
-                    JsonSerializer.Deserialize<FiducialHoleSettings>(json, JsonOptions)
-                    ?? new FiducialHoleSettings());
-
-            any |= TryImportLegacySection(
                 Path.Combine(searchDir, LegacyCameraFile),
                 json => setting.CameraBasler =
                     JsonSerializer.Deserialize<CameraParameters>(json, JsonOptions)
@@ -264,13 +251,6 @@ public class AppSettingService : IAppSettingService
             || !string.IsNullOrWhiteSpace(source.ComponentTemplates.CustomFolder))
         {
             target.ComponentTemplates = source.ComponentTemplates;
-        }
-
-        if (!string.IsNullOrWhiteSpace(source.FiducialHoles.TemplateFolder)
-            || source.FiducialHoles.MinMatchScore > 0
-            || source.FiducialHoles.MaxMatchDimension > 0)
-        {
-            target.FiducialHoles = source.FiducialHoles;
         }
 
         if (source.CameraBasler.Width > 0 && source.CameraBasler.Height > 0)

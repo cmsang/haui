@@ -14,8 +14,8 @@ public interface IPcbSegmentationService
     SegmentationPipelineResult RunPipeline(Mat source);
 
     /// <summary>
-    /// Phân vùng và trả về ảnh bo mạch đã cắt từ ảnh gốc.
-    /// Trả về null nếu không tìm thấy bo mạch.
+    /// Phân vùng theo khung hộp đỡ và trả về ảnh bo mạch đã cắt từ ảnh gốc.
+    /// Trả về null nếu không tìm thấy khung hộp đỡ hợp lệ.
     /// </summary>
     Mat? Segment(Mat source);
 }

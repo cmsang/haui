@@ -1,0 +1,149 @@
+{
+  "Name": "21/06/2026 16:05",
+  "Regions": [
+    {
+      "Name": "KF1",
+      "RelX": 0.12672098424531197,
+      "RelY": 0.763058419875174,
+      "RelWidth": 0.11654016219571246,
+      "RelHeight": 0.06502117780169643,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "KF2",
+      "RelX": 0.29583565570224807,
+      "RelY": 0.763058419875174,
+      "RelWidth": 0.11566392037469207,
+      "RelHeight": 0.06502117780169643,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "KF3",
+      "RelX": 0.46582656898020464,
+      "RelY": 0.7619563660141283,
+      "RelWidth": 0.10953022762754931,
+      "RelHeight": 0.06502117780169643,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C2",
+      "RelX": 0.6437036586473447,
+      "RelY": 0.7233844808775287,
+      "RelWidth": 0.08236673117591707,
+      "RelHeight": 0.03526572355346247,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "AMS1",
+      "RelX": 0.7882835591157098,
+      "RelY": 0.7366091272100772,
+      "RelWidth": 0.07097558750265195,
+      "RelHeight": 0.03746983127555387,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "L3",
+      "RelX": 0.84950288135218,
+      "RelY": 0.5155815277467823,
+      "RelWidth": 0.01921437641557,
+      "RelHeight": 0.015832909912943918,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "L2",
+      "RelX": 0.8196874696728471,
+      "RelY": 0.5172481498428817,
+      "RelWidth": 0.017889247007599755,
+      "RelHeight": 0.015832909912943918,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "R1",
+      "RelX": 0.7693325521699738,
+      "RelY": 0.49808199573773904,
+      "RelWidth": 0.023189764639481133,
+      "RelHeight": 0.03249913087393757,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "R2",
+      "RelX": 0.720965328779056,
+      "RelY": 0.49974861783383834,
+      "RelWidth": 0.021202070527525617,
+      "RelHeight": 0.029999197729788544,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C3",
+      "RelX": 0.381069635634661,
+      "RelY": 0.6055791209361477,
+      "RelWidth": 0.014576423487673842,
+      "RelHeight": 0.023332709345391067,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C6",
+      "RelX": 0.3413157533955505,
+      "RelY": 0.6064124319841975,
+      "RelWidth": 0.01656411759962941,
+      "RelHeight": 0.02249939829734139,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C5",
+      "RelX": 0.2995741770444844,
+      "RelY": 0.6072457430322471,
+      "RelWidth": 0.01722668230361458,
+      "RelHeight": 0.024166020393440745,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C1",
+      "RelX": 0.13724582456811643,
+      "RelY": 0.23808894874623876,
+      "RelWidth": 0.08282058799814694,
+      "RelHeight": 0.05083197393103046,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "LM1",
+      "RelX": 0.2869854476687661,
+      "RelY": 0.31225363202266027,
+      "RelWidth": 0.03909131753512537,
+      "RelHeight": 0.08499772690106744,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "L1",
+      "RelX": 0.5308092587353106,
+      "RelY": 0.21558955044889735,
+      "RelWidth": 0.08017032918220626,
+      "RelHeight": 0.05083197393103052,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "C4",
+      "RelX": 0.7362043169707151,
+      "RelY": 0.23808894874623876,
+      "RelWidth": 0.05234261161482882,
+      "RelHeight": 0.054165218123229227,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "D2",
+      "RelX": 0.15125575523388302,
+      "RelY": 0.4831367391695657,
+      "RelWidth": 0.04381209105101972,
+      "RelHeight": 0.056204746913330814,
+      "IsOrientationMarker": false
+    },
+    {
+      "Name": "D1",
+      "RelX": 0.1530082388759238,
+      "RelY": 0.4059929688963665,
+      "RelWidth": 0.041183365587958536,
+      "RelHeight": 0.048490369886010895,
+      "IsOrientationMarker": false
+    }
+  ]
+}

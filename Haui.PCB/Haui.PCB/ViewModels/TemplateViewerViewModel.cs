@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Haui.PCB.Processing.Configuration;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
 
@@ -56,6 +57,9 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
     private bool _disposed;
     private int _boardWidth;
     private int _boardHeight;
+    private bool _isWhiteCircuitMode;
+    private string _libraryFolderPath = string.Empty;
+    private string _modeDisplayText = "Linh kiện";
 
     public event Action<BitmapSource?>? PreviewImageChanged;
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -81,6 +85,33 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
     public int BoardWidth => _boardWidth;
     public int BoardHeight => _boardHeight;
 
+    public bool IsWhiteCircuitMode
+    {
+        get => _isWhiteCircuitMode;
+        private set
+        {
+            if (_isWhiteCircuitMode == value) return;
+            _isWhiteCircuitMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ModeBannerText));
+        }
+    }
+
+    public string ModeDisplayText
+    {
+        get => _modeDisplayText;
+        private set { _modeDisplayText = value; OnPropertyChanged(); }
+    }
+
+    public string LibraryFolderPath
+    {
+        get => _libraryFolderPath;
+        private set { _libraryFolderPath = value; OnPropertyChanged(); }
+    }
+
+    public string ModeBannerText =>
+        $"Chế độ train: {ModeDisplayText} — Thư viện: {LibraryFolderPath}";
+
     // ──── Internal state ─────────────────────────────────────────────────────
 
     // ──── Khởi tạo ───────────────────────────────────────────────────────────
@@ -91,6 +122,16 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
     {
         _libraryService = libraryService;
         _requiredRegionCount = ComponentTemplateRegionNames.RequiredRegionCount;
+        RefreshModeFromConfig();
+    }
+
+    public void RefreshModeFromConfig()
+    {
+        var settings = AppSettingsStore.LoadComponentTemplates();
+        IsWhiteCircuitMode = TemplateLibraryPaths.IsWhiteCircuitMode(settings);
+        ModeDisplayText = IsWhiteCircuitMode ? "Mạch trắng" : "Linh kiện";
+        LibraryFolderPath = _libraryService.GetLibraryFolder();
+        OnPropertyChanged(nameof(ModeBannerText));
     }
 
     // ──── Public API ─────────────────────────────────────────────────────────
@@ -98,6 +139,7 @@ public class TemplateViewerViewModel : INotifyPropertyChanged, IDisposable
     /// <summary>Nạp danh sách mẫu từ thư viện.</summary>
     public void LoadTemplates()
     {
+        RefreshModeFromConfig();
         Templates.Clear();
         Regions.Clear();
         PreviewImage = null;

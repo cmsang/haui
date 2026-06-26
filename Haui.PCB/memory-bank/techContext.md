@@ -39,9 +39,8 @@ Summary for Haui.PCB:
 | Path | Written by | Purpose |
 |------|------------|---------|
 | `last_region.json` | `MainViewModel` | Last camera ROI (pixel rect) |
-| `Config/setting.json` | `AppSettingService` | Robot, `DatabaseConnection`, `ComponentTemplates`, `FiducialHoles`, `CameraBasler`, `CameraCapture` |
+| `Config/setting.json` | `AppSettingService` | Robot, `DatabaseConnection`, `ComponentTemplates`, `PcbBoard`, `CameraBasler`, `CameraCapture` |
 | `ComponentTemplates.CustomFolder` (`setting.json`) | `TemplateLibraryService` | Thư mục thư viện mẫu (`*.png` + `*_regions.json`; rỗng → `templates/`) |
-| `fiducial_holes/hole_*.png` | `FiducialHoleTemplateService` | Thư viện mẫu lỗ (nhiều ảnh, cùng hình dạng) |
 
 ## Segmentation constants (`PcbSegmentationService`)
 
@@ -51,7 +50,7 @@ Summary for Haui.PCB:
 | `MorphKernelSize` | 5 | Close gaps in edges |
 | `EdgePadding` | 2 px | Crop padding |
 
-Pipeline: BGR→gray → GaussianBlur(5×5) → Canny → morphology close → fiducial hole template matching (4 centers) → perspective warp → landscape normalize. Requires `fiducial_holes/hole_*.png` library.
+Pipeline: BGR→gray → GaussianBlur(5×5) → Canny → morphology close → holder contour quad (460×590 mm) → perspective warp → landscape normalize.
 
 ## Comparison (`RegionComparisonService`)
 
