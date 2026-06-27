@@ -387,7 +387,7 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             using var canvas = board.Channels() == 1 ? EnsureBgr(board) : board.Clone();
-            const int thickness = 8;
+            const int thickness = 24;
             const double fontScale = 0.45;
 
             foreach (var item in missing)
