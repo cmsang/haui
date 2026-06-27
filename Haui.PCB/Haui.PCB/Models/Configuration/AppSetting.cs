@@ -33,10 +33,6 @@ public class AppSetting
     /// <summary>Tốc độ di chuyển khi Go To (0–100%).</summary>
     public int SpeedPercent { get; set; } = 50;
 
-    /// <summary>Offset J2/J3/J4 khi tính Wait PickUp / Wait OK / Wait NG (độ).</summary>
-    [JsonPropertyName("waitPointJoint234OffsetDegrees")]
-    public double WaitPointJoint234OffsetDegrees { get; set; } = -20;
-
     /// <summary>Chuỗi kết nối SQL Server.</summary>
     [JsonPropertyName("DatabaseConnection")]
     public string DatabaseConnection { get; set; } =

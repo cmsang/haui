@@ -54,7 +54,6 @@ public partial class wdTeaching : Window
         CboComPort.Text = _viewModel.SerialPortName;
         CboBaudRate.SelectedItem = _viewModel.BaudRate;
         TxtStepsPerDeg.Text = _viewModel.StepsPerDeg.ToString();
-        TxtWaitOffset.Text = _viewModel.WaitPointJoint234OffsetDegrees.ToString("0.##");
         SldSpeed.Value = _viewModel.SpeedPercent;
         TxtSpeed.Text = $"{_viewModel.SpeedPercent}%";
 
@@ -69,6 +68,8 @@ public partial class wdTeaching : Window
             else if (e.PropertyName is nameof(RobotTeachViewModel.SelectedPoint))
                 UpdateJointSummary();
         };
+
+        _viewModel.JogLimitWarning += OnJogLimitWarning;
 
         foreach (var joint in _viewModel.Joints)
             joint.PropertyChanged += (_, _) => UpdateJointSummary();
@@ -100,6 +101,9 @@ public partial class wdTeaching : Window
 
     private void UpdateJointSummary()
         => TxtJointSummary.Text = _viewModel.GetJointSummary();
+
+    private void OnJogLimitWarning(string message)
+        => MessageBox.Show(this, message, "Giới hạn khớp", MessageBoxButton.OK, MessageBoxImage.Warning);
 
     private void BtnRefreshPorts_Click(object sender, RoutedEventArgs e)
     {
@@ -214,8 +218,6 @@ public partial class wdTeaching : Window
             _viewModel.BaudRate = baud;
         if (int.TryParse(TxtStepsPerDeg.Text, out var steps))
             _viewModel.StepsPerDeg = steps;
-        if (double.TryParse(TxtWaitOffset.Text, out var waitOffset))
-            _viewModel.WaitPointJoint234OffsetDegrees = waitOffset;
 
         _viewModel.SaveConfiguration();
     }
@@ -233,6 +235,7 @@ public partial class wdTeaching : Window
     {
         if (_allowClose)
         {
+            _viewModel.JogLimitWarning -= OnJogLimitWarning;
             _viewModel.SaveConfiguration();
             _viewModel.CancelPendingOperations();
             if (_ownsSerialService)
@@ -261,7 +264,6 @@ public partial class wdTeaching : Window
 
         CboComPort.Text = _viewModel.SerialPortName;
         CboBaudRate.SelectedItem = _viewModel.BaudRate;
-        TxtWaitOffset.Text = _viewModel.WaitPointJoint234OffsetDegrees.ToString("0.##");
 
         if (_viewModel.SelectedPoint != null)
             TeachPointsGrid.SelectedItem = _viewModel.SelectedPoint;
