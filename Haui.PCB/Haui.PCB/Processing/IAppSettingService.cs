@@ -11,6 +11,9 @@ public interface IAppSettingService
     ComponentDetectionSettings LoadComponentDetection();
     void SaveComponentDetection(ComponentDetectionSettings settings);
 
+    SegmentationPipelineSettings LoadSegmentation();
+    void SaveSegmentation(SegmentationPipelineSettings settings);
+
     PcbBoardSettings LoadPcbBoard();
     void SavePcbBoard(PcbBoardSettings settings);
 

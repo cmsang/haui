@@ -86,6 +86,21 @@ public class AppSettingService : IAppSettingService
         Save(app);
     }
 
+    public SegmentationPipelineSettings LoadSegmentation()
+    {
+        var settings = Load().Segmentation;
+        NormalizeSegmentation(settings);
+        return settings;
+    }
+
+    public void SaveSegmentation(SegmentationPipelineSettings settings)
+    {
+        var app = Load();
+        NormalizeSegmentation(settings);
+        app.Segmentation = settings;
+        Save(app);
+    }
+
     public PcbBoardSettings LoadPcbBoard() => Load().PcbBoard;
 
     public void SavePcbBoard(PcbBoardSettings settings)
@@ -136,6 +151,7 @@ public class AppSettingService : IAppSettingService
     private static void Normalize(AppSetting setting)
     {
         NormalizeComponentDetection(setting.ComponentDetection);
+        NormalizeSegmentation(setting.Segmentation);
 
         setting.WaitPointJoint234OffsetDegrees = Math.Clamp(
             setting.WaitPointJoint234OffsetDegrees,
@@ -188,6 +204,16 @@ public class AppSettingService : IAppSettingService
                 .Where(g => g.Parent.Length > 0 && g.Children.Count > 0)
                 .ToList();
         }
+    }
+
+    private static void NormalizeSegmentation(SegmentationPipelineSettings settings)
+    {
+        if (settings.CannyThreshold1 <= 0)
+            settings.CannyThreshold1 = SegmentationPipelineSettings.DefaultCannyThreshold1;
+        if (settings.CannyThreshold2 <= 0)
+            settings.CannyThreshold2 = SegmentationPipelineSettings.DefaultCannyThreshold2;
+        if (settings.CannyThreshold2 < settings.CannyThreshold1)
+            settings.CannyThreshold2 = settings.CannyThreshold1;
     }
 
     private static void MigrateFromAppsettingsJson()

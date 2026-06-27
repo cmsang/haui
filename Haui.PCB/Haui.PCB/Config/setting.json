@@ -60,6 +60,10 @@
     "aspectRatioTolerancePercent": 5,
     "quadAngleToleranceDegrees": 5
   },
+  "Segmentation": {
+    "cannyThreshold1": 30,
+    "cannyThreshold2": 100
+  },
   "CameraBasler": {
     "deviceIp": "",
     "exposureTimeUs": 20000,

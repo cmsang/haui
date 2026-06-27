@@ -13,6 +13,8 @@ internal static class AppSettingsStore
     public static void SaveComponentDetection(ComponentDetectionSettings settings)
         => Service.SaveComponentDetection(settings);
 
+    public static SegmentationPipelineSettings LoadSegmentation() => Service.LoadSegmentation();
+
     public static PcbBoardSettings LoadPcbBoard() => Service.LoadPcbBoard();
 
     public static CameraParameters LoadCameraBasler() => Service.LoadCameraBasler();

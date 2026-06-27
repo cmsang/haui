@@ -11,24 +11,15 @@ namespace Haui.PCB.Processing.Segmentation;
 /// </summary>
 public class PcbSegmentationService : IPcbSegmentationService
 {
-    private readonly SegmentationParameters _parameters;
     private readonly IHolderContourDetectionService _holderContourDetection;
 
     public PcbSegmentationService()
-        : this(SegmentationSettings.Current, new HolderContourDetectionService())
+        : this(new HolderContourDetectionService())
     {
     }
 
-    public PcbSegmentationService(SegmentationParameters parameters)
-        : this(parameters, new HolderContourDetectionService())
+    public PcbSegmentationService(IHolderContourDetectionService holderContourDetection)
     {
-    }
-
-    public PcbSegmentationService(
-        SegmentationParameters parameters,
-        IHolderContourDetectionService holderContourDetection)
-    {
-        _parameters = parameters;
         _holderContourDetection = holderContourDetection;
     }
 
@@ -80,8 +71,9 @@ public class PcbSegmentationService : IPcbSegmentationService
             cannyInput = blurredWork;
         }
 
-        double t1 = _parameters.CannyThreshold1;
-        double t2 = _parameters.CannyThreshold2;
+        var segmentation = AppSettingsStore.LoadSegmentation();
+        double t1 = segmentation.CannyThreshold1;
+        double t2 = segmentation.CannyThreshold2;
 
         var holderDownscale = AppSettingsStore.LoadHolderDetectionDownscale();
         var (detectionInputMat, detectionScale) = DetectionImageHelper.DownscaleForDetection(

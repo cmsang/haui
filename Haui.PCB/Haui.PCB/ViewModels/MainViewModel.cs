@@ -31,7 +31,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private double _gainDb;
     private double _gamma = 1.0;
 
-    private readonly SegmentationParameters _pipelineParameters = SegmentationSettings.Current;
     private readonly CameraCaptureService _cameraCaptureService = new();
 
     private OpenCvSharp.Rect? _selectedRegion;
@@ -94,26 +93,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _gamma;
         set { _gamma = value; OnPropertyChanged(); }
-    }
-
-    public double CannyThreshold1
-    {
-        get => _pipelineParameters.CannyThreshold1;
-        set
-        {
-            _pipelineParameters.CannyThreshold1 = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public double CannyThreshold2
-    {
-        get => _pipelineParameters.CannyThreshold2;
-        set
-        {
-            _pipelineParameters.CannyThreshold2 = value;
-            OnPropertyChanged();
-        }
     }
 
     public OpenCvSharp.Rect? SelectedRegion
@@ -315,14 +294,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             StatusText = $"Lỗi áp dụng tham số: {ex.Message}";
         }
-    }
-
-    public void ResetPipelineParameters()
-    {
-        _pipelineParameters.ResetToDefaults();
-        OnPropertyChanged(nameof(CannyThreshold1));
-        OnPropertyChanged(nameof(CannyThreshold2));
-        StatusText = "Đã đặt lại tham số Canny (50 / 150).";
     }
 
     public void ResetCameraParameters()

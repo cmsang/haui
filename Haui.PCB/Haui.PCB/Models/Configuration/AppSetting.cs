@@ -45,6 +45,9 @@ public class AppSetting
     [JsonPropertyName("ComponentDetection")]
     public ComponentDetectionSettings ComponentDetection { get; set; } = new();
 
+    [JsonPropertyName("Segmentation")]
+    public SegmentationPipelineSettings Segmentation { get; set; } = new();
+
     [JsonPropertyName("PcbBoard")]
     public PcbBoardSettings PcbBoard { get; set; } = new();
 
