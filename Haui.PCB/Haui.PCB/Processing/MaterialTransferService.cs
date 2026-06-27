@@ -59,8 +59,7 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
-        var offset = _appSettingService.Load().WaitPointJoint234OffsetDegrees;
-        var points = RobotTeachPositions.Normalize(teachPoints, offset);
+        var points = RobotTeachPositions.Normalize(teachPoints);
         var pickUp = FindPoint(points, RobotTeachPositions.PickUp);
         var wait = FindPoint(points, RobotTeachPositions.Wait);
 
@@ -76,10 +75,10 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
-        var waitPickUp = RobotTeachPositions.ResolveWaitPickUp(points, offset);
+        var waitPickUp = RobotTeachPositions.ResolveWaitPickUp(points);
         if (waitPickUp == null)
         {
-            reportStatus("Không tìm thấy Wait PickUp — teach Wait PickUp hoặc PickUp.");
+            reportStatus("Không tìm thấy Wait PickUp — cần teach Wait PickUp.");
             return;
         }
 
@@ -100,17 +99,10 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
-        var referenceName = isPass ? RobotTeachPositions.Ok1 : RobotTeachPositions.Ng1;
-        if (FindPoint(points, referenceName) == null)
-        {
-            reportStatus($"Không tìm thấy {referenceName} — cần teach Wait Place {(isPass ? "OK" : "NG")} hoặc {referenceName}.");
-            return;
-        }
-
-        var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(points, destination, offset);
+        var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(points, destination);
         if (waitPlace == null)
         {
-            reportStatus($"Không tính được Wait Place {(isPass ? "OK" : "NG")}.");
+            reportStatus($"Không tìm thấy Wait {(isPass ? "OK" : "NG")} — cần teach Wait {(isPass ? "OK" : "NG")}.");
             return;
         }
 
@@ -140,7 +132,7 @@ public class MaterialTransferService : IMaterialTransferService
 
             if (_robotConfigService.TryLoadTeachPoints(out var updatedPoints, out _))
             {
-                var updated = RobotTeachPositions.Normalize(updatedPoints, offset);
+                var updated = RobotTeachPositions.Normalize(updatedPoints);
                 NotifyWarehouseIfBufferFull(updated, isPass, reportStatus);
             }
 

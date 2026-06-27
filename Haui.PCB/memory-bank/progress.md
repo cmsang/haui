@@ -31,6 +31,7 @@
 - [x] Unified config — `Config/setting.json` (`AppSettingService`)
 - [x] DeveloperMode — **Chọn ảnh** (file inspect, no camera required) on Dashboard toolbar
 - [x] Virtual Serial Port — `VirtualRobotSerialService` when dev + virtual enabled (no COM required)
+- [x] **Wait points teach thủ công (2026-06-28)** — bỏ offset tự sinh; `Wait PickUp`/`Wait OK`/`Wait NG` teach trực tiếp như mọi điểm; gỡ `RobotTeachPointOffsets`, `waitPointJoint234OffsetDegrees`, ô Offset Wait trong Teaching
 - [x] Sharpest-frame selection (Laplacian variance)
 - [x] Camera Mono8 — force `Mono8`, `CV_8UC1` grab, Gaussian blur at grab; segmentation skips Grayscale + duplicate blur for 1-channel frames
 

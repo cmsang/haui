@@ -182,7 +182,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         var selectedName = SelectedDestination?.Name;
         DestinationPoints.Clear();
 
-        foreach (var point in RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset))
+        foreach (var point in RobotTeachPositions.Normalize(_allTeachPoints))
         {
             if (point.Group is not ("OK" or "NG")) continue;
             DestinationPoints.Add(point);
@@ -329,26 +329,20 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var waitPickUp = RobotTeachPositions.ResolveWaitPickUp(
-            RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset), WaitJoint234Offset);
+            RobotTeachPositions.Normalize(_allTeachPoints));
         if (waitPickUp == null)
         {
-            StatusText = "Không tìm thấy Wait PickUp — teach Wait PickUp hoặc PickUp.";
+            StatusText = "Không tìm thấy Wait PickUp — cần teach Wait PickUp.";
             return;
         }
 
         var isNg = RobotTeachPositions.IsNgSlot(destination.Name);
-        var referenceName = isNg ? RobotTeachPositions.Ng1 : RobotTeachPositions.Ok1;
-        if (GetTeachPoint(referenceName) == null)
-        {
-            StatusText = $"Không tìm thấy {referenceName} — cần teach Wait Place {(isNg ? "NG" : "OK")} hoặc {referenceName}.";
-            return;
-        }
 
         var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(
-            RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset), destination, WaitJoint234Offset);
+            RobotTeachPositions.Normalize(_allTeachPoints), destination);
         if (waitPlace == null)
         {
-            StatusText = $"Không tính được Wait Place {(isNg ? "NG" : "OK")}.";
+            StatusText = $"Không tìm thấy Wait {(isNg ? "NG" : "OK")} — cần teach Wait {(isNg ? "NG" : "OK")}.";
             return;
         }
 
@@ -509,10 +503,8 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private double WaitJoint234Offset => _appSetting.WaitPointJoint234OffsetDegrees;
-
     private RobotTeachPoint? GetTeachPoint(string name)
-        => RobotTeachPositions.Normalize(_allTeachPoints, WaitJoint234Offset)
+        => RobotTeachPositions.Normalize(_allTeachPoints)
             .FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     private IReadOnlyList<RobotTeachPoint> LoadAllTeachPoints()
@@ -520,12 +512,12 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         if (!_robotConfigService.TryLoadTeachPoints(out var dbPoints, out var error))
         {
             StatusText = $"Không tải được Database: {error}";
-            return RobotTeachPositions.CreateDefault(WaitJoint234Offset);
+            return RobotTeachPositions.CreateDefault();
         }
 
         return dbPoints.Count > 0
             ? dbPoints
-            : RobotTeachPositions.CreateDefault(WaitJoint234Offset);
+            : RobotTeachPositions.CreateDefault();
     }
 
     private void OnSerialFrameReceived(string frame)

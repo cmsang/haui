@@ -152,11 +152,6 @@ public class AppSettingService : IAppSettingService
     {
         NormalizeComponentDetection(setting.ComponentDetection);
         NormalizeSegmentation(setting.Segmentation);
-
-        setting.WaitPointJoint234OffsetDegrees = Math.Clamp(
-            setting.WaitPointJoint234OffsetDegrees,
-            -180,
-            180);
     }
 
     private static void NormalizeComponentDetection(ComponentDetectionSettings settings)

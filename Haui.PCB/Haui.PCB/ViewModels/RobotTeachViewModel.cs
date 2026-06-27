@@ -85,7 +85,6 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private int _stepsPerDeg = 100;
     private double _jogStep = 1.0;
     private int _speedPercent = 50;
-    private double _waitPointJoint234Offset = RobotTeachPointOffsets.DefaultJoint234OffsetDegrees;
     private bool _isSerialConnected;
     private bool _isAwaitingRobotDone;
     private bool _isReturningHome;
@@ -112,7 +111,6 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
         _jogStep = _appSetting.JogStepDegrees;
         _speedPercent = _appSetting.SpeedPercent;
-        _waitPointJoint234Offset = _appSetting.WaitPointJoint234OffsetDegrees;
         _serialPort = _appSetting.Com;
         _baudRate = _appSetting.BaudRate;
         _stepsPerDeg = _appSetting.StepsPerDeg;
@@ -248,20 +246,13 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public double WaitPointJoint234OffsetDegrees
-    {
-        get => _waitPointJoint234Offset;
-        set
-        {
-            _waitPointJoint234Offset = Math.Clamp(value, -180, 180);
-            OnPropertyChanged();
-        }
-    }
-
     public IReadOnlyList<double> JogStepOptions { get; } = [0.5, 1, 2, 5, 10, 15];
     public IReadOnlyList<int> BaudRateOptions { get; } = [9600, 19200, 38400, 57600, 115200];
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>Cảnh báo khi jog chạm giới hạn khớp — View hiển thị hộp thoại.</summary>
+    public event Action<string>? JogLimitWarning;
 
     public void RefreshAvailablePorts()
     {
@@ -329,11 +320,36 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     {
         if (_closing || _disposed) return;
 
-        joint.Angle += direction * JogStep;
+        var current = joint.Angle;
+        var requested = direction * JogStep;
+        var clampedTarget = Math.Clamp(Math.Round(current + requested, 2), joint.MinAngle, joint.MaxAngle);
+        var actualDelta = Math.Round(clampedTarget - current, 2);
+
+        // Đã chạm giới hạn phần mềm — không jog thêm, không gửi lệnh ra firmware.
+        if (Math.Abs(actualDelta) < 0.001)
+        {
+            var warning = direction > 0
+                ? $"{joint.Label}\n\nĐã ở giới hạn trên {joint.MaxAngle:0.##}° — không thể jog thêm."
+                : $"{joint.Label}\n\nĐã ở giới hạn dưới {joint.MinAngle:0.##}° — không thể jog thêm.";
+            StatusText = $"{joint.Key} chạm giới hạn — không jog thêm.";
+            JogLimitWarning?.Invoke(warning);
+            return;
+        }
+
+        // Bước jog vượt giới hạn → chỉ jog phần còn lại tới đúng min/max.
+        var limited = Math.Abs(actualDelta - requested) > 0.001;
+        var limitWarning = limited
+            ? $"{joint.Label}\n\nBước jog {JogStep:0.##}° vượt giới hạn {joint.MinAngle:0.##}…{joint.MaxAngle:0.##}° — chỉ jog {actualDelta:0.##}° tới giới hạn."
+            : null;
 
         if (!IsSerialConnected)
         {
-            StatusText = $"Jog {joint.Key} (offline): {joint.AngleText}";
+            joint.Angle = clampedTarget;
+            StatusText = limited
+                ? $"Jog {joint.Key} (offline) — chạm giới hạn, chỉ {actualDelta:0.##}° → {joint.AngleText}"
+                : $"Jog {joint.Key} (offline): {joint.AngleText}";
+            if (limitWarning != null)
+                JogLimitWarning?.Invoke(limitWarning);
             return;
         }
 
@@ -346,10 +362,15 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             var axisName = joint.AxisNumber.ToString(CultureInfo.InvariantCulture);
-            var cmd = RobotSerialProtocol.JogCommand(axisName, direction > 0, JogStep);
+            var cmd = RobotSerialProtocol.JogCommand(axisName, actualDelta > 0, Math.Abs(actualDelta));
             _serialService.SendAscii(cmd);
+            joint.Angle = clampedTarget;
             BeginAwaitDone();
-            StatusText = $"TX {cmd} → {joint.AngleText} — chờ Dx...";
+            StatusText = limited
+                ? $"TX {cmd} — chạm giới hạn {joint.MinAngle:0.##}…{joint.MaxAngle:0.##}° → {joint.AngleText} — chờ Dx..."
+                : $"TX {cmd} → {joint.AngleText} — chờ Dx...";
+            if (limitWarning != null)
+                JogLimitWarning?.Invoke(limitWarning);
         }
         catch (Exception ex)
         {
@@ -419,22 +440,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        var taughtName = SelectedPoint.Name;
-        var derivedWait = RobotTeachPositions.CreateDerivedWaitPoint(SelectedPoint, WaitPointJoint234OffsetDegrees);
-        if (derivedWait != null)
-        {
-            if (!_robotConfigService.TrySaveTeachPoint(derivedWait, out var waitError))
-            {
-                StatusText = $"Đã teach \"{taughtName}\" nhưng cập nhật \"{derivedWait.Name}\" thất bại — {waitError}";
-                return;
-            }
-
-            ReplaceTeachPointInGrid(derivedWait);
-            StatusText = $"Đã teach \"{taughtName}\" → \"{derivedWait.Name}\" offset {WaitPointJoint234OffsetDegrees:0.##}° J2–J4 → Database.";
-            return;
-        }
-
-        StatusText = $"Đã teach \"{taughtName}\" → lưu Database.";
+        StatusText = $"Đã teach \"{SelectedPoint.Name}\" → lưu Database.";
     }
 
     public void GoToSelectedPoint()
@@ -456,7 +462,6 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         _appSetting.StepsPerDeg = StepsPerDeg;
         _appSetting.JogStepDegrees = JogStep;
         _appSetting.SpeedPercent = SpeedPercent;
-        _appSetting.WaitPointJoint234OffsetDegrees = WaitPointJoint234OffsetDegrees;
         _appSettingService.Save(_appSetting);
         StatusText = "Đã lưu cấu hình (setting.json).";
     }
@@ -469,8 +474,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         StepsPerDeg = _appSetting.StepsPerDeg;
         JogStep = _appSetting.JogStepDegrees;
         SpeedPercent = _appSetting.SpeedPercent;
-        WaitPointJoint234OffsetDegrees = _appSetting.WaitPointJoint234OffsetDegrees;
-        StatusText = $"Đã tải setting.json — COM={SerialPortName}, STEPS_PER_DEG={StepsPerDeg}, Wait offset={WaitPointJoint234OffsetDegrees:0.##}°.";
+        StatusText = $"Đã tải setting.json — COM={SerialPortName}, STEPS_PER_DEG={StepsPerDeg}.";
     }
 
     /// <summary>Tải lại danh sách vị trí teach từ Database (BL → DL).</summary>
@@ -485,8 +489,8 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var points = dbPoints.Count > 0
-            ? RobotTeachPositions.Normalize(dbPoints, WaitPointJoint234OffsetDegrees)
-            : RobotTeachPositions.CreateDefault(WaitPointJoint234OffsetDegrees);
+            ? RobotTeachPositions.Normalize(dbPoints)
+            : RobotTeachPositions.CreateDefault();
 
         TeachPoints.Clear();
         foreach (var point in points)
@@ -752,22 +756,6 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             TeachPoints[idx] = copy;
             SelectedPoint = copy;
         }
-    }
-
-    private void ReplaceTeachPointInGrid(RobotTeachPoint point)
-    {
-        for (var i = 0; i < TeachPoints.Count; i++)
-        {
-            if (!TeachPoints[i].Name.Equals(point.Name, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            TeachPoints[i] = point;
-            if (SelectedPoint?.Name.Equals(point.Name, StringComparison.OrdinalIgnoreCase) == true)
-                SelectedPoint = point;
-            return;
-        }
-
-        TeachPoints.Add(point);
     }
 
     private void OnPropertyChanged([CallerMemberName] string? name = null)

@@ -7,7 +7,6 @@
   "stepsPerDeg": 100,
   "jogStepDegrees": 15,
   "speedPercent": 31,
-  "waitPointJoint234OffsetDegrees": -20,
   "DatabaseConnection": "Data Source=.\\SQLExpress;Initial Catalog=SmartWarehouse;Integrated Security=True;TrustServerCertificate=True",
   "ComponentDetection": {
     "modelPath": "Config/yolo26m_960x1280.onnx",
