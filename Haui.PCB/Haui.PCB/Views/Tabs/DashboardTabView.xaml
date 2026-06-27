@@ -158,6 +158,14 @@
                         Visibility="Collapsed"
                         Style="{StaticResource SecondaryButtonStyle}"
                         Click="BtnSelectImage_Click" />
+                <Button x:Name="BtnCannyThreshold"
+                        Content="Canny Threshold"
+                        Height="30" Width="130"
+                        Margin="0,0,8,0"
+                        Visibility="Collapsed"
+                        IsEnabled="False"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Click="BtnCannyThreshold_Click" />
                 <Button x:Name="BtnSelectRegion"
                         Content="🔲 Chọn vùng"
                         Height="30" Width="120"

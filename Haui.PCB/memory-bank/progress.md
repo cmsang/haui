@@ -18,7 +18,7 @@
 - [x] Optional ROI on preview (`last_region.json`)
 - [x] PCB segmentation (holder support contour → perspective warp; default frame 460×590 mm; gallery **Khung hộp đỡ**)
 - [x] **HD holder detection (2026-06-27)** — Canny/Close/hull on downscaled copy (`HolderDetectionDownscale`, default 1920×1080); corners mapped to full-res for warp + YOLO; hull-only (no FindContours fallback)
-- [x] **Canny threshold config (2026-06-27)** — `Segmentation` section in `setting.json` (file-only, not in Setting tab); runtime load via `AppSettingsStore`
+- [x] **Canny threshold config (2026-06-27)** — `Segmentation` section in `setting.json`; runtime load via `AppSettingsStore`; DeveloperMode Dashboard button + `CannyThresholdWindow` tuner (save to JSON)
 - [x] Holder quad validation — `QuadGeometry` + `PcbBoard` aspect ratio; `quadRectTolerancePercent` / `aspectRatioTolerancePercent` / `quadAngleToleranceDegrees` (default 15%/15%/5°); Setting tab **Hộp đỡ PCB**
 - [x] Pipeline step gallery on Dashboard — per-step elapsed time via `PipelineStepMapper`; bước **Khung hộp đỡ** annotate tứ giác trên ảnh gốc; bước **Nhận diện linh kiện** sau segmentation
 - [x] **YOLO missing-component detection (2026-06-26)** — `OnnxYoloDetector` + `MissingComponentDetectionService` (Microsoft.ML.OnnxRuntime); PASS when zero boxes; red overlay per missing location; config `ComponentDetection` in `setting.json`; removed template library / orientation / histogram match / Create+Viewer windows

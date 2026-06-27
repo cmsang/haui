@@ -46,7 +46,7 @@ Summary for Haui.PCB:
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `CannyThreshold1/2` | 30 / 100 (default) | Edge detection — section `Segmentation` in `setting.json`; chỉ sửa trực tiếp trong file (không có trong tab Cài đặt) |
+| `CannyThreshold1/2` | 30 / 100 (default) | Edge detection — section `Segmentation` in `setting.json`; DeveloperMode → Dashboard **Canny Threshold** window (Lưu) hoặc sửa file trực tiếp |
 | `MorphKernelSize` | 5 | Close gaps in edges |
 | `EdgePadding` | 2 px | Crop padding |
 

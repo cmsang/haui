@@ -4,7 +4,7 @@
 
 **HD holder detection + hull-only (2026-06-27):** Canny/Morphology Close/khung hộp đỡ chạy trên ảnh thu nhỏ tối đa 1920×1080 (`HolderDetectionDownscale` trong `setting.json`, mặc định bật); 4 góc map ngược lên full-res rồi `WarpPerspective` + YOLO trên ảnh gốc. Helper `DetectionImageHelper`; `SegmentationPipelineResult.DetectionSize` cho gallery. Đã xóa hẳn fallback `FindContours` trong `HolderContourDetectionService` — chỉ còn Convex Hull (strict → loose).
 
-**Canny threshold in setting.json (2026-06-27):** Section `Segmentation` (`cannyThreshold1`, `cannyThreshold2`, mặc định 30/100). `PcbSegmentationService` đọc qua `AppSettingsStore.LoadSegmentation()` mỗi lần chạy pipeline. **Chỉ chỉnh trực tiếp trong `setting.json`** — không hiển thị/sửa từ tab Cài đặt. Đã gỡ `SegmentationSettings.Current` / `MainViewModel.CannyThreshold*`.
+**Canny threshold in setting.json (2026-06-27):** Section `Segmentation` (`cannyThreshold1`, `cannyThreshold2`, mặc định 30/100). `PcbSegmentationService` đọc qua `AppSettingsStore.LoadSegmentation()` mỗi lần chạy pipeline. Không hiển thị trên tab Cài đặt. **DeveloperMode:** nút **Canny Threshold** trên Dashboard → chụp frame → `CannyThresholdWindow` (slider t1/t2, xem trực tiếp Canny + Morphology Close, nút Lưu ghi `setting.json`). Helper `CannyPreviewHelper`. Đã gỡ `SegmentationSettings.Current` / `MainViewModel.CannyThreshold*`.
 
 **Holder detection perf (2026-06-27):** `HolderContourDetectionService.TryDetectFromConvexHull` thay vòng lặp `pointsMat.At<Point>(i)` bằng `GetArray(out Point[])` — copy hàng loạt thay vì gọi native từng pixel.
 

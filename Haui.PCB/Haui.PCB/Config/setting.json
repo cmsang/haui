@@ -62,7 +62,7 @@
   },
   "Segmentation": {
     "cannyThreshold1": 30,
-    "cannyThreshold2": 100
+    "cannyThreshold2": 120
   },
   "CameraBasler": {
     "deviceIp": "",

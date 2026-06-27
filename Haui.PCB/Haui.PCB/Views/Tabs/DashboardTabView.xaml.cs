@@ -220,6 +220,7 @@ public partial class DashboardTabView : UserControl
         _showInspectionResultAfterRecognition = setting.ShowInspectionResultAfterRecognition;
         var visibility = _developerMode ? Visibility.Visible : Visibility.Collapsed;
         BtnSelectImage.Visibility = visibility;
+        BtnCannyThreshold.Visibility = visibility;
     }
 
     private async void UserControl_Loaded(object sender, RoutedEventArgs e)
@@ -314,6 +315,7 @@ public partial class DashboardTabView : UserControl
             BtnTest.IsEnabled = true;
             BtnSelectRegion.IsEnabled = true;
             BtnCapture.IsEnabled = true;
+            BtnCannyThreshold.IsEnabled = true;
             CameraPlaceholder.Visibility = Visibility.Collapsed;
             ResetInspectionDisplay();
         }
@@ -334,6 +336,7 @@ public partial class DashboardTabView : UserControl
         BtnTest.IsEnabled = false;
         BtnSelectRegion.IsEnabled = false;
         BtnCapture.IsEnabled = false;
+        BtnCannyThreshold.IsEnabled = false;
         ExitSelectMode();
         CameraImage.Source = null;
         CameraPlaceholder.Visibility = Visibility.Visible;
@@ -384,6 +387,27 @@ public partial class DashboardTabView : UserControl
         finally
         {
             BtnSelectImage.IsEnabled = true;
+        }
+    }
+
+    private async void BtnCannyThreshold_Click(object sender, RoutedEventArgs e)
+    {
+        BtnCannyThreshold.IsEnabled = false;
+        try
+        {
+            using var frame = await _viewModel.CaptureFrameAsync();
+            if (frame is null)
+                return;
+
+            var window = new CannyThresholdWindow(frame, _owner)
+            {
+                Owner = _owner
+            };
+            window.ShowDialog();
+        }
+        finally
+        {
+            BtnCannyThreshold.IsEnabled = _viewModel.IsRunning;
         }
     }
 
