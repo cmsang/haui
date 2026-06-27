@@ -5,7 +5,8 @@ using OpenCvSharp;
 namespace Haui.PCB.Processing.Segmentation;
 
 /// <summary>
-/// Detects the outer rectangular holder frame from morphology-close edge pixels.
+/// Detects the outer rectangular holder frame from morphology-close edge pixels
+/// via convex hull and minAreaRect.
 /// </summary>
 public interface IHolderContourDetectionService
 {

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Haui.PCB.Processing.Configuration;
 using OpenCvSharp;
 
 namespace Haui.PCB.Processing.Segmentation;
@@ -10,28 +11,18 @@ namespace Haui.PCB.Processing.Segmentation;
 /// </summary>
 public class PcbSegmentationService : IPcbSegmentationService
 {
-    private readonly SegmentationParameters _parameters;
     private readonly IHolderContourDetectionService _holderContourDetection;
 
     public PcbSegmentationService()
-        : this(SegmentationSettings.Current, new HolderContourDetectionService())
+        : this(new HolderContourDetectionService())
     {
     }
 
-    public PcbSegmentationService(SegmentationParameters parameters)
-        : this(parameters, new HolderContourDetectionService())
+    public PcbSegmentationService(IHolderContourDetectionService holderContourDetection)
     {
-    }
-
-    public PcbSegmentationService(
-        SegmentationParameters parameters,
-        IHolderContourDetectionService holderContourDetection)
-    {
-        _parameters = parameters;
         _holderContourDetection = holderContourDetection;
     }
 
-    private const int MorphKernelSize = 5;
     private const int EdgePadding = 2;
 
     /// <inheritdoc />
@@ -52,50 +43,23 @@ public class PcbSegmentationService : IPcbSegmentationService
         var timings = includeDebugMats ? new Dictionary<string, TimeSpan>() : null;
         var sw = new Stopwatch();
 
-        using var grayWork = new Mat();
-        using var blurredWork = new Mat();
-        using var edgesWork = new Mat();
-        using var closedWork = new Mat();
-        using var kernel = Cv2.GetStructuringElement(
-            MorphShapes.Rect,
-            new Size(MorphKernelSize, MorphKernelSize));
+        var segmentation = AppSettingsStore.LoadSegmentation();
+        double t1 = segmentation.CannyThreshold1;
+        double t2 = segmentation.CannyThreshold2;
 
-        if (source.Channels() == 1)
-            source.CopyTo(grayWork);
-        else
-            Cv2.CvtColor(source, grayWork, ColorConversionCodes.BGR2GRAY);
-
-        Mat cannyInput;
-        if (source.Channels() == 1)
-        {
-            // Mono8 frames are pre-blurred in BaslerCameraService.
-            cannyInput = grayWork;
-        }
-        else
-        {
-            sw.Restart();
-            Cv2.GaussianBlur(grayWork, blurredWork, new Size(5, 5), 0);
-            RecordTiming(timings, SegmentationPipelineSteps.GaussianBlur, sw.Elapsed);
-            cannyInput = blurredWork;
-        }
-
-        double t1 = _parameters.CannyThreshold1;
-        double t2 = _parameters.CannyThreshold2;
-
-        sw.Restart();
-        Cv2.Canny(cannyInput, edgesWork, t1, t2);
-        RecordTiming(timings, SegmentationPipelineSteps.Canny, sw.Elapsed);
-
-        sw.Restart();
-        Cv2.MorphologyEx(edgesWork, closedWork, MorphTypes.Close, kernel, iterations: 3);
-        RecordTiming(timings, SegmentationPipelineSteps.MorphologyClose, sw.Elapsed);
+        var edgeResult = CannyPreviewHelper.Compute(
+            source,
+            t1,
+            t2,
+            includeIntermediateMats: includeDebugMats,
+            timings: timings);
 
         Point2f[]? warpQuadCorners = null;
         string? contourDescription = null;
         Rect? edgeSearchRoi = null;
         Mat? warped = null;
 
-        edgeSearchRoi = EdgeSearchRoiHelper.ComputeBoundingRect(closedWork);
+        edgeSearchRoi = EdgeSearchRoiHelper.ComputeBoundingRect(edgeResult.Closed);
 
         if (edgeSearchRoi is null)
         {
@@ -108,7 +72,7 @@ public class PcbSegmentationService : IPcbSegmentationService
 
             sw.Restart();
             var contourResult = _holderContourDetection.Detect(
-                closedWork,
+                edgeResult.Closed,
                 edgeSearchRoi,
                 holderSettings);
             RecordTiming(timings, SegmentationPipelineSteps.HolderContour, sw.Elapsed);
@@ -117,7 +81,9 @@ public class PcbSegmentationService : IPcbSegmentationService
 
             if (contourResult.Success && contourResult.Corners is { Length: 4 } corners)
             {
-                warpQuadCorners = corners;
+                warpQuadCorners = DetectionImageHelper.ScaleCornersToSource(
+                    corners,
+                    edgeResult.InvDetectionScale);
 
                 sw.Restart();
                 warped = WarpPerspective(source, warpQuadCorners);
@@ -127,15 +93,16 @@ public class PcbSegmentationService : IPcbSegmentationService
 
         return new SegmentationPipelineResult
         {
-            Gray = includeDebugMats ? grayWork.Clone() : new Mat(),
-            Blurred = includeDebugMats && source.Channels() != 1 ? blurredWork.Clone() : new Mat(),
-            Edges = includeDebugMats ? edgesWork.Clone() : new Mat(),
-            Closed = includeDebugMats ? closedWork.Clone() : new Mat(),
+            Gray = edgeResult.Gray,
+            Blurred = edgeResult.Blurred,
+            Edges = edgeResult.Edges,
+            Closed = edgeResult.Closed,
             CannyThreshold1 = t1,
             CannyThreshold2 = t2,
             WarpQuadCorners = warpQuadCorners,
             ContourDescription = contourDescription,
             EdgeSearchRoi = edgeSearchRoi,
+            DetectionSize = edgeResult.DetectionSize,
             Warped = warped,
             StepTimings = timings ?? new Dictionary<string, TimeSpan>()
         };

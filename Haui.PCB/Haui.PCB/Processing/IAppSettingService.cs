@@ -8,9 +8,11 @@ public interface IAppSettingService
     AppSetting Load();
     void Save(AppSetting setting);
 
-    ComponentTemplateSettings LoadComponentTemplates();
-    void SaveComponentTemplates(ComponentTemplateSettings settings);
-    double LoadMatchThresholdPercent();
+    ComponentDetectionSettings LoadComponentDetection();
+    void SaveComponentDetection(ComponentDetectionSettings settings);
+
+    SegmentationPipelineSettings LoadSegmentation();
+    void SaveSegmentation(SegmentationPipelineSettings settings);
 
     PcbBoardSettings LoadPcbBoard();
     void SavePcbBoard(PcbBoardSettings settings);
@@ -18,4 +20,5 @@ public interface IAppSettingService
     CameraParameters LoadCameraBasler();
     CameraCaptureSettings LoadCameraCapture();
     ImageDownscaleSettings LoadCameraDownscale();
+    HolderDetectionDownscaleSettings LoadHolderDetectionDownscale();
 }

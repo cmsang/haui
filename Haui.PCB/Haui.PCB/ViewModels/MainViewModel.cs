@@ -31,7 +31,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private double _gainDb;
     private double _gamma = 1.0;
 
-    private readonly SegmentationParameters _pipelineParameters = SegmentationSettings.Current;
     private readonly CameraCaptureService _cameraCaptureService = new();
 
     private OpenCvSharp.Rect? _selectedRegion;
@@ -42,7 +41,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _previewProcessing;
 
     public event Action<System.Windows.Media.Imaging.BitmapSource>? FrameReady;
-    public event Action<Mat>? TemplateFrameCaptured;
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public IReadOnlyList<CameraInfo> Cameras
@@ -95,26 +93,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _gamma;
         set { _gamma = value; OnPropertyChanged(); }
-    }
-
-    public double CannyThreshold1
-    {
-        get => _pipelineParameters.CannyThreshold1;
-        set
-        {
-            _pipelineParameters.CannyThreshold1 = value;
-            OnPropertyChanged();
-        }
-    }
-
-    public double CannyThreshold2
-    {
-        get => _pipelineParameters.CannyThreshold2;
-        set
-        {
-            _pipelineParameters.CannyThreshold2 = value;
-            OnPropertyChanged();
-        }
     }
 
     public OpenCvSharp.Rect? SelectedRegion
@@ -318,14 +296,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public void ResetPipelineParameters()
-    {
-        _pipelineParameters.ResetToDefaults();
-        OnPropertyChanged(nameof(CannyThreshold1));
-        OnPropertyChanged(nameof(CannyThreshold2));
-        StatusText = "Đã đặt lại tham số Canny (50 / 150).";
-    }
-
     public void ResetCameraParameters()
     {
         if (_cameraService is null)
@@ -368,29 +338,6 @@ public class MainViewModel : INotifyPropertyChanged, IDisposable
         }
 
         return CropToSelectedRegion(frame);
-    }
-
-    public async Task CaptureTemplateFrameAsync()
-    {
-        StatusText = "Đang chụp ảnh để tạo mẫu...";
-
-        if (_cameraService is null)
-        {
-            StatusText = "Camera chưa khởi động.";
-            return;
-        }
-
-        var frame = await Task.Run(() => _cameraService.GrabFrame());
-
-        if (frame is null || frame.Empty())
-        {
-            frame?.Dispose();
-            StatusText = "Không thể chụp ảnh từ camera.";
-            return;
-        }
-
-        StatusText = "Đã mở form tạo mẫu.";
-        TemplateFrameCaptured?.Invoke(frame);
     }
 
     public async Task CaptureAndSaveFrameAsync()

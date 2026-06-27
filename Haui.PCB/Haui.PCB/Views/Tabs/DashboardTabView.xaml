@@ -158,26 +158,20 @@
                         Visibility="Collapsed"
                         Style="{StaticResource SecondaryButtonStyle}"
                         Click="BtnSelectImage_Click" />
+                <Button x:Name="BtnCannyThreshold"
+                        Content="Canny Threshold"
+                        Height="30" Width="130"
+                        Margin="0,0,8,0"
+                        Visibility="Collapsed"
+                        IsEnabled="False"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Click="BtnCannyThreshold_Click" />
                 <Button x:Name="BtnSelectRegion"
                         Content="🔲 Chọn vùng"
                         Height="30" Width="120"
                         Margin="0,0,8,0"
                         IsEnabled="False"
                         Click="BtnSelectRegion_Click"
-                        Style="{StaticResource SecondaryButtonStyle}" />
-                <Button x:Name="BtnCreateTemplate"
-                        Content="📋 Tạo mẫu"
-                        Height="30" Width="110"
-                        IsEnabled="False"
-                        Visibility="Collapsed"
-                        Margin="0,0,8,0"
-                        Click="BtnCreateTemplate_Click"
-                        Style="{StaticResource SecondaryButtonStyle}" />
-                <Button x:Name="BtnViewTemplates"
-                        Content="🖼 Xem mẫu"
-                        Height="30" Width="110"
-                        Margin="0,0,8,0"
-                        Click="BtnViewTemplates_Click"
                         Style="{StaticResource SecondaryButtonStyle}" />
                 <Button x:Name="BtnCapture"
                         Content="📷 Chụp"
@@ -304,11 +298,8 @@
                                        Foreground="#333333"
                                        VerticalAlignment="Center"
                                        TextAlignment="Right"
-                                       Margin="0,2,8,2">
-                                <Run Text="{Binding MatchedComponentCount, Mode=OneWay}" />
-                                <Run Text="/" />
-                                <Run Text="{Binding SearchedComponentCount, Mode=OneWay}" />
-                            </TextBlock>
+                                       Margin="0,2,8,2"
+                                       Text="{Binding InspectionSummaryText, Mode=OneWay}" />
                             <StackPanel Grid.Column="2"
                                         Orientation="Horizontal"
                                         VerticalAlignment="Center">
@@ -366,11 +357,8 @@
                                        Foreground="#333333"
                                        VerticalAlignment="Center"
                                        TextAlignment="Right"
-                                       Margin="0,2,2,2">
-                                <Run Text="{Binding MissingComponentCount, Mode=OneWay}" />
-                                <Run Text="/" />
-                                <Run Text="{Binding SearchedComponentCount, Mode=OneWay}" />
-                            </TextBlock>
+                                       Margin="0,2,2,2"
+                                       Text="{Binding MissingComponentCount, Mode=OneWay}" />
                         </Grid>
 
                         <Border Grid.Row="1"
@@ -378,15 +366,7 @@
                                 BorderBrush="#DCDCDC"
                                 BorderThickness="0,0,0,1" />
 
-                        <TextBlock Grid.Row="2"
-                                   Margin="2,6,2,4"
-                                   Text="{Binding WhiteCircuitSummaryText}"
-                                   TextWrapping="Wrap"
-                                   FontSize="13"
-                                   Foreground="#333333"
-                                   Visibility="{Binding HasWhiteCircuitSummary, Converter={StaticResource BoolToVis}}" />
-
-                        <Grid Grid.Row="3" Margin="0,0,0,2">
+                        <Grid Grid.Row="3" Margin="0,6,0,2">
                             <DataGrid ItemsSource="{Binding DifferentRegions}"
                                       AutoGenerateColumns="False"
                                       CanUserAddRows="False"
@@ -407,8 +387,8 @@
                                     <DataGridTextColumn Header="Tên linh kiện"
                                                         Binding="{Binding Name}"
                                                         Width="*" />
-                                    <DataGridTextColumn Header="Độ tương đồng"
-                                                        Binding="{Binding SimilarityDisplayText}"
+                                    <DataGridTextColumn Header="Độ tin cậy"
+                                                        Binding="{Binding ConfidenceDisplayText}"
                                                         Width="132" />
                                 </DataGrid.Columns>
                             </DataGrid>

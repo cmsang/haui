@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Haui.PCB.Processing.Configuration;
 using Haui.PCB.ViewModels.Pipeline;
 using OpenCvSharp;
 using System.Windows.Media.Imaging;
@@ -10,42 +9,27 @@ using System.Windows.Media.Imaging;
 namespace Haui.PCB.ViewModels;
 
 /// <summary>
-/// ViewModel for PCB inspection — segmentation, template match, annotated result.
-/// Tách biệt hoàn toàn khỏi UI, tuân theo SOLID: SRP, DIP.
+/// ViewModel for PCB inspection — segmentation, YOLO missing-component detection, annotated result.
 /// </summary>
 public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IPcbSegmentationService _segmentation;
-    private readonly ICompositeTemplateMatchService _compositeMatchService;
-    private readonly IBoardOrientationDetectionService _orientationService;
+    private readonly IComponentInspectionService _inspectionService;
 
     private Mat? _sourceMat;
     private string _statusText = string.Empty;
     private bool _isBusy;
     private bool _disposed;
-    private double _matchThresholdPercent = ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
     private bool? _isFullMatch;
     private string _totalInspectionElapsedText = "—";
     private bool _hasInspectionTiming;
-    private bool _isWhiteCircuitInspectionMode;
-    private string _whiteCircuitSummaryText = string.Empty;
-    private string _inspectionModeLabel = "Linh kiện";
+    private bool _hasInspectionResult;
     private BitmapSource? _resultAnnotatedImage;
 
-    // ──── Sự kiện ────────────────────────────────────────────────────────────
-
-    /// <summary>Phát khi ảnh đã xử lý (bo mạch đã cắt) sẵn sàng — BitmapSource đã Freeze.</summary>
-    public event Action<System.Windows.Media.Imaging.BitmapSource?>? ProcessedImageReady;
-
-    /// <summary>Phát khi ảnh đã vẽ các vùng so sánh sẵn sàng — BitmapSource đã Freeze.</summary>
-    public event Action<System.Windows.Media.Imaging.BitmapSource?>? AnnotatedImageReady;
-
-    /// <summary>Phát khi nhận dạng xong — true = PASS, false = FAIL (kích hoạt phân loại robot).</summary>
+    public event Action<BitmapSource?>? ProcessedImageReady;
+    public event Action<BitmapSource?>? AnnotatedImageReady;
     public event Action<bool>? InspectionCompleted;
-
     public event PropertyChangedEventHandler? PropertyChanged;
-
-    // ──── Properties ─────────────────────────────────────────────────────────
 
     public string StatusText
     {
@@ -61,7 +45,6 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasSource => _sourceMat is not null && !_sourceMat.Empty();
 
-    /// <summary>True when every configured region is recognized; false on failure; null before first run.</summary>
     public bool? IsFullMatch
     {
         get => _isFullMatch;
@@ -70,28 +53,27 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             _isFullMatch = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(PassFailLabel));
+            OnPropertyChanged(nameof(InspectionSummaryText));
         }
     }
 
-    /// <summary>Ngưỡng % từ <c>setting.json</c> (cập nhật mỗi lần so).</summary>
-    public double MatchThresholdPercent => _matchThresholdPercent;
+    public string InspectionSummaryText => IsFullMatch switch
+    {
+        true => "Đủ linh kiện",
+        false => MissingComponentCount > 0
+            ? $"Thiếu {MissingComponentCount} linh kiện"
+            : "Chưa đạt",
+        _ => "—"
+    };
 
-    public string DifferentRegionsHeader => "⚠ Vùng thiếu linh kiện";
+    public string DifferentRegionsHeader => "Danh sách linh kiện thiếu";
 
-    public string MatchedRegionsHeader => "✔ Vùng có linh kiện";
-
-    /// <summary>Regions where a component is present.</summary>
-    public ObservableCollection<RegionComparisonResult> MatchedRegions { get; } = [];
-
-    /// <summary>Regions where a component is missing (Dashboard grid rows).</summary>
     public ObservableCollection<MissingComponentRowItem> DifferentRegions { get; } = [];
 
-    /// <summary>Full result list for developer inspection result window.</summary>
     public ObservableCollection<InspectionResultRowItem> InspectionResults { get; } = [];
 
     public bool HasInspectionResultList => InspectionResults.Count > 0;
 
-    /// <summary>Last annotated board image from the most recent inspection run.</summary>
     public BitmapSource? ResultAnnotatedImage
     {
         get => _resultAnnotatedImage;
@@ -105,107 +87,57 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         _ => "—"
     };
 
-    /// <summary>Debug gallery — populated from the same RunPipeline call as PASS/FAIL.</summary>
     public ObservableCollection<PipelineStep> Steps { get; } = [];
 
     public bool HasPipelineSteps => Steps.Count > 0;
 
-    public int SearchedComponentCount => MatchedRegions.Count + DifferentRegions.Count;
-
-    public int MatchedComponentCount => MatchedRegions.Count;
-
     public int MissingComponentCount => DifferentRegions.Count;
 
-    public bool HasComponentResults => SearchedComponentCount > 0;
+    public bool HasComponentResults => _hasInspectionResult;
 
-    /// <summary>True when the active config uses white-circuit inspection.</summary>
-    public bool IsWhiteCircuitInspectionMode
-    {
-        get => _isWhiteCircuitInspectionMode;
-        private set
-        {
-            if (_isWhiteCircuitInspectionMode == value) return;
-            _isWhiteCircuitInspectionMode = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(IsComponentInspectionMode));
-            OnPropertyChanged(nameof(HasComponentResults));
-        }
-    }
-
-    public bool IsComponentInspectionMode => !IsWhiteCircuitInspectionMode;
-
-    public string InspectionModeLabel
-    {
-        get => _inspectionModeLabel;
-        private set { _inspectionModeLabel = value; OnPropertyChanged(); }
-    }
-
-    public string WhiteCircuitSummaryText
-    {
-        get => _whiteCircuitSummaryText;
-        private set
-        {
-            _whiteCircuitSummaryText = value;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(HasWhiteCircuitSummary));
-        }
-    }
-
-    public bool HasWhiteCircuitSummary =>
-        IsWhiteCircuitInspectionMode && !string.IsNullOrWhiteSpace(WhiteCircuitSummaryText);
-
-    /// <summary>Formatted full-pipeline elapsed time (segmentation + component match).</summary>
     public string TotalInspectionElapsedText
     {
         get => _totalInspectionElapsedText;
         private set { _totalInspectionElapsedText = value; OnPropertyChanged(); }
     }
 
-    /// <summary>True after an inspection run completes and total elapsed time is available.</summary>
     public bool HasInspectionTiming
     {
         get => _hasInspectionTiming;
         private set { _hasInspectionTiming = value; OnPropertyChanged(); }
     }
 
-    // ──── Khởi tạo ───────────────────────────────────────────────────────────
-
     public TestPipelineViewModel(
         IPcbSegmentationService segmentation,
-        ICompositeTemplateMatchService compositeMatchService,
-        IBoardOrientationDetectionService? orientationService = null)
+        IComponentInspectionService inspectionService)
     {
         _segmentation = segmentation;
-        _compositeMatchService = compositeMatchService;
-        _orientationService = orientationService ?? new BoardOrientationDetectionService(new TemplateLibraryService());
-        RefreshMatchThresholdFromConfig();
-        RefreshInspectionModeFromConfig();
+        _inspectionService = inspectionService;
     }
 
-    // ──── Actions ─────────────────────────────────────────────────────────────
-
-    /// <summary>Nạp ảnh từ bên ngoài (ví dụ từ camera chụp) rồi tự động chạy pipeline.</summary>
     public void LoadImage(Mat mat)
     {
         _sourceMat?.Dispose();
         _sourceMat = mat.Clone();
         OnPropertyChanged(nameof(HasSource));
         IsFullMatch = null;
+        _hasInspectionResult = false;
+        OnPropertyChanged(nameof(HasComponentResults));
 
         _ = RunSegmentationAsync();
     }
 
-    /// <summary>Load a captured frame and await the full inspection pipeline.</summary>
     public async Task InspectAsync(Mat mat)
     {
         _sourceMat?.Dispose();
         _sourceMat = mat.Clone();
         OnPropertyChanged(nameof(HasSource));
         IsFullMatch = null;
+        _hasInspectionResult = false;
+        OnPropertyChanged(nameof(HasComponentResults));
         await RunSegmentationAsync();
     }
 
-    /// <summary>Load an image from disk and await the full inspection pipeline.</summary>
     public async Task InspectFromFileAsync(string filePath)
     {
         _sourceMat?.Dispose();
@@ -218,15 +150,14 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        StatusText = $"Đã chọn: {System.IO.Path.GetFileName(filePath)}";
+        StatusText = $"Đã chọn: {Path.GetFileName(filePath)}";
         OnPropertyChanged(nameof(HasSource));
         IsFullMatch = null;
+        _hasInspectionResult = false;
+        OnPropertyChanged(nameof(HasComponentResults));
         await RunSegmentationAsync();
     }
 
-    /// <summary>
-    /// Chạy pipeline: cắt bo mạch → hiển thị → so sánh vùng với thư viện mẫu.
-    /// </summary>
     public async Task RunSegmentationAsync()
     {
         if (!HasSource)
@@ -238,7 +169,6 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         IsBusy = true;
         StatusText = "Đang xử lý...";
         ResetInspectionTiming();
-        MatchedRegions.Clear();
         DifferentRegions.Clear();
         NotifyComponentCounts();
         Steps.Clear();
@@ -257,6 +187,8 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             if (newBoard is null)
             {
                 IsFullMatch = false;
+                _hasInspectionResult = false;
+                OnPropertyChanged(nameof(HasComponentResults));
                 StatusText = "Không phát hiện được bo mạch. Thử điều chỉnh ảnh.";
                 ProcessedImageReady?.Invoke(null);
                 AnnotatedImageReady?.Invoke(null);
@@ -267,67 +199,13 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             var bitmap = await ToFrozenBitmapAsync(newBoard);
             ProcessedImageReady?.Invoke(bitmap);
 
-            var boardForMatch = newBoard;
-            Mat? orientedBoard = null;
-            TemplateEntry? orientationTemplate = null;
-
-            try
-            {
-                var (orientation, orientationElapsed) = await Task.Run(() =>
-                {
-                    var sw = Stopwatch.StartNew();
-                    var result = _orientationService.Detect(newBoard);
-                    sw.Stop();
-                    return (result, sw.Elapsed);
-                });
-
-                if (!orientation.Success)
-                {
-                    IsFullMatch = false;
-                    StatusText = orientation.ErrorMessage ?? "Không tìm được chiều mạch.";
-                    AnnotatedImageReady?.Invoke(bitmap);
-                    RaiseInspectionCompleted(false);
-                    return;
-                }
-
-                if (orientation.RequiresRotation180)
-                {
-                    orientedBoard = new Mat();
-                    Cv2.Rotate(newBoard, orientedBoard, RotateFlags.Rotate180);
-                    boardForMatch = orientedBoard;
-
-                    var orientedBitmap = await ToFrozenBitmapAsync(orientedBoard);
-                    ProcessedImageReady?.Invoke(orientedBitmap);
-                    bitmap = orientedBitmap;
-                }
-
-                orientationTemplate = orientation.MatchedTemplate;
-
-                if (orientation.MatchedTemplate is not null)
-                {
-                    var orientationStep = await BuildOrientationStepAsync(
-                        boardForMatch,
-                        orientation.MatchedTemplate,
-                        orientation.MatchScore,
-                        orientation.RequiresRotation180,
-                        orientationElapsed);
-                    if (orientationStep is not null)
-                    {
-                        Steps.Add(orientationStep);
-                        OnPropertyChanged(nameof(HasPipelineSteps));
-                    }
-                }
-
-                await CompareWithTemplatesAsync(boardForMatch, ResolveMatchRestrictTemplate(orientationTemplate));
-            }
-            finally
-            {
-                orientedBoard?.Dispose();
-            }
+            await InspectComponentsAsync(newBoard);
         }
         catch (Exception ex)
         {
             IsFullMatch = false;
+            _hasInspectionResult = false;
+            OnPropertyChanged(nameof(HasComponentResults));
             StatusText = $"Lỗi: {ex.Message}";
             ProcessedImageReady?.Invoke(null);
             AnnotatedImageReady?.Invoke(null);
@@ -342,129 +220,81 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async Task<PipelineStep?> BuildOrientationStepAsync(
-        Mat orientedBoard,
-        TemplateEntry matchedTemplate,
-        double matchScore,
-        bool wasRotated,
-        TimeSpan elapsed)
+    private async Task InspectComponentsAsync(Mat newBoard)
     {
+        ComponentInspectionResult result;
+        TimeSpan inspectElapsed;
+
         try
         {
-            var settings = AppSettingsStore.LoadComponentTemplates();
-            var orientationName = settings.OrientationComponentName.Trim();
-            var region = matchedTemplate.Regions.FirstOrDefault(r =>
-                r.IsOrientationMarker
-                && string.Equals(r.Name.Trim(), orientationName, StringComparison.Ordinal));
-
-            using var annotated = orientedBoard.Channels() == 1 ? EnsureBgr(orientedBoard) : orientedBoard.Clone();
-
-            if (region is not null)
+            (result, inspectElapsed) = await Task.Run(() =>
             {
-                int bx = Math.Clamp((int)(region.RelX * annotated.Width), 0, annotated.Width - 1);
-                int by = Math.Clamp((int)(region.RelY * annotated.Height), 0, annotated.Height - 1);
-                int bw = Math.Clamp((int)(region.RelWidth * annotated.Width), 1, annotated.Width - bx);
-                int bh = Math.Clamp((int)(region.RelHeight * annotated.Height), 1, annotated.Height - by);
-                Cv2.Rectangle(annotated, new Rect(bx, by, bw, bh), new Scalar(0, 200, 255), 6);
-            }
-
-            var bitmap = await ToFrozenBitmapAsync(annotated);
-            var scorePercent = Math.Round(matchScore * 100.0, 1);
-            var rotationText = wasRotated ? " — đã xoay 180°" : string.Empty;
-            var description =
-                $"Mẫu \"{matchedTemplate.Name}\" — {orientationName}: {scorePercent}%{rotationText}";
-
-            return PipelineStep.WithTiming(
-                "Xác định chiều mạch",
-                bitmap,
-                description,
-                elapsed);
+                var sw = Stopwatch.StartNew();
+                using var clone = newBoard.Clone();
+                var inspection = _inspectionService.Inspect(clone);
+                sw.Stop();
+                return (inspection, sw.Elapsed);
+            });
         }
-        catch
+        catch (Exception ex)
         {
-            return null;
+            IsFullMatch = false;
+            _hasInspectionResult = false;
+            OnPropertyChanged(nameof(HasComponentResults));
+            InspectionResults.Clear();
+            OnPropertyChanged(nameof(HasInspectionResultList));
+            StatusText = $"Lỗi nhận diện linh kiện: {ex.Message}";
+            var fallback = await ToFrozenBitmapAsync(newBoard);
+            ResultAnnotatedImage = fallback;
+            AnnotatedImageReady?.Invoke(fallback);
+            RaiseInspectionCompleted(false);
+            return;
         }
-    }
 
-    /// <summary>
-    /// Component mode: lock matching to the orientation template (board variant).
-    /// White-circuit mode: search all partial templates per region — orientation only fixes 180° rotation.
-    /// </summary>
-    private TemplateEntry? ResolveMatchRestrictTemplate(TemplateEntry? orientationTemplate)
-    {
-        RefreshInspectionModeFromConfig();
-        return IsWhiteCircuitInspectionMode ? null : orientationTemplate;
-    }
-
-    /// <summary>
-    /// So từng tên trong AllowedRegionNames: lấy ứng viên đầu tiên đạt MinMatchSimilarityPercent trong nhóm.
-    /// </summary>
-    private async Task CompareWithTemplatesAsync(Mat newBoard, TemplateEntry? restrictToTemplate = null)
-    {
-        RefreshInspectionModeFromConfig();
-
-        var (match, matchElapsed) = await Task.Run(() =>
-        {
-            var sw = Stopwatch.StartNew();
-            using var clone = newBoard.Clone();
-            var result = _compositeMatchService.Match(clone, restrictToTemplate);
-            sw.Stop();
-            return (result, sw.Elapsed);
-        });
-
-        var regionResults = match?.RegionResults ?? [];
-        var invertColors = match?.UseInvertedPassLogic ?? IsWhiteCircuitInspectionMode;
-        var annotated = await DrawAnnotationsAsync(newBoard, regionResults, invertColors);
+        var annotated = await DrawMissingAnnotationsAsync(newBoard, result.Missing);
         if (annotated is null)
             annotated = await ToFrozenBitmapAsync(newBoard);
 
         ResultAnnotatedImage = annotated;
         AnnotatedImageReady?.Invoke(annotated);
-        AppendRecognitionStep(annotated, match, matchElapsed);
+        AppendRecognitionStep(annotated, result, inspectElapsed);
 
-        if (match is null)
-        {
-            RefreshMatchThresholdFromConfig();
-            IsFullMatch = false;
-            WhiteCircuitSummaryText = string.Empty;
-            InspectionResults.Clear();
-            OnPropertyChanged(nameof(HasInspectionResultList));
-            StatusText = IsWhiteCircuitInspectionMode
-                ? "Bo mạch đã cắt. Chưa có mẫu mạch trắng nào trong thư viện."
-                : "Bo mạch đã cắt. Chưa có mẫu nào trong thư viện (hoặc thiếu vùng/ảnh).";
-            RaiseInspectionCompleted(false);
-            return;
-        }
+        ApplyInspectionResult(result);
+        IsFullMatch = result.IsComplete;
+        _hasInspectionResult = true;
+        OnPropertyChanged(nameof(HasComponentResults));
 
-        RefreshMatchThreshold(match.MatchThresholdPercent);
+        StatusText = result.IsComplete
+            ? "Đủ linh kiện — không phát hiện vị trí thiếu."
+            : BuildMissingStatusText(result);
 
-        ApplyRegionResultsToGrids(match);
-        IsFullMatch = match.IsFullMatch;
+        RaiseInspectionCompleted(result.IsComplete);
+    }
 
-        var thresholdText = FormatThresholdPercent(match.MatchThresholdPercent);
-        WhiteCircuitSummaryText = string.Empty;
-        var present = match.PresentComponentCount;
-        var total = match.TotalCount;
-        var absent = match.AbsentComponentCount;
+    private static string BuildMissingStatusText(ComponentInspectionResult result)
+    {
+        var names = result.Missing
+            .Select(m => m.Label)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
-        StatusText = match.IsFullMatch
-            ? $"Đạt — {present}/{total} vùng có linh kiện."
-            : $"Chưa đạt — thiếu {absent}/{total} vùng linh kiện (ngưỡng {thresholdText}).";
+        var nameList = names.Count > 0
+            ? string.Join(", ", names)
+            : "—";
 
-        RaiseInspectionCompleted(match.IsFullMatch);
+        return $"Thiếu {result.MissingCount} vị trí linh kiện: {nameList}.";
     }
 
     private void AppendRecognitionStep(
-        System.Windows.Media.Imaging.BitmapSource annotated,
-        CompositeTemplateMatchResult? match,
-        TimeSpan matchElapsed)
+        BitmapSource annotated,
+        ComponentInspectionResult result,
+        TimeSpan elapsed)
     {
-        string stepName = "Nhận diện linh kiện";
-        string description = match is not null
-            ? $"Nhận diện theo vùng — {match.PresentComponentCount}/{match.TotalCount} vùng có linh kiện"
-            : "Nhận diện linh kiện theo vùng trên ảnh bo mạch đã cắt";
+        var description = result.IsComplete
+            ? "Không phát hiện linh kiện thiếu trên bo mạch đã cắt"
+            : $"Phát hiện {result.MissingCount} vị trí thiếu linh kiện";
 
-        Steps.Add(PipelineStep.WithTiming(stepName, annotated, description, matchElapsed));
+        Steps.Add(PipelineStep.WithTiming("Nhận diện linh kiện", annotated, description, elapsed));
         OnPropertyChanged(nameof(HasPipelineSteps));
     }
 
@@ -503,44 +333,17 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     private sealed record SegmentationRunResult(IReadOnlyList<PipelineStep> Steps, Mat? Warped);
 
-    private void RefreshMatchThresholdFromConfig()
-        => RefreshMatchThreshold(AppSettingsStore.LoadMatchThresholdPercent());
-
-    public void RefreshInspectionModeFromConfig()
+    private void ApplyInspectionResult(ComponentInspectionResult result)
     {
-        var settings = AppSettingsStore.LoadComponentTemplates();
-        IsWhiteCircuitInspectionMode = TemplateLibraryPaths.IsWhiteCircuitMode(settings);
-        InspectionModeLabel = IsWhiteCircuitInspectionMode ? "Mạch trắng" : "Linh kiện";
-    }
-
-    private void RefreshMatchThreshold(double percent)
-    {
-        if (Math.Abs(_matchThresholdPercent - percent) < 0.001)
-            return;
-
-        _matchThresholdPercent = percent;
-        OnPropertyChanged(nameof(MatchThresholdPercent));
-        OnPropertyChanged(nameof(DifferentRegionsHeader));
-        OnPropertyChanged(nameof(MatchedRegionsHeader));
-    }
-
-    private static string FormatThresholdPercent(double percent)
-        => percent % 1 == 0 ? $"{percent:F0}%" : $"{percent:F1}%";
-
-    private void ApplyRegionResultsToGrids(CompositeTemplateMatchResult match)
-    {
-        MatchedRegions.Clear();
         DifferentRegions.Clear();
         InspectionResults.Clear();
 
-        foreach (var r in match.RegionResults.OrderBy(x => x.Stt))
+        var stt = 1;
+        foreach (var missing in result.Missing)
         {
-            InspectionResults.Add(InspectionResultRowItem.From(r, match.UseInvertedPassLogic));
-
-            if (r.HasComponent(match.UseInvertedPassLogic))
-                MatchedRegions.Add(r);
-            else
-                DifferentRegions.Add(MissingComponentRowItem.From(r, match.UseInvertedPassLogic));
+            DifferentRegions.Add(MissingComponentRowItem.From(missing, stt));
+            InspectionResults.Add(InspectionResultRowItem.From(missing, stt));
+            stt++;
         }
 
         OnPropertyChanged(nameof(HasInspectionResultList));
@@ -549,41 +352,28 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
 
     public void ClearInspectionResults()
     {
-        MatchedRegions.Clear();
         DifferentRegions.Clear();
         InspectionResults.Clear();
         IsFullMatch = null;
-        WhiteCircuitSummaryText = string.Empty;
         ResultAnnotatedImage = null;
+        _hasInspectionResult = false;
         ResetInspectionTiming();
         OnPropertyChanged(nameof(HasInspectionResultList));
+        OnPropertyChanged(nameof(HasComponentResults));
         NotifyComponentCounts();
     }
 
     private void NotifyComponentCounts()
     {
-        OnPropertyChanged(nameof(SearchedComponentCount));
-        OnPropertyChanged(nameof(MatchedComponentCount));
         OnPropertyChanged(nameof(MissingComponentCount));
-        OnPropertyChanged(nameof(HasComponentResults));
+        OnPropertyChanged(nameof(InspectionSummaryText));
     }
 
-    /// <summary>
-    /// Draws region boxes on the board: green = component present, red = missing.
-    /// </summary>
-    public async Task PublishAnnotatedImageAsync(Mat board, IReadOnlyList<RegionComparisonResult> results)
-    {
-        var invert = TemplateLibraryPaths.IsWhiteCircuitMode(AppSettingsStore.LoadComponentTemplates());
-        var annotated = await DrawAnnotationsAsync(board, results, invert);
-        if (annotated is not null)
-            AnnotatedImageReady?.Invoke(annotated);
-    }
+    private static Task<BitmapSource?> DrawMissingAnnotationsAsync(
+        Mat board, IReadOnlyList<MissingComponent> missing)
+        => Task.Run(() => DrawMissingAnnotations(board, missing));
 
-    private static Task<System.Windows.Media.Imaging.BitmapSource?> DrawAnnotationsAsync(
-        Mat board, IReadOnlyList<RegionComparisonResult> results, bool invertPassColors)
-        => Task.Run(() => DrawAnnotations(board, results, invertPassColors));
-
-    private static Task<System.Windows.Media.Imaging.BitmapSource> ToFrozenBitmapAsync(Mat mat)
+    private static Task<BitmapSource> ToFrozenBitmapAsync(Mat mat)
         => Task.Run(() =>
         {
             var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(mat);
@@ -591,29 +381,26 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
             return bitmap;
         });
 
-    private static System.Windows.Media.Imaging.BitmapSource? DrawAnnotations(
-        Mat board, IReadOnlyList<RegionComparisonResult> results, bool invertPassColors)
+    private static BitmapSource? DrawMissingAnnotations(
+        Mat board, IReadOnlyList<MissingComponent> missing)
     {
         try
         {
             using var canvas = board.Channels() == 1 ? EnsureBgr(board) : board.Clone();
-            var green = new Scalar(0, 200, 0);
-            var red = new Scalar(0, 0, 220);
-            const int thickness = 8;
+            const int thickness = 24;
             const double fontScale = 0.45;
 
-            foreach (var r in results)
+            foreach (var item in missing)
             {
-                if (!r.HasBoardRect)
+                if (item.Box.Width <= 0 || item.Box.Height <= 0)
                     continue;
 
-                var hasComponent = r.HasComponent(invertPassColors);
-                var color = hasComponent ? green : red;
-                Cv2.Rectangle(canvas, r.BoardRect, color, thickness);
+                var color = ComponentColorPalette.GetColor(item.Label);
+                Cv2.Rectangle(canvas, item.Box, color, thickness);
 
-                var labelPos = new Point(r.BoardRect.X + 2, r.BoardRect.Y - 4);
-                if (labelPos.Y < 10) labelPos.Y = r.BoardRect.Y + 12;
-                Cv2.PutText(canvas, r.Name, labelPos,
+                var labelPos = new Point(item.Box.X + 2, item.Box.Y - 4);
+                if (labelPos.Y < 10) labelPos.Y = item.Box.Y + 12;
+                Cv2.PutText(canvas, item.Label, labelPos,
                     HersheyFonts.HersheySimplex, fontScale, color, 1, LineTypes.AntiAlias);
             }
 
@@ -649,5 +436,4 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         _sourceMat?.Dispose();
         _disposed = true;
     }
-
 }

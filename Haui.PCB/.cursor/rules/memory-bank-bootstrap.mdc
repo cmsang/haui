@@ -24,7 +24,7 @@ Coding rules → `.github/copilot-instructions.md` only (SOLID, MVVM, C# style, 
 
 ## Gotcha
 
-**Test / Create / Viewer** → one template folder via `Config/setting.json` → `ComponentTemplates` (`ITemplateLibraryService`).
+**YOLO ONNX** → `ComponentDetection` in `setting.json`; train/export in `yolo/`. Inspection: segment → YOLO on warped board.
 
 ## After tasks
 

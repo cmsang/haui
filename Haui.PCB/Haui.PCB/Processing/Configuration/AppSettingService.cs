@@ -71,23 +71,35 @@ public class AppSettingService : IAppSettingService
         catch { /* bỏ qua lỗi ghi file */ }
     }
 
-    public ComponentTemplateSettings LoadComponentTemplates()
+    public ComponentDetectionSettings LoadComponentDetection()
     {
-        var section = Load().ComponentTemplates;
-        section.MinMatchSimilarityPercent = NormalizeMatchThreshold(section.MinMatchSimilarityPercent);
+        var section = Load().ComponentDetection;
+        NormalizeComponentDetection(section);
         return section;
     }
 
-    public void SaveComponentTemplates(ComponentTemplateSettings settings)
+    public void SaveComponentDetection(ComponentDetectionSettings settings)
     {
         var app = Load();
-        settings.MinMatchSimilarityPercent = NormalizeMatchThreshold(settings.MinMatchSimilarityPercent);
-        app.ComponentTemplates = settings;
+        NormalizeComponentDetection(settings);
+        app.ComponentDetection = settings;
         Save(app);
     }
 
-    public double LoadMatchThresholdPercent()
-        => NormalizeMatchThreshold(LoadComponentTemplates().MinMatchSimilarityPercent);
+    public SegmentationPipelineSettings LoadSegmentation()
+    {
+        var settings = Load().Segmentation;
+        NormalizeSegmentation(settings);
+        return settings;
+    }
+
+    public void SaveSegmentation(SegmentationPipelineSettings settings)
+    {
+        var app = Load();
+        NormalizeSegmentation(settings);
+        app.Segmentation = settings;
+        Save(app);
+    }
 
     public PcbBoardSettings LoadPcbBoard() => Load().PcbBoard;
 
@@ -118,6 +130,16 @@ public class AppSettingService : IAppSettingService
         return settings;
     }
 
+    public HolderDetectionDownscaleSettings LoadHolderDetectionDownscale()
+    {
+        var settings = Load().HolderDetectionDownscale;
+        if (settings.Width <= 0)
+            settings.Width = HolderDetectionDownscaleSettings.DefaultWidth;
+        if (settings.Height <= 0)
+            settings.Height = HolderDetectionDownscaleSettings.DefaultHeight;
+        return settings;
+    }
+
     private static AppSetting CreateAndSaveDefault()
     {
         var setting = new AppSetting();
@@ -128,8 +150,8 @@ public class AppSettingService : IAppSettingService
 
     private static void Normalize(AppSetting setting)
     {
-        setting.ComponentTemplates.MinMatchSimilarityPercent =
-            NormalizeMatchThreshold(setting.ComponentTemplates.MinMatchSimilarityPercent);
+        NormalizeComponentDetection(setting.ComponentDetection);
+        NormalizeSegmentation(setting.Segmentation);
 
         setting.WaitPointJoint234OffsetDegrees = Math.Clamp(
             setting.WaitPointJoint234OffsetDegrees,
@@ -137,11 +159,61 @@ public class AppSettingService : IAppSettingService
             180);
     }
 
-    private static double NormalizeMatchThreshold(double value)
+    private static void NormalizeComponentDetection(ComponentDetectionSettings settings)
     {
-        if (double.IsNaN(value) || double.IsInfinity(value))
-            return ComponentTemplateSettings.DefaultMinMatchSimilarityPercent;
-        return Math.Clamp(value, 0, 100);
+        settings.ConfThreshold = Math.Clamp(settings.ConfThreshold, 0.01, 0.99);
+        settings.IouThreshold = Math.Clamp(settings.IouThreshold, 0.01, 0.99);
+
+        if (settings.InputWidth <= 0)
+            settings.InputWidth = ComponentDetectionSettings.DefaultInputWidth;
+        if (settings.InputHeight <= 0)
+            settings.InputHeight = ComponentDetectionSettings.DefaultInputHeight;
+
+        if (string.IsNullOrWhiteSpace(settings.ModelPath))
+            settings.ModelPath = ComponentDetectionSettings.DefaultModelPath;
+
+        if (settings.ClassNames is null || settings.ClassNames.Count == 0)
+            settings.ClassNames = [.. ComponentDetectionSettings.DefaultClassNames];
+
+        if (string.IsNullOrWhiteSpace(settings.DefaultGroupSplit))
+            settings.DefaultGroupSplit = ComponentDetectionSettings.DefaultGroupSplitDirection;
+
+        if (settings.ComponentGroups is null || settings.ComponentGroups.Count == 0)
+        {
+            settings.ComponentGroups = ComponentDetectionSettings.DefaultComponentGroups
+                .Select(g => new ComponentGroup
+                {
+                    Parent = g.Parent,
+                    Children = [.. g.Children],
+                    Split = g.Split
+                })
+                .ToList();
+        }
+        else
+        {
+            foreach (var group in settings.ComponentGroups)
+            {
+                group.Parent = group.Parent?.Trim() ?? string.Empty;
+                group.Children = group.Children?
+                    .Select(c => c.Trim())
+                    .Where(c => c.Length > 0)
+                    .ToList() ?? [];
+            }
+
+            settings.ComponentGroups = settings.ComponentGroups
+                .Where(g => g.Parent.Length > 0 && g.Children.Count > 0)
+                .ToList();
+        }
+    }
+
+    private static void NormalizeSegmentation(SegmentationPipelineSettings settings)
+    {
+        if (settings.CannyThreshold1 <= 0)
+            settings.CannyThreshold1 = SegmentationPipelineSettings.DefaultCannyThreshold1;
+        if (settings.CannyThreshold2 <= 0)
+            settings.CannyThreshold2 = SegmentationPipelineSettings.DefaultCannyThreshold2;
+        if (settings.CannyThreshold2 < settings.CannyThreshold1)
+            settings.CannyThreshold2 = settings.CannyThreshold1;
     }
 
     private static void MigrateFromAppsettingsJson()
@@ -203,9 +275,10 @@ public class AppSettingService : IAppSettingService
         {
             any |= TryImportLegacySection(
                 Path.Combine(searchDir, LegacyComponentFile),
-                json => setting.ComponentTemplates =
-                    JsonSerializer.Deserialize<ComponentTemplateSettings>(json, JsonOptions)
-                    ?? new ComponentTemplateSettings());
+                json =>
+                {
+                    // Legacy component template settings are no longer used at runtime.
+                });
 
             any |= TryImportLegacySection(
                 Path.Combine(searchDir, LegacyCameraFile),
@@ -247,12 +320,6 @@ public class AppSettingService : IAppSettingService
 
     private static void MergeVisionSections(AppSetting target, AppSetting source)
     {
-        if (source.ComponentTemplates.AllowedRegionNames.Count > 0
-            || !string.IsNullOrWhiteSpace(source.ComponentTemplates.CustomFolder))
-        {
-            target.ComponentTemplates = source.ComponentTemplates;
-        }
-
         if (source.CameraBasler.Width > 0 && source.CameraBasler.Height > 0)
             target.CameraBasler = source.CameraBasler;
 

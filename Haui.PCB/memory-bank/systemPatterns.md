@@ -7,16 +7,16 @@ Haui.PCB/                 # WPF app project
 ├── GlobalUsings.cs       # global using cho Models.* và Processing.*
 ├── App.xaml(.cs)         # Startup → Views/Windows/MainWindow
 ├── Models/               # DTO / POCO theo domain
-│   ├── Configuration/    # AppSetting, ComponentTemplateSettings, …
-│   ├── Templates/        # TemplateEntry, TemplateRegion, …
-│   ├── Segmentation/     # SegmentationPipelineResult, RegionComparisonResult, …
+│   ├── Configuration/    # AppSetting, ComponentDetectionSettings, …
+│   ├── Detection/        # MissingComponent, ComponentInspectionResult
+│   ├── Segmentation/     # SegmentationPipelineResult, …
 │   ├── Camera/           # CameraInfo, ResolutionInfo
 │   └── Robot/            # RobotTeachPoint, RobotJointLimits, …
 ├── Processing/           # Services + I* theo domain
 │   ├── Configuration/    # AppSettingService, AppConfigPaths, …
 │   ├── Camera/           # BaslerCameraService, CameraCaptureService, …
 │   ├── Segmentation/     # PcbSegmentationService, HolderContourDetectionService, QuadGeometry, PipelineStepMapper
-│   ├── Templates/        # TemplateLibraryService, RegionComparisonService, BoardOrientationDetectionService, …
+│   ├── Detection/        # OnnxYoloDetector, MissingComponentDetectionService
 │   └── Robot/            # RobotSerialService, RobotConfigService, …
 ├── ViewModels/           # INotifyPropertyChanged, business logic
 │   └── Pipeline/         # PipelineStep (WPF BitmapSource)
@@ -39,27 +39,20 @@ Haui.PCB/                 # WPF app project
 | `ICameraService` | `BaslerCameraService` | Basler pylon; frames as `Mat` |
 | `ICameraParameterService` | `BaslerCameraService` | GenICam Apply / Reset (Basler only) |
 | `IPcbSegmentationService` | `PcbSegmentationService` | Canny + holder contour + perspective warp → straight board |
-| `ITemplateLibraryService` | `TemplateLibraryService` | Thư viện mẫu: quét `*.png` + `*_regions.json` |
-| `IRegionComparisonService` | `RegionComparisonService` | Per-region histogram compare |
+| `IComponentInspectionService` | `MissingComponentDetectionService` | YOLO26 ONNX — detect missing component locations on warped board |
+| `IOnnxYoloDetector` | `OnnxYoloDetector` | Letterbox + OnnxRuntime inference + NMS |
 
-Step gallery on Dashboard uses `PipelineStepMapper` + `TestPipelineViewModel.Steps` (same `RunPipeline` as PASS/FAIL).
+Step gallery on Dashboard uses `PipelineStepMapper` + `TestPipelineViewModel.Steps` (segmentation + YOLO recognition).
 
-## Template storage
+## ONNX model
 
-Thư mục cấu hình (`templates/` hoặc tùy chỉnh qua `Config/setting.json` → ComponentTemplates):
-
-- `{name}_{timestamp}.png` — ảnh bo mẫu
-- `{name}_{timestamp}_regions.json` — `TemplateRegionsDocument` (tên + vùng)
-
-**Create**, **Viewer**, **Test** đều dùng `ITemplateLibraryService` (không còn `template_board` / `template_regions`).
+Path → `Config/setting.json` → `ComponentDetection.modelPath` (default `Models/yolo26m_960x1280.onnx`). Train/export via `yolo/` project.
 
 ## Window graph
 
 ```
 App → MainWindow (MainViewModel + CameraService)
-        ├─ CreateTemplateWindow    (Owner=Main or Viewer)
-        └─ TemplateViewerWindow    (Owner=Main)
-              └─ CreateTemplateWindow (edit mode via RegionsSaved)
+        └─ DashboardTabView (inline Test + pipeline gallery)
 ```
 
 Child windows receive a captured `Mat` from Main; caller **disposes** the frame after handoff.

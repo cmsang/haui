@@ -39,32 +39,30 @@ Summary for Haui.PCB:
 | Path | Written by | Purpose |
 |------|------------|---------|
 | `last_region.json` | `MainViewModel` | Last camera ROI (pixel rect) |
-| `Config/setting.json` | `AppSettingService` | Robot, `DatabaseConnection`, `ComponentTemplates`, `PcbBoard`, `CameraBasler`, `CameraCapture` |
-| `ComponentTemplates.CustomFolder` (`setting.json`) | `TemplateLibraryService` | Thư mục thư viện mẫu (`*.png` + `*_regions.json`; rỗng → `templates/`) |
+| `Config/setting.json` | `AppSettingService` | Robot, `DatabaseConnection`, `ComponentDetection`, `PcbBoard`, `CameraBasler`, `CameraCapture` |
+| `ComponentDetection.modelPath` | ONNX runtime | `Models/yolo26m_960x1280.onnx` (or custom path) |
 
 ## Segmentation constants (`PcbSegmentationService`)
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `CannyThreshold1/2` | 50 / 150 (default; chỉnh trên MainWindow) | Edge detection — `SegmentationSettings.Current` |
+| `CannyThreshold1/2` | 30 / 100 (default) | Edge detection — section `Segmentation` in `setting.json`; DeveloperMode → Dashboard **Canny Threshold** window (Lưu) hoặc sửa file trực tiếp |
 | `MorphKernelSize` | 5 | Close gaps in edges |
 | `EdgePadding` | 2 px | Crop padding |
 
 Pipeline: BGR→gray → GaussianBlur(5×5) → Canny → morphology close → holder contour quad (460×590 mm) → perspective warp → landscape normalize.
 
-## Comparison (`RegionComparisonService`)
+## Comparison (YOLO — `MissingComponentDetectionService`)
 
-- Crop region on template and new board using relative coords
-- Resize to **128×128** (`INTER_AREA` when downscaling, `INTER_LINEAR` when upscaling)
-- Preprocess: **LAB L** → **CLAHE** (clip 2.0, tile 8×8) → **bilateral** (d=5)
-- Similarity metric: **Hybrid score** = `0.7 * NCC(CCoeffNormed)` + `0.3 * histogram correlation`; both clamped to 0..1
-- Match threshold **`MinMatchSimilarityPercent`** in `setting.json` → ComponentTemplates (default 80); `RegionComparisonResult.IsMatch`
+- Input: warped board `Mat` (Mono8 or BGR) after `PcbSegmentationService`
+- Model: ONNX YOLO26, default `Models/yolo26m_960x1280.onnx`, letterbox 960×1280
+- Each box above **`confThreshold`** = one **missing** component; **PASS** when no boxes after NMS
+- Class labels from `ComponentDetection.classNames` (11 classes, matches `yolo/yolo_dataset/data.yaml`)
 
-## Models
+## Models (inspection)
 
-- `TemplateRegion` — `RelX`, `RelY`, `RelWidth`, `RelHeight` (0..1), `Name`
-- `TemplateEntry` — library metadata + image path + regions
-- `RegionComparisonResult` — similarity %, `BoardRect`, `IsMatch`
+- `MissingComponent` — `Label`, `Confidence`, `Box`
+- `ComponentInspectionResult` — `Missing`, `IsComplete`
 - `PipelineStep` — debug step label + frozen `BitmapSource`
 
 ## Do not index / edit

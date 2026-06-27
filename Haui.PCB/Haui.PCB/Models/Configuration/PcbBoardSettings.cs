@@ -28,6 +28,7 @@ public sealed class PcbBoardSettings
     [JsonPropertyName("quadAngleToleranceDegrees")]
     public double QuadAngleToleranceDegrees { get; set; } = DefaultQuadAngleToleranceDegrees;
 
+    [JsonIgnore]
     public bool HasAspectConstraint => WidthMm > 0 && HeightMm > 0;
 
     [JsonIgnore]

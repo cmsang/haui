@@ -15,6 +15,7 @@
 		<PackageReference Include="MaterialDesignColors" Version="5.3.2" />
 		<PackageReference Include="MaterialDesignThemes" Version="5.3.2" />
 		<PackageReference Include="MaterialDesignThemes.Wpf" Version="1.0.1" />
+		<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.27.0" />
 		<PackageReference Include="OpenCvSharp4" Version="4.13.0.20260427" />
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.13.0.20260427" />
 		<PackageReference Include="OpenCvSharp4.runtime.win" Version="4.13.0.20260302" />
@@ -44,6 +45,22 @@
 
 	<ItemGroup>
 		<Resource Include="Image\**\*.*" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="Models\yolo26m_960x1280.onnx" Link="Models\yolo26m_960x1280.onnx" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Models\yolo26m_960x1280.onnx')" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Config\setting.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Config\yolo26m_960x1280.onnx">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Config\yolov8m_960x1280.onnx">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
 	</ItemGroup>
 
 </Project>

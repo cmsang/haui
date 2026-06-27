@@ -2,6 +2,22 @@
 
 ## Current focus
 
+**HD holder detection + hull-only (2026-06-27):** Canny/Morphology Close/khung hộp đỡ chạy trên ảnh thu nhỏ tối đa 1920×1080 (`HolderDetectionDownscale` trong `setting.json`, mặc định bật); 4 góc map ngược lên full-res rồi `WarpPerspective` + YOLO trên ảnh gốc. Helper `DetectionImageHelper`; `SegmentationPipelineResult.DetectionSize` cho gallery. Đã xóa hẳn fallback `FindContours` trong `HolderContourDetectionService` — chỉ còn Convex Hull (strict → loose).
+
+**Canny threshold in setting.json (2026-06-27):** Section `Segmentation` (`cannyThreshold1`, `cannyThreshold2`, mặc định 30/100). `PcbSegmentationService` đọc qua `AppSettingsStore.LoadSegmentation()` mỗi lần chạy pipeline. Không hiển thị trên tab Cài đặt. **DeveloperMode:** nút **Canny Threshold** trên Dashboard → chụp frame → `CannyThresholdWindow` (slider t1/t2, xem trực tiếp Canny + Morphology Close, nút Lưu ghi `setting.json`). Helper `CannyPreviewHelper`. Đã gỡ `SegmentationSettings.Current` / `MainViewModel.CannyThreshold*`.
+
+**Holder detection perf (2026-06-27):** `HolderContourDetectionService.TryDetectFromConvexHull` thay vòng lặp `pointsMat.At<Point>(i)` bằng `GetArray(out Point[])` — copy hàng loạt thay vì gọi native từng pixel.
+
+**PcbBoard config cleanup (2026-06-27):** Removed dead JSON key `hasAspectConstraint` from `setting.json`. `PcbBoardSettings.HasAspectConstraint` is computed-only (`WidthMm > 0 && HeightMm > 0`); added `[JsonIgnore]` so Setting tab save no longer rewrites it.
+
+**YOLO missing-component detection (2026-06-26):** Replaced histogram/template matching with YOLO26 ONNX (`Microsoft.ML.OnnxRuntime` 1.27). `MissingComponentDetectionService` runs on warped board; each detection = missing component location (red box). PASS when `Missing.Count == 0`. Config section **`ComponentDetection`** in `setting.json`. Removed: template library, Create/Viewer windows, board orientation, white-circuit mode, `ComponentTemplates` settings.
+
+**Component groups + split boxes (2026-06-27):** `ComponentDetection.componentGroups` maps parent YOLO labels to child names (L23→L2,L3; R12→R1,R2; C365→C3,C6,C5; D12→D1,D2 vertical split; KF→KF1,KF2,KF3). `defaultGroupSplit` = Horizontal (columns); D12 uses Vertical (rows). `MissingComponentDetectionService` dedups parent detections then expands to one `MissingComponent` per child with split cell box; list/count/overlay use child labels automatically.
+
+**Per-label marking colors (2026-06-27):** `ComponentColorPalette` (Processing/Detection) gives each component label a stable distinct BGR color — hues spread evenly over the configured label universe (`ClassNames` with grouped parents replaced by children); unknown labels fall back to a name-hash hue. `TestPipelineViewModel.DrawMissingAnnotations` now draws each box + text in `ComponentColorPalette.GetColor(item.Label)` instead of a single red.
+
+**OnnxYoloDetector gotchas (2026-06-26, fixed):** (1) **RGB order** — Ultralytics trains on RGB; OpenCV `Mat` is BGR. `PrepareInput` must `CvtColor(BGR2RGB)` before building the NCHW tensor (else detections are chaotic). (2) **End-to-end output** — `yolo26m_960x1280.onnx` exports NMS-free format **`[1, 300, 6]`** where each row = `[x1, y1, x2, y2, confidence, classId]` (xyxy, input-pixel space, already NMS'd + sorted). `Decode` branches: `DecodeEndToEnd` for `[1, N, 6]`, `DecodeRaw` (custom NMS) for legacy `[1, 4+nc, N]` (e.g. yolov8m). Input is `[1, 3, 1280, 960]` (H×W portrait).
+
 Stable layout: **Models** and **Processing** by domain subfolder; **Views** as `Windows/` · `Tabs/` · `Controls/`; config unified in **`Config/setting.json`**.
 
 Language convention (`.cursor/rules/language-and-ui-text.mdc`): source comments **English**; operator UI **Vietnamese** with `MaterialDesignFont` / `Segoe UI` (not Consolas for labels). Mojibake in 13 ViewModel/code-behind `.cs` files fixed (2026-06); child windows/tabs now set `MaterialDesignFont` on root.

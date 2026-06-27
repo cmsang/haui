@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local hardware overrides
+config.local.yaml
+
+# Training outputs
+runs/
+*.pt
+*.onnx
+wandb/
+
+# Optional: large dataset images (keep labels + data.yaml in repo if needed)
+# yolo_dataset/images/

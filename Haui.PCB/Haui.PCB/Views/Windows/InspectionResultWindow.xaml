@@ -32,10 +32,6 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                    <TextBlock FontSize="13" Foreground="#1A3A6B" Margin="0,0,0,4">
-                        <Run Text="Chế độ: "/>
-                        <Run Text="{Binding InspectionModeLabel, Mode=OneWay}" FontWeight="SemiBold"/>
-                    </TextBlock>
                     <TextBlock Text="{Binding StatusText}"
                                TextWrapping="Wrap"
                                FontSize="13"
@@ -106,7 +102,6 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <Border Grid.Row="0"
@@ -119,14 +114,7 @@
                                    FontSize="14"
                                    Foreground="#1A3A6B"/>
                     </Border>
-                    <TextBlock Grid.Row="1"
-                               Margin="10,8,10,4"
-                               Text="{Binding WhiteCircuitSummaryText}"
-                               TextWrapping="Wrap"
-                               FontSize="13"
-                               Foreground="#333333"
-                               Visibility="{Binding HasWhiteCircuitSummary, Converter={StaticResource BoolToVis}}"/>
-                    <DataGrid Grid.Row="2"
+                    <DataGrid Grid.Row="1"
                               ItemsSource="{Binding InspectionResults}"
                               AutoGenerateColumns="False"
                               CanUserAddRows="False"
@@ -145,18 +133,15 @@
                             <DataGridTextColumn Header="Tên"
                                                 Binding="{Binding Name}"
                                                 Width="*"/>
-                            <DataGridTextColumn Header="Độ tương đồng"
-                                                Binding="{Binding SimilarityDisplayText}"
+                            <DataGridTextColumn Header="Độ tin cậy"
+                                                Binding="{Binding ConfidenceDisplayText}"
                                                 Width="96"/>
                             <DataGridTextColumn Header="Kết quả"
                                                 Binding="{Binding ResultText}"
                                                 Width="110"/>
-                            <DataGridTextColumn Header="Ghi chú"
-                                                Binding="{Binding StatusNote}"
-                                                Width="120"/>
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock Grid.Row="2"
+                    <TextBlock Grid.Row="1"
                                Text="Không có dữ liệu chi tiết."
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"

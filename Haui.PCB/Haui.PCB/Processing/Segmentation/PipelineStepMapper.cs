@@ -133,10 +133,19 @@ public static class PipelineStepMapper
     private static string BuildMorphologyCloseDescription(SegmentationPipelineResult pipeline)
     {
         const string baseText = "Đóng kín khoảng hở trên biên (Close, 3 lần lặp)";
-        if (pipeline.EdgeSearchRoi is not { } roi)
-            return baseText;
+        var parts = new List<string> { baseText };
 
-        return $"{baseText}. ROI biên: {roi.Width}×{roi.Height} px tại ({roi.X},{roi.Y})";
+        if (pipeline.DetectionSize is { } detectionSize)
+        {
+            parts.Add($"Chạy trên ảnh {detectionSize.Width}×{detectionSize.Height} px (thu nhỏ từ gốc)");
+        }
+
+        if (pipeline.EdgeSearchRoi is { } roi)
+        {
+            parts.Add($"ROI biên: {roi.Width}×{roi.Height} px tại ({roi.X},{roi.Y})");
+        }
+
+        return string.Join(". ", parts);
     }
 
     private static TimeSpan GetTiming(IReadOnlyDictionary<string, TimeSpan> timings, string key)

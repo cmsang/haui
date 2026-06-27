@@ -1,0 +1,16 @@
+path: D:/haui/Haui.PCB/yolo/yolo_dataset
+train: images/train
+val: images/val
+nc: 11
+names:
+  0: KF
+  1: C2
+  2: AMS1
+  3: L23
+  4: R12
+  5: C365
+  6: D12
+  7: C1
+  8: LM1
+  9: L1
+  10: C4
