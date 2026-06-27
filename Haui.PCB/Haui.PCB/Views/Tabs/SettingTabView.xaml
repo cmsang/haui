@@ -157,8 +157,6 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <TextBlock Grid.Row="0" Text="Đường dẫn model ONNX" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FieldTextBox}"
@@ -174,9 +172,6 @@
                             <TextBlock Grid.Row="2" Text="Ngưỡng tin cậy (conf)" Style="{StaticResource FieldLabel}"/>
                             <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource FieldTextBox}"
                                      Text="{Binding DetectionConfThreshold, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Grid.Row="3" Text="Ngưỡng NMS (IoU)" Style="{StaticResource FieldLabel}"/>
-                            <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource FieldTextBox}"
-                                     Text="{Binding DetectionIouThreshold, UpdateSourceTrigger=PropertyChanged}"/>
                         </Grid>
 
                         <TextBlock Text="Danh sách tên class (classNames)"
