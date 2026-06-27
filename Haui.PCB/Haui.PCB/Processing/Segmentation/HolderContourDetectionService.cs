@@ -5,14 +5,13 @@ using OpenCvSharp;
 namespace Haui.PCB.Processing.Segmentation;
 
 /// <summary>
-/// Finds the holder support quad from morphology-close edges using dilated masks,
-/// convex hull + minAreaRect (primary), and scored external contours (fallback).
+/// Finds the holder support quad from morphology-close edges using dilated masks
+/// and convex hull + minAreaRect.
 /// </summary>
 public sealed class HolderContourDetectionService : IHolderContourDetectionService
 {
     private const int DilateKernelSize = 9;
     private const int DilateIterations = 2;
-    private const double MinAreaFraction = 0.02;
     private const double SoftAspectMultiplier = 2.0;
 
     public HolderContourResult Detect(
@@ -29,35 +28,15 @@ public sealed class HolderContourDetectionService : IHolderContourDetectionServi
             dilated,
             edgeSearchRoi,
             holderSettings,
-            strictAspect: true);
+            strictAspect: true)
+            ?? TryDetectFromConvexHull(
+                dilated,
+                edgeSearchRoi,
+                holderSettings,
+                strictAspect: false);
+
         if (hullResult is not null)
             return hullResult;
-
-        var contourResult = TryDetectFromContours(
-            dilated,
-            closedEdges.Width,
-            closedEdges.Height,
-            holderSettings,
-            strictAspect: true);
-        if (contourResult is not null)
-            return contourResult;
-
-        hullResult = TryDetectFromConvexHull(
-            dilated,
-            edgeSearchRoi,
-            holderSettings,
-            strictAspect: false);
-        if (hullResult is not null)
-            return hullResult;
-
-        contourResult = TryDetectFromContours(
-            dilated,
-            closedEdges.Width,
-            closedEdges.Height,
-            holderSettings,
-            strictAspect: false);
-        if (contourResult is not null)
-            return contourResult;
 
         if (holderSettings.HasAspectConstraint)
         {
@@ -98,11 +77,14 @@ public sealed class HolderContourDetectionService : IHolderContourDetectionServi
         if (pointsMat.Empty() || pointsMat.Total() < 4)
             return null;
 
-        var points = new Point[pointsMat.Total()];
+        pointsMat.GetArray(out Point[] points);
+
+        int offsetX = padded.X;
+        int offsetY = padded.Y;
         for (int i = 0; i < points.Length; i++)
         {
-            var p = pointsMat.At<Point>(i);
-            points[i] = new Point(p.X + padded.X, p.Y + padded.Y);
+            points[i].X += offsetX;
+            points[i].Y += offsetY;
         }
 
         int[] hullIndices = Cv2.ConvexHullIndices(points, clockwise: true);
@@ -123,55 +105,6 @@ public sealed class HolderContourDetectionService : IHolderContourDetectionServi
             holderSettings,
             strictAspect,
             sourceLabel: "hull");
-    }
-
-    private static HolderContourResult? TryDetectFromContours(
-        Mat dilated,
-        int imageWidth,
-        int imageHeight,
-        PcbBoardSettings holderSettings,
-        bool strictAspect)
-    {
-        Cv2.FindContours(
-            dilated,
-            out Point[][] contours,
-            out _,
-            RetrievalModes.External,
-            ContourApproximationModes.ApproxSimple);
-
-        if (contours.Length == 0)
-            return null;
-
-        double imageArea = Math.Max(imageWidth * imageHeight, 1);
-        double minArea = imageArea * MinAreaFraction;
-
-        CandidateQuad? best = null;
-
-        foreach (var contour in contours)
-        {
-            double area = Cv2.ContourArea(contour);
-            if (area < minArea)
-                continue;
-
-            var rotated = Cv2.MinAreaRect(contour);
-            var corners = rotated.Points();
-            if (corners.Length != 4)
-                continue;
-
-            if (!TryScoreQuad(
-                    corners,
-                    area,
-                    imageArea,
-                    holderSettings,
-                    strictAspect,
-                    out var candidate))
-                continue;
-
-            if (best is null || candidate.Score > best.Score)
-                best = candidate;
-        }
-
-        return best is null ? null : ToResult(best, holderSettings);
     }
 
     private static HolderContourResult? TryAcceptQuad(
@@ -241,9 +174,7 @@ public sealed class HolderContourDetectionService : IHolderContourDetectionServi
         }
 
         double areaNorm = area / Math.Max(imageArea, 1);
-        double score = areaNorm * 2.0 + metrics.Rectangularity - aspectErr;
-
-        candidate = new CandidateQuad(ordered, metrics, area, areaNorm, aspectErr, score, strictAspect);
+        candidate = new CandidateQuad(ordered, metrics, area, areaNorm, aspectErr, strictAspect);
         return true;
     }
 
@@ -290,6 +221,5 @@ public sealed class HolderContourDetectionService : IHolderContourDetectionServi
         double Area,
         double AreaNorm,
         double AspectError,
-        double Score,
         bool StrictAspect);
 }

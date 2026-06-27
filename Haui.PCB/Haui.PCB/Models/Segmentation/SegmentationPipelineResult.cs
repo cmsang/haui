@@ -23,6 +23,9 @@ public sealed class SegmentationPipelineResult : IDisposable
     /// <summary>Axis-aligned ROI of edge pixels used for holder search; null when no edges found.</summary>
     public Rect? EdgeSearchRoi { get; init; }
 
+    /// <summary>Detection-space image size when Canny/Close/holder ran on a downscaled copy; null when full-res.</summary>
+    public Size? DetectionSize { get; init; }
+
     /// <summary>Warped board image; null when detection failed.</summary>
     public Mat? Warped { get; init; }
 

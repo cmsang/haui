@@ -56,4 +56,7 @@ public class AppSetting
 
     [JsonPropertyName("CameraDownscale")]
     public ImageDownscaleSettings CameraDownscale { get; set; } = new();
+
+    [JsonPropertyName("HolderDetectionDownscale")]
+    public HolderDetectionDownscaleSettings HolderDetectionDownscale { get; set; } = new();
 }

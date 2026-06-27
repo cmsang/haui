@@ -17,4 +17,5 @@ public interface IAppSettingService
     CameraParameters LoadCameraBasler();
     CameraCaptureSettings LoadCameraCapture();
     ImageDownscaleSettings LoadCameraDownscale();
+    HolderDetectionDownscaleSettings LoadHolderDetectionDownscale();
 }

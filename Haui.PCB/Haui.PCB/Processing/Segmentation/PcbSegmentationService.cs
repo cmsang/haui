@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Haui.PCB.Processing.Configuration;
 using OpenCvSharp;
 
 namespace Haui.PCB.Processing.Segmentation;
@@ -82,8 +83,18 @@ public class PcbSegmentationService : IPcbSegmentationService
         double t1 = _parameters.CannyThreshold1;
         double t2 = _parameters.CannyThreshold2;
 
+        var holderDownscale = AppSettingsStore.LoadHolderDetectionDownscale();
+        var (detectionInputMat, detectionScale) = DetectionImageHelper.DownscaleForDetection(
+            cannyInput,
+            holderDownscale);
+        using var detectionInput = detectionInputMat;
+        double invDetectionScale = detectionScale > 0 ? 1.0 / detectionScale : 1.0;
+        Size? detectionSize = Math.Abs(detectionScale - 1.0) > 1e-9
+            ? new Size(detectionInput.Width, detectionInput.Height)
+            : null;
+
         sw.Restart();
-        Cv2.Canny(cannyInput, edgesWork, t1, t2);
+        Cv2.Canny(detectionInput, edgesWork, t1, t2);
         RecordTiming(timings, SegmentationPipelineSteps.Canny, sw.Elapsed);
 
         sw.Restart();
@@ -117,7 +128,7 @@ public class PcbSegmentationService : IPcbSegmentationService
 
             if (contourResult.Success && contourResult.Corners is { Length: 4 } corners)
             {
-                warpQuadCorners = corners;
+                warpQuadCorners = DetectionImageHelper.ScaleCornersToSource(corners, invDetectionScale);
 
                 sw.Restart();
                 warped = WarpPerspective(source, warpQuadCorners);
@@ -136,6 +147,7 @@ public class PcbSegmentationService : IPcbSegmentationService
             WarpQuadCorners = warpQuadCorners,
             ContourDescription = contourDescription,
             EdgeSearchRoi = edgeSearchRoi,
+            DetectionSize = detectionSize,
             Warped = warped,
             StepTimings = timings ?? new Dictionary<string, TimeSpan>()
         };

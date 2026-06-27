@@ -2,6 +2,10 @@
 
 ## Current focus
 
+**HD holder detection + hull-only (2026-06-27):** Canny/Morphology Close/khung hộp đỡ chạy trên ảnh thu nhỏ tối đa 1920×1080 (`HolderDetectionDownscale` trong `setting.json`, mặc định bật); 4 góc map ngược lên full-res rồi `WarpPerspective` + YOLO trên ảnh gốc. Helper `DetectionImageHelper`; `SegmentationPipelineResult.DetectionSize` cho gallery. Đã xóa hẳn fallback `FindContours` trong `HolderContourDetectionService` — chỉ còn Convex Hull (strict → loose).
+
+**Holder detection perf (2026-06-27):** `HolderContourDetectionService.TryDetectFromConvexHull` thay vòng lặp `pointsMat.At<Point>(i)` bằng `GetArray(out Point[])` — copy hàng loạt thay vì gọi native từng pixel.
+
 **PcbBoard config cleanup (2026-06-27):** Removed dead JSON key `hasAspectConstraint` from `setting.json`. `PcbBoardSettings.HasAspectConstraint` is computed-only (`WidthMm > 0 && HeightMm > 0`); added `[JsonIgnore]` so Setting tab save no longer rewrites it.
 
 **YOLO missing-component detection (2026-06-26):** Replaced histogram/template matching with YOLO26 ONNX (`Microsoft.ML.OnnxRuntime` 1.27). `MissingComponentDetectionService` runs on warped board; each detection = missing component location (red box). PASS when `Missing.Count == 0`. Config section **`ComponentDetection`** in `setting.json`. Removed: template library, Create/Viewer windows, board orientation, white-circuit mode, `ComponentTemplates` settings.

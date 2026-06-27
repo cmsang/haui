@@ -20,4 +20,7 @@ internal static class AppSettingsStore
     public static CameraCaptureSettings LoadCameraCapture() => Service.LoadCameraCapture();
 
     public static ImageDownscaleSettings LoadCameraDownscale() => Service.LoadCameraDownscale();
+
+    public static HolderDetectionDownscaleSettings LoadHolderDetectionDownscale()
+        => Service.LoadHolderDetectionDownscale();
 }

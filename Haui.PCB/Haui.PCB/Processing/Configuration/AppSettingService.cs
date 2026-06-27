@@ -115,6 +115,16 @@ public class AppSettingService : IAppSettingService
         return settings;
     }
 
+    public HolderDetectionDownscaleSettings LoadHolderDetectionDownscale()
+    {
+        var settings = Load().HolderDetectionDownscale;
+        if (settings.Width <= 0)
+            settings.Width = HolderDetectionDownscaleSettings.DefaultWidth;
+        if (settings.Height <= 0)
+            settings.Height = HolderDetectionDownscaleSettings.DefaultHeight;
+        return settings;
+    }
+
     private static AppSetting CreateAndSaveDefault()
     {
         var setting = new AppSetting();
