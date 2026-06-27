@@ -387,7 +387,6 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             using var canvas = board.Channels() == 1 ? EnsureBgr(board) : board.Clone();
-            var red = new Scalar(0, 0, 220);
             const int thickness = 8;
             const double fontScale = 0.45;
 
@@ -396,12 +395,13 @@ public class TestPipelineViewModel : INotifyPropertyChanged, IDisposable
                 if (item.Box.Width <= 0 || item.Box.Height <= 0)
                     continue;
 
-                Cv2.Rectangle(canvas, item.Box, red, thickness);
+                var color = ComponentColorPalette.GetColor(item.Label);
+                Cv2.Rectangle(canvas, item.Box, color, thickness);
 
                 var labelPos = new Point(item.Box.X + 2, item.Box.Y - 4);
                 if (labelPos.Y < 10) labelPos.Y = item.Box.Y + 12;
                 Cv2.PutText(canvas, item.Label, labelPos,
-                    HersheyFonts.HersheySimplex, fontScale, red, 1, LineTypes.AntiAlias);
+                    HersheyFonts.HersheySimplex, fontScale, color, 1, LineTypes.AntiAlias);
             }
 
             var bitmap = OpenCvSharp.WpfExtensions.BitmapSourceConverter.ToBitmapSource(canvas);
