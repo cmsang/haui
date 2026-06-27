@@ -148,6 +148,36 @@ public class AppSettingService : IAppSettingService
 
         if (settings.ClassNames is null || settings.ClassNames.Count == 0)
             settings.ClassNames = [.. ComponentDetectionSettings.DefaultClassNames];
+
+        if (string.IsNullOrWhiteSpace(settings.DefaultGroupSplit))
+            settings.DefaultGroupSplit = ComponentDetectionSettings.DefaultGroupSplitDirection;
+
+        if (settings.ComponentGroups is null || settings.ComponentGroups.Count == 0)
+        {
+            settings.ComponentGroups = ComponentDetectionSettings.DefaultComponentGroups
+                .Select(g => new ComponentGroup
+                {
+                    Parent = g.Parent,
+                    Children = [.. g.Children],
+                    Split = g.Split
+                })
+                .ToList();
+        }
+        else
+        {
+            foreach (var group in settings.ComponentGroups)
+            {
+                group.Parent = group.Parent?.Trim() ?? string.Empty;
+                group.Children = group.Children?
+                    .Select(c => c.Trim())
+                    .Where(c => c.Length > 0)
+                    .ToList() ?? [];
+            }
+
+            settings.ComponentGroups = settings.ComponentGroups
+                .Where(g => g.Parent.Length > 0 && g.Children.Count > 0)
+                .ToList();
+        }
     }
 
     private static void MigrateFromAppsettingsJson()

@@ -20,6 +20,7 @@
 - [x] Holder quad validation — `QuadGeometry` + `PcbBoard` aspect ratio; `quadRectTolerancePercent` / `aspectRatioTolerancePercent` / `quadAngleToleranceDegrees` (default 15%/15%/5°); Setting tab **Hộp đỡ PCB**
 - [x] Pipeline step gallery on Dashboard — per-step elapsed time via `PipelineStepMapper`; bước **Khung hộp đỡ** annotate tứ giác trên ảnh gốc; bước **Nhận diện linh kiện** sau segmentation
 - [x] **YOLO missing-component detection (2026-06-26)** — `OnnxYoloDetector` + `MissingComponentDetectionService` (Microsoft.ML.OnnxRuntime); PASS when zero boxes; red overlay per missing location; config `ComponentDetection` in `setting.json`; removed template library / orientation / histogram match / Create+Viewer windows
+- [x] **Component groups + split marking boxes (2026-06-27)** — `componentGroups` + `defaultGroupSplit` in `ComponentDetection`; parent detections expanded to child rows/boxes (horizontal columns default; D12 vertical rows)
 - [x] Dashboard inline test — result image + panel (PASS/FAIL, thời gian, DataGrid linh kiện thiếu), pipeline steps gallery on tab
 - [x] Result overlay — red boxes at missing component locations detected by YOLO
 - [x] Preview perf — off-thread Mat→BitmapSource, frame drop, coalesced Dispatcher updates (2026-06-15)
