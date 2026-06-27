@@ -58,8 +58,7 @@
     "heightMm": 590,
     "quadRectTolerancePercent": 5,
     "aspectRatioTolerancePercent": 5,
-    "quadAngleToleranceDegrees": 5,
-    "hasAspectConstraint": true
+    "quadAngleToleranceDegrees": 5
   },
   "CameraBasler": {
     "deviceIp": "",

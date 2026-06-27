@@ -2,6 +2,8 @@
 
 ## Current focus
 
+**PcbBoard config cleanup (2026-06-27):** Removed dead JSON key `hasAspectConstraint` from `setting.json`. `PcbBoardSettings.HasAspectConstraint` is computed-only (`WidthMm > 0 && HeightMm > 0`); added `[JsonIgnore]` so Setting tab save no longer rewrites it.
+
 **YOLO missing-component detection (2026-06-26):** Replaced histogram/template matching with YOLO26 ONNX (`Microsoft.ML.OnnxRuntime` 1.27). `MissingComponentDetectionService` runs on warped board; each detection = missing component location (red box). PASS when `Missing.Count == 0`. Config section **`ComponentDetection`** in `setting.json`. Removed: template library, Create/Viewer windows, board orientation, white-circuit mode, `ComponentTemplates` settings.
 
 **Component groups + split boxes (2026-06-27):** `ComponentDetection.componentGroups` maps parent YOLO labels to child names (L23→L2,L3; R12→R1,R2; C365→C3,C6,C5; D12→D1,D2 vertical split; KF→KF1,KF2,KF3). `defaultGroupSplit` = Horizontal (columns); D12 uses Vertical (rows). `MissingComponentDetectionService` dedups parent detections then expands to one `MissingComponent` per child with split cell box; list/count/overlay use child labels automatically.
