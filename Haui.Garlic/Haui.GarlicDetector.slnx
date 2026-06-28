@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/AI/">
-    <File Path=".github/copilot-instructions.md" />
-  </Folder>
-  <Folder Name="/Solution Items/">
-    <File Path="README.md" />
-  </Folder>
-  <Project Path="Haui.GarlicDetector/Haui.GarlicDetector.csproj" />
-</Solution>
