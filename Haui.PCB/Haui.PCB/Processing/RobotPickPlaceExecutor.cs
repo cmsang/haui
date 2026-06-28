@@ -40,43 +40,40 @@ public class RobotPickPlaceExecutor
     }
 
     /// <summary>
-    /// Wait → mở gripper → Wait PickUp → PickUp → đóng → Wait PickUp → Wait → Wait Place
+    /// Mở gripper → Wait PickUp → PickUp → đóng → Wait PickUp → Wait Place
     /// → Place → mở → Wait Place → Wait → đóng gripper.
+    /// Điểm Wait chỉ dùng ở cuối: robot về Wait rồi đóng gripper.
     /// </summary>
     public async Task RunPickUpToDestinationAsync(
         RobotTeachPoint pickUp,
         RobotTeachPoint waitPickUp,
-        RobotTeachPoint wait,
         RobotTeachPoint waitPlace,
         RobotTeachPoint destination,
+        RobotTeachPoint wait,
         Action<string> reportStatus,
         CancellationToken ct)
     {
-        await RunStepAsync("1/13 — Move → Wait",
-            () => SendMove(wait), reportStatus, ct);
-        await RunStepAsync("2/13 — Mở gripper (G90x)",
+        await RunStepAsync("1/11 — Mở gripper (G90x)",
             () => SendGripper(GripperOpenAngle), reportStatus, ct);
-        await RunStepAsync($"3/13 — Move → {waitPickUp.Name}",
+        await RunStepAsync($"2/11 — Move → {waitPickUp.Name}",
             () => SendMove(waitPickUp), reportStatus, ct);
-        await RunStepAsync("4/13 — Move → PickUp",
+        await RunStepAsync("3/11 — Move → PickUp",
             () => SendMove(pickUp), reportStatus, ct);
-        await RunStepAsync("5/13 — Đóng gripper (G0x)",
+        await RunStepAsync("4/11 — Đóng gripper (G0x)",
             () => SendGripper(GripperCloseAngle), reportStatus, ct);
-        await RunStepAsync($"6/13 — Move → {waitPickUp.Name} (rút lui)",
+        await RunStepAsync($"5/11 — Move → {waitPickUp.Name} (rút lui)",
             () => SendMove(waitPickUp), reportStatus, ct);
-        await RunStepAsync($"7/13 — Move → {wait.Name}",
-            () => SendMove(wait), reportStatus, ct);
-        await RunStepAsync($"8/13 — Move → {waitPlace.Name}",
+        await RunStepAsync($"6/11 — Move → {waitPlace.Name}",
             () => SendMove(waitPlace), reportStatus, ct);
-        await RunStepAsync($"9/13 — Move → {destination.Name} (Place)",
+        await RunStepAsync($"7/11 — Move → {destination.Name} (Place)",
             () => SendMove(destination), reportStatus, ct);
-        await RunStepAsync("10/13 — Mở gripper (G90x)",
+        await RunStepAsync("8/11 — Mở gripper (G90x)",
             () => SendGripper(GripperOpenAngle), reportStatus, ct);
-        await RunStepAsync($"11/13 — Move → {waitPlace.Name} (rút lui)",
+        await RunStepAsync($"9/11 — Move → {waitPlace.Name} (rút lui)",
             () => SendMove(waitPlace), reportStatus, ct);
-        await RunStepAsync($"12/13 — Move → {wait.Name}",
+        await RunStepAsync($"10/11 — Move → {wait.Name}",
             () => SendMove(wait), reportStatus, ct);
-        await RunStepAsync("13/13 — Đóng gripper (G0x)",
+        await RunStepAsync("11/11 — Đóng gripper (G0x)",
             () => SendGripper(GripperCloseAngle), reportStatus, ct);
     }
 

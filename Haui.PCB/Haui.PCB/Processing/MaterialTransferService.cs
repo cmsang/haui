@@ -122,7 +122,7 @@ public class MaterialTransferService : IMaterialTransferService
             reportStatus($"{label} — bắt đầu: PickUp → {slotName} (EMPTY)...");
 
             await _pickPlaceExecutor.RunPickUpToDestinationAsync(
-                pickUp, waitPickUp, wait, waitPlace, destination, reportStatus, _cts.Token);
+                pickUp, waitPickUp, waitPlace, destination, wait, reportStatus, _cts.Token);
 
             if (!_robotConfigService.TryMarkSlotFull(slotName, out var markError))
             {

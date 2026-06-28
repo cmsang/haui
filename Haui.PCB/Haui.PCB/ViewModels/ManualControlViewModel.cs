@@ -358,9 +358,9 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             var ct = _testCts.Token;
 
             await _pickPlaceExecutor.RunPickUpToDestinationAsync(
-                pickUp, waitPickUp, wait, waitPlace, destination, msg => StatusText = msg, ct);
+                pickUp, waitPickUp, waitPlace, destination, wait, msg => StatusText = msg, ct);
 
-            StatusText = $"Test hoàn tất: Wait → PickUp → {destination.Name} → Wait.";
+            StatusText = $"Test hoàn tất: PickUp → {destination.Name} → Wait.";
         }
         catch (OperationCanceledException)
         {

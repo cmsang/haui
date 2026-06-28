@@ -49,11 +49,13 @@ public static class RobotSerialProtocol
         return $"J{axisName}{dir}{step}";
     }
 
-    /// <summary>VD: M10.0,20.5,-15.0,0.0,45.0</summary>
+    /// <summary>VD: M10,21,-15,0,45 (chỉ số nguyên, không gửi số thập phân).</summary>
     public static string MoveCommand(double j1, double j2, double j3, double j4, double j5)
     {
+        // Firmware lệnh M chỉ nhận số nguyên → làm tròn góc về int (làm tròn 0.5 ra xa 0).
         static string A(double angle) =>
-            angle.ToString("0.##", CultureInfo.InvariantCulture);
+            ((int)Math.Round(angle, MidpointRounding.AwayFromZero))
+                .ToString(CultureInfo.InvariantCulture);
 
         return $"M{A(j1)},{A(j2)},{A(j3)},{A(j4)},{A(j5)}";
     }

@@ -1,7 +1,7 @@
 {
   "developerMode": true,
   "showInspectionResultAfterRecognition": false,
-  "com": "COM20",
+  "com": "COM3",
   "warehouseCom": "COM22",
   "baudRate": 115200,
   "stepsPerDeg": 100,

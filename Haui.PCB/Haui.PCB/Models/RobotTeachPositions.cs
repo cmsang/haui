@@ -2,7 +2,7 @@ namespace Haui.PCB.Models;
 
 /// <summary>
 /// Danh sách vị trí teach chuẩn của hệ thống Pick &amp; Place PCB.
-/// Mọi vị trí Wait được teach thủ công như các vị trí khác.
+/// Điểm Wait chung chỉ dùng ở cuối chu trình (robot về Wait rồi đóng gripper).
 /// </summary>
 public static class RobotTeachPositions
 {
