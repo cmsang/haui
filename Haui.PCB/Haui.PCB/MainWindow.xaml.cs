@@ -21,6 +21,7 @@ public partial class MainWindow : System.Windows.Window
     private readonly MainViewModel _viewModel;
     private readonly RobotTeachViewModel _robotViewModel;
     private readonly RobotSerialService _serialService = new();
+    private readonly WarehouseSerialService _warehouseSerialService;
     private readonly RobotStartupHandshakeService _startupHandshake;
 
     private readonly Queue<(string Line, Brush Brush)> _robotSerialLog = new();
@@ -35,10 +36,12 @@ public partial class MainWindow : System.Windows.Window
     {
         InitializeComponent();
         var appSettingService = new AppSettingService();
+        _warehouseSerialService = new WarehouseSerialService(appSettingService);
         var materialTransfer = new MaterialTransferService(
             new RobotConfigService(appSettingService),
             _serialService,
-            appSettingService);
+            appSettingService,
+            _warehouseSerialService);
         _viewModel = new MainViewModel(materialTransfer);
         _robotViewModel = new RobotTeachViewModel(
             new RobotConfigService(appSettingService),
@@ -50,6 +53,7 @@ public partial class MainWindow : System.Windows.Window
 
         _serialService.FrameReceived += Serial_FrameReceived;
         _serialService.DataSent += Serial_DataSent;
+        _warehouseSerialService.CaptureRequested += OnWarehouseCaptureRequested;
         _startupHandshake = new RobotStartupHandshakeService(_serialService);
 
         _robotViewModel.PropertyChanged += (_, e) =>
@@ -93,6 +97,8 @@ public partial class MainWindow : System.Windows.Window
         _startupHandshake.Cancel();
         _serialService.FrameReceived -= Serial_FrameReceived;
         _serialService.DataSent -= Serial_DataSent;
+        _warehouseSerialService.CaptureRequested -= OnWarehouseCaptureRequested;
+        _warehouseSerialService.Dispose();
         _robotViewModel.Dispose();
         _serialService.Dispose();
         _viewModel.Dispose();
@@ -144,7 +150,15 @@ public partial class MainWindow : System.Windows.Window
 
         UpdateRobotSerialStatus();
         UpdateRobotOperationButtons();
+
+        if (_warehouseSerialService.TryStartListening(out var warehouseCom, out var warehouseError))
+            AppendRobotSerialLog($"Warehouse {warehouseCom} — đang lắng nghe CAPx", RxLogBrush);
+        else
+            AppendRobotSerialLog($"Không lắng nghe warehouse: {warehouseError}", RxLogBrush);
     }
+
+    private void OnWarehouseCaptureRequested()
+        => Dispatcher.InvokeAsync(() => _dashboardTab?.RequestInspection());
 
     private void UpdateRobotOperationButtons()
     {

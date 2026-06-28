@@ -344,7 +344,38 @@ public partial class DashboardTabView : UserControl
         ResetInspectionDisplay();
     }
 
-    private async void BtnTest_Click(object sender, RoutedEventArgs e)
+    private void BtnTest_Click(object sender, RoutedEventArgs e)
+    {
+        ProcessImage();
+    }
+
+    /// <summary>
+    /// Trigger an inspection from outside the UI (e.g. warehouse CAPx). Marshals to the UI thread.
+    /// </summary>
+    public void RequestInspection()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.InvokeAsync(RequestInspection);
+            return;
+        }
+
+        if (!_viewModel.IsRunning)
+        {
+            StatusText.Text = "Nhận CAPx nhưng camera chưa chạy — bỏ qua.";
+            return;
+        }
+
+        if (_inspectionViewModel.IsBusy)
+        {
+            StatusText.Text = "Đang kiểm tra — bỏ qua CAPx.";
+            return;
+        }
+
+        ProcessImage();
+    }
+
+    private async void ProcessImage()
     {
         BtnTest.IsEnabled = false;
         try

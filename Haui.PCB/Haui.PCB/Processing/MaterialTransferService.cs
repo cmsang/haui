@@ -20,12 +20,13 @@ public class MaterialTransferService : IMaterialTransferService
     public MaterialTransferService(
         IRobotConfigService robotConfigService,
         IRobotSerialService serialService,
-        IAppSettingService appSettingService)
+        IAppSettingService appSettingService,
+        WarehouseSerialService warehouseSerialService)
     {
         _robotConfigService = robotConfigService;
         _serialService = serialService;
         _appSettingService = appSettingService;
-        _warehouseSerialService = new WarehouseSerialService(appSettingService);
+        _warehouseSerialService = warehouseSerialService;
         _pickPlaceExecutor = new RobotPickPlaceExecutor(serialService);
     }
 

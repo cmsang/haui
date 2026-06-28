@@ -23,6 +23,9 @@ public static class RobotSerialProtocol
     public const string WarehouseMaterialRequest = "CM";
     public const string WarehouseMaterialReady = "CO";
 
+    /// <summary>Warehouse: CAP = nhà kho yêu cầu PC chụp + kiểm tra bo mạch.</summary>
+    public const string WarehouseCaptureRequest = "CAP";
+
     /// <summary>Ký tự kết thúc frame lệnh/phản hồi (PC gửi thêm khi TX, RX đọc tới 'x').</summary>
     public const string FrameTerminator = "x";
     public const char FrameTerminatorChar = 'x';

@@ -1,34 +1,42 @@
 namespace Haui.PCB.Processing;
 
 /// <summary>
-/// Giao tiếp cổng warehouse — CMx/COx trước khi robot gắp hàng; C1x/C2x khi buffer đầy.
+/// Giao tiếp cổng warehouse trên một kết nối Serial bền vững — lắng nghe CAPx (yêu cầu chụp),
+/// gửi CMx/chờ COx trước khi robot gắp hàng, gửi C1x/C2x khi buffer đầy.
 /// </summary>
-public class WarehouseSerialService
+public class WarehouseSerialService : IDisposable
 {
     private static readonly TimeSpan ReadyResponseTimeout = TimeSpan.FromSeconds(120);
 
     private readonly IAppSettingService _appSettingService;
+    private readonly RobotSerialService _serial = new();
+    private readonly object _connectGate = new();
+    private bool _disposed;
 
     public WarehouseSerialService(IAppSettingService appSettingService)
     {
         _appSettingService = appSettingService;
+        _serial.FrameReceived += OnFrameReceived;
     }
+
+    /// <summary>Nhà kho gửi CAPx — yêu cầu PC chụp ảnh và kiểm tra bo mạch.</summary>
+    public event Action? CaptureRequested;
+
+    public bool IsConnected => _serial.IsConnected;
+
+    /// <summary>Mở cổng warehouse và bắt đầu lắng nghe CAPx. False nếu chưa cấu hình / mở lỗi.</summary>
+    public bool TryStartListening(out string warehouseCom, out string? error)
+        => EnsureConnected(out warehouseCom, out error);
 
     /// <summary>Gửi CMx, chờ COx từ nhà kho trước khi chạy robot.</summary>
     public async Task RequestMaterialTransferAsync(
         Action<string> reportStatus,
         CancellationToken ct)
     {
-        var setting = _appSettingService.Load();
-
-        var warehouseCom = setting.WarehouseCom?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(warehouseCom))
-            throw new InvalidOperationException("Chưa cấu hình warehouseCom trong setting.json.");
+        if (!EnsureConnected(out var warehouseCom, out var connectError))
+            throw new InvalidOperationException(connectError ?? "Không mở được cổng warehouse.");
 
         reportStatus($"Gửi {RobotSerialProtocol.WarehouseMaterialRequest}x → {warehouseCom}, chờ {RobotSerialProtocol.WarehouseMaterialReady}x...");
-
-        using var warehouseSerial = new RobotSerialService();
-        warehouseSerial.Connect(warehouseCom, setting.BaudRate);
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -38,11 +46,11 @@ public class WarehouseSerialService
                 tcs.TrySetResult();
         }
 
-        warehouseSerial.FrameReceived += OnFrame;
+        _serial.FrameReceived += OnFrame;
 
         try
         {
-            warehouseSerial.SendAscii(RobotSerialProtocol.WarehouseMaterialRequest);
+            _serial.SendAscii(RobotSerialProtocol.WarehouseMaterialRequest);
 
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
             linked.CancelAfter(ReadyResponseTimeout);
@@ -65,13 +73,29 @@ public class WarehouseSerialService
         }
         finally
         {
-            warehouseSerial.FrameReceived -= OnFrame;
+            _serial.FrameReceived -= OnFrame;
         }
     }
 
     public bool TrySendCommand(string command, out string warehouseCom, out string? error)
     {
-        warehouseCom = string.Empty;
+        if (!EnsureConnected(out warehouseCom, out error))
+            return false;
+
+        try
+        {
+            _serial.SendAscii(command);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private bool EnsureConnected(out string warehouseCom, out string? error)
+    {
         error = null;
 
         var setting = _appSettingService.Load();
@@ -85,9 +109,12 @@ public class WarehouseSerialService
 
         try
         {
-            using var warehouseSerial = new RobotSerialService();
-            warehouseSerial.Connect(warehouseCom, setting.BaudRate);
-            warehouseSerial.SendAscii(command);
+            lock (_connectGate)
+            {
+                if (!_serial.IsConnected)
+                    _serial.Connect(warehouseCom, setting.BaudRate);
+            }
+
             return true;
         }
         catch (Exception ex)
@@ -97,18 +124,30 @@ public class WarehouseSerialService
         }
     }
 
+    private void OnFrameReceived(string frame)
+    {
+        if (IsCaptureRequest(frame))
+            CaptureRequested?.Invoke();
+    }
+
     public static bool IsReadyResponse(string text)
+        => HasFrame(text, IsCoFrame);
+
+    public static bool IsCaptureRequest(string text)
+        => HasFrame(text, IsCapFrame);
+
+    private static bool HasFrame(string text, Func<string, bool> predicate)
     {
         if (string.IsNullOrWhiteSpace(text))
             return false;
 
         foreach (var segment in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
         {
-            if (IsCoFrame(segment.Trim()))
+            if (predicate(segment.Trim()))
                 return true;
         }
 
-        return IsCoFrame(text.Trim());
+        return predicate(text.Trim());
     }
 
     private static bool IsCoFrame(string frame)
@@ -118,5 +157,24 @@ public class WarehouseSerialService
 
         return frame[0] == 'C'
                && char.ToUpperInvariant(frame[1]) == 'O';
+    }
+
+    private static bool IsCapFrame(string frame)
+    {
+        var body = frame.EndsWith(RobotSerialProtocol.FrameTerminator, StringComparison.OrdinalIgnoreCase)
+            ? frame[..^1]
+            : frame;
+
+        return body.Equals(RobotSerialProtocol.WarehouseCaptureRequest, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _serial.FrameReceived -= OnFrameReceived;
+        _serial.Dispose();
     }
 }
