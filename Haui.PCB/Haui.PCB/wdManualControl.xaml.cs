@@ -16,7 +16,9 @@ public partial class wdManualControl : Window
     private readonly bool _ownsSerialService;
     private bool _allowClose;
 
-    public wdManualControl(IRobotSerialService? sharedSerialService = null)
+    public wdManualControl(
+        IRobotSerialService? sharedSerialService = null,
+        RobotPositionTracker? positionTracker = null)
     {
         InitializeComponent();
 
@@ -36,7 +38,8 @@ public partial class wdManualControl : Window
             new RobotConfigService(appSettingService),
             _serialService,
             appSettingService,
-            disposeSerialService: _ownsSerialService);
+            disposeSerialService: _ownsSerialService,
+            positionTracker: positionTracker ?? new RobotPositionTracker());
         DataContext = _viewModel;
 
         DestinationGrid.ItemsSource = _viewModel.DestinationPoints;

@@ -23,6 +23,7 @@ public partial class MainWindow : System.Windows.Window
     private readonly RobotSerialService _serialService = new();
     private readonly WarehouseSerialService _warehouseSerialService;
     private readonly RobotStartupHandshakeService _startupHandshake;
+    private readonly RobotPositionTracker _positionTracker = new();
 
     private readonly Queue<(string Line, Brush Brush)> _robotSerialLog = new();
     private const int MaxRobotSerialLogLines = 30;
@@ -43,7 +44,8 @@ public partial class MainWindow : System.Windows.Window
             new RobotConfigService(appSettingService),
             _serialService,
             appSettingService,
-            _warehouseSerialService);
+            _warehouseSerialService,
+            _positionTracker);
         _viewModel = new MainViewModel(materialTransfer);
         _robotViewModel = new RobotTeachViewModel(
             new RobotConfigService(appSettingService),
@@ -152,6 +154,9 @@ public partial class MainWindow : System.Windows.Window
                     UpdateRobotSerialStatus();
                 });
             });
+
+            if (_startupHandshake.IsCompleted)
+                _positionTracker.SetHome();
         }
 
         UpdateRobotSerialStatus();
@@ -312,7 +317,7 @@ public partial class MainWindow : System.Windows.Window
         if (!RobotConnectionHelper.EnsureRobotArmReady(_serialService, _startupHandshake))
             return;
 
-        var win = new wdManualControl(_serialService) { Owner = this };
+        var win = new wdManualControl(_serialService, _positionTracker) { Owner = this };
         win.ShowDialog();
         EnsureMainSerialDataReceiver();
         _robotViewModel.SyncConnectionState();
@@ -334,7 +339,7 @@ public partial class MainWindow : System.Windows.Window
         if (!RobotConnectionHelper.EnsureRobotArmReady(_serialService, _startupHandshake))
             return;
 
-        var win = new wdTeaching(_serialService) { Owner = this };
+        var win = new wdTeaching(_serialService, _positionTracker) { Owner = this };
         win.ShowDialog();
         EnsureMainSerialDataReceiver();
         _robotViewModel.SyncConnectionState();

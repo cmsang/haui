@@ -75,6 +75,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private readonly IRobotSerialService _serialService;
     private readonly IAppSettingService _appSettingService;
     private readonly RobotPickPlaceExecutor _pickPlaceExecutor;
+    private readonly RobotPositionTracker _positionTracker;
     private readonly bool _disposeSerialService;
     private readonly bool _enableSerialEvents;
     private AppSetting _appSetting;
@@ -99,12 +100,14 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         IRobotSerialService serialService,
         IAppSettingService appSettingService,
         bool disposeSerialService = true,
-        bool enableSerialEvents = true)
+        bool enableSerialEvents = true,
+        RobotPositionTracker? positionTracker = null)
     {
         _robotConfigService = robotConfigService;
         _serialService = serialService;
         _appSettingService = appSettingService;
         _pickPlaceExecutor = new RobotPickPlaceExecutor(serialService);
+        _positionTracker = positionTracker ?? new RobotPositionTracker();
         _disposeSerialService = disposeSerialService;
         _enableSerialEvents = enableSerialEvents;
         _appSetting = appSettingService.Load();
@@ -365,6 +368,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             var cmd = RobotSerialProtocol.JogCommand(axisName, actualDelta > 0, Math.Abs(actualDelta));
             _serialService.SendAscii(cmd);
             joint.Angle = clampedTarget;
+            _positionTracker.SetUnknown();
             BeginAwaitDone();
             StatusText = limited
                 ? $"TX {cmd} — chạm giới hạn {joint.MinAngle:0.##}…{joint.MaxAngle:0.##}° → {joint.AngleText} — chờ Dx..."
@@ -395,6 +399,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        _positionTracker.SetUnknown();
         StatusText = $"TX {moveCmd} — chờ Dx...";
     }
 
@@ -407,6 +412,8 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        // Đang về home — vị trí chưa chắc cho tới khi homing xong (xác nhận khi đóng màn hình).
+        _positionTracker.SetUnknown();
         StatusText = $"TX {cmd} — Homing tất cả trục (3→2→1→4→5) — chờ Dx...";
     }
 
@@ -420,6 +427,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        _positionTracker.SetUnknown();
         StatusText = $"TX {cmd} — Homing {joint.Key} — chờ Dx...";
     }
 
@@ -538,6 +546,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             await _pickPlaceExecutor.HomeAllAxesAsync(msg => StatusText = msg, ct);
+            _positionTracker.SetHome();
         }
         catch (TimeoutException ex)
         {
@@ -598,6 +607,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        _positionTracker.SetUnknown();
         StatusText = $"Go To \"{point.Name}\" — TX {moveCmd} — chờ Dx...";
     }
 

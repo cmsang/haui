@@ -12,6 +12,7 @@ public class MaterialTransferService : IMaterialTransferService
     private readonly IRobotSerialService _serialService;
     private readonly IAppSettingService _appSettingService;
     private readonly WarehouseSerialService _warehouseSerialService;
+    private readonly RobotPositionTracker _positionTracker;
     private readonly RobotPickPlaceExecutor _pickPlaceExecutor;
 
     private bool _isRunning;
@@ -21,12 +22,14 @@ public class MaterialTransferService : IMaterialTransferService
         IRobotConfigService robotConfigService,
         IRobotSerialService serialService,
         IAppSettingService appSettingService,
-        WarehouseSerialService warehouseSerialService)
+        WarehouseSerialService warehouseSerialService,
+        RobotPositionTracker positionTracker)
     {
         _robotConfigService = robotConfigService;
         _serialService = serialService;
         _appSettingService = appSettingService;
         _warehouseSerialService = warehouseSerialService;
+        _positionTracker = positionTracker;
         _pickPlaceExecutor = new RobotPickPlaceExecutor(serialService);
     }
 
@@ -54,6 +57,14 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
+        if (!_positionTracker.CanStartCycle)
+        {
+            reportStatus(
+                $"Robot đang ở vị trí {RobotPositionTracker.Describe(_positionTracker.Current)} — " +
+                "chỉ chạy chu trình khi robot ở Home hoặc Wait. Đưa robot về Home/Wait rồi thử lại.");
+            return;
+        }
+
         if (!_robotConfigService.TryLoadTeachPoints(out var teachPoints, out var dbError))
         {
             reportStatus($"Không tải được vị trí teach: {dbError}");
@@ -70,9 +81,21 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
+        if (RobotTeachPositions.IsUntaught(pickUp))
+        {
+            reportStatus("Vị trí PickUp chưa teach (J1–J5 đang toàn 0) — cần teach PickUp.");
+            return;
+        }
+
         if (wait == null)
         {
             reportStatus("Không tìm thấy vị trí Wait trong Database — cần teach Wait.");
+            return;
+        }
+
+        if (RobotTeachPositions.IsUntaught(wait))
+        {
+            reportStatus("Vị trí Wait chưa teach (J1–J5 đang toàn 0) — cần teach Wait.");
             return;
         }
 
@@ -100,6 +123,12 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
+        if (RobotTeachPositions.IsUntaught(destination))
+        {
+            reportStatus($"Vị trí {slotName} chưa teach (J1–J5 đang toàn 0) — cần teach {slotName}.");
+            return;
+        }
+
         var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(points, destination);
         if (waitPlace == null)
         {
@@ -121,8 +150,14 @@ public class MaterialTransferService : IMaterialTransferService
 
             reportStatus($"{label} — bắt đầu: PickUp → {slotName} (EMPTY)...");
 
+            // Chu trình bắt đầu — vị trí không còn chắc chắn cho tới khi về Wait ở bước cuối.
+            _positionTracker.SetUnknown();
+
             await _pickPlaceExecutor.RunPickUpToDestinationAsync(
                 pickUp, waitPickUp, waitPlace, destination, wait, reportStatus, _cts.Token);
+
+            // Bước 11 kết thúc ở Wait.
+            _positionTracker.SetWait();
 
             if (!_robotConfigService.TryMarkSlotFull(slotName, out var markError))
             {

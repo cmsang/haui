@@ -16,6 +16,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
     private readonly IRobotSerialService _serialService;
     private readonly IAppSettingService _appSettingService;
     private readonly RobotPickPlaceExecutor _pickPlaceExecutor;
+    private readonly RobotPositionTracker _positionTracker;
     private IReadOnlyList<RobotTeachPoint> _allTeachPoints = [];
     private readonly bool _disposeSerialService;
     private AppSetting _appSetting;
@@ -38,12 +39,14 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         IRobotConfigService robotConfigService,
         IRobotSerialService serialService,
         IAppSettingService appSettingService,
-        bool disposeSerialService = true)
+        bool disposeSerialService = true,
+        RobotPositionTracker? positionTracker = null)
     {
         _robotConfigService = robotConfigService;
         _serialService = serialService;
         _appSettingService = appSettingService;
         _pickPlaceExecutor = new RobotPickPlaceExecutor(serialService);
+        _positionTracker = positionTracker ?? new RobotPositionTracker();
         _disposeSerialService = disposeSerialService;
         _appSetting = appSettingService.Load();
 
@@ -322,9 +325,21 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        if (RobotTeachPositions.IsUntaught(pickUp))
+        {
+            StatusText = "Vị trí PickUp chưa teach (J1–J5 đang toàn 0).";
+            return;
+        }
+
         if (wait == null)
         {
             StatusText = "Không tìm thấy Wait — cần teach Wait.";
+            return;
+        }
+
+        if (RobotTeachPositions.IsUntaught(wait))
+        {
+            StatusText = "Vị trí Wait chưa teach (J1–J5 đang toàn 0).";
             return;
         }
 
@@ -337,6 +352,12 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         }
 
         var isNg = RobotTeachPositions.IsNgSlot(destination.Name);
+
+        if (RobotTeachPositions.IsUntaught(destination))
+        {
+            StatusText = $"Vị trí {destination.Name} chưa teach (J1–J5 đang toàn 0).";
+            return;
+        }
 
         var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(
             RobotTeachPositions.Normalize(_allTeachPoints), destination);
@@ -357,9 +378,12 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         {
             var ct = _testCts.Token;
 
+            _positionTracker.SetUnknown();
+
             await _pickPlaceExecutor.RunPickUpToDestinationAsync(
                 pickUp, waitPickUp, waitPlace, destination, wait, msg => StatusText = msg, ct);
 
+            _positionTracker.SetWait();
             StatusText = $"Test hoàn tất: PickUp → {destination.Name} → Wait.";
         }
         catch (OperationCanceledException)
@@ -428,6 +452,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
 
         try
         {
+            _positionTracker.SetUnknown();
             await _pickPlaceExecutor.MoveToPointAsync(
                 point, msg => StatusText = msg, cts.Token);
             StatusText = $"Đã tới {label}.";
@@ -467,6 +492,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             await _pickPlaceExecutor.HomeAllAxesAsync(msg => StatusText = msg, ct);
+            _positionTracker.SetHome();
         }
         catch (TimeoutException ex)
         {
