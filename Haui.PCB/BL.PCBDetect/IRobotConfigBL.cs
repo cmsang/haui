@@ -9,4 +9,6 @@ public interface IRobotConfigBL
     bool TrySaveTeachPoint(RobotTeachPointInfo point, out string? error);
 
     bool TryMarkSlotFull(string posName, out string? error);
+
+    bool TryMarkSlotEmpty(string posName, out string? error);
 }

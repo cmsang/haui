@@ -545,7 +545,7 @@
                                      FontSize="10"
                                      Background="#FAFAFA"
                                      BorderBrush="#DDDDDD"
-                                     ToolTip="Nhật ký Serial — S: gửi (tím) / R: nhận frame ghép (đen)"/>
+                                     ToolTip="Nhật ký Serial — Robot (S gửi tím / R nhận đen) và Kho (S gửi xanh dương / R nhận xanh lá)"/>
                     </Grid>
                 </Border>
             </Grid>

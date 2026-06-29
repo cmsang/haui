@@ -42,6 +42,9 @@ public class RobotConfigService : IRobotConfigService
     public bool TryMarkSlotFull(string posName, out string? error)
         => _robotConfigBL.TryMarkSlotFull(posName, out error);
 
+    public bool TryMarkSlotEmpty(string posName, out string? error)
+        => _robotConfigBL.TryMarkSlotEmpty(posName, out error);
+
     private static RobotTeachPoint ToModel(RobotTeachPointInfo info) => new()
     {
         Name = info.Name,

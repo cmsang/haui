@@ -28,6 +28,8 @@ public partial class MainWindow : System.Windows.Window
     private const int MaxRobotSerialLogLines = 30;
     private static readonly Brush TxLogBrush = new SolidColorBrush(Color.FromRgb(0x7B, 0x1F, 0xA2));
     private static readonly Brush RxLogBrush = Brushes.Black;
+    private static readonly Brush WarehouseTxLogBrush = new SolidColorBrush(Color.FromRgb(0x0D, 0x65, 0x6F));
+    private static readonly Brush WarehouseRxLogBrush = new SolidColorBrush(Color.FromRgb(0x1B, 0x5E, 0x20));
 
     private DashboardTabView? _dashboardTab;
     private SettingTabView? _settingTab;
@@ -54,6 +56,8 @@ public partial class MainWindow : System.Windows.Window
         _serialService.FrameReceived += Serial_FrameReceived;
         _serialService.DataSent += Serial_DataSent;
         _warehouseSerialService.CaptureRequested += OnWarehouseCaptureRequested;
+        _warehouseSerialService.FrameReceived += Warehouse_FrameReceived;
+        _warehouseSerialService.DataSent += Warehouse_DataSent;
         _startupHandshake = new RobotStartupHandshakeService(_serialService);
 
         _robotViewModel.PropertyChanged += (_, e) =>
@@ -98,6 +102,8 @@ public partial class MainWindow : System.Windows.Window
         _serialService.FrameReceived -= Serial_FrameReceived;
         _serialService.DataSent -= Serial_DataSent;
         _warehouseSerialService.CaptureRequested -= OnWarehouseCaptureRequested;
+        _warehouseSerialService.FrameReceived -= Warehouse_FrameReceived;
+        _warehouseSerialService.DataSent -= Warehouse_DataSent;
         _warehouseSerialService.Dispose();
         _robotViewModel.Dispose();
         _serialService.Dispose();
@@ -172,22 +178,24 @@ public partial class MainWindow : System.Windows.Window
     }
 
     private void Serial_FrameReceived(string frame)
-    {
-        Dispatcher.InvokeAsync(() =>
-        {
-            var visible = EscapeSerialText(frame);
-            AppendRobotSerialLog(FormatSerialLogEntry("R", visible, frame), RxLogBrush);
-            RobotSerialDetail.Text = $"R: {visible}";
-        });
-    }
+        => LogSerial("Robot", "R", frame, RxLogBrush);
 
     private void Serial_DataSent(string chunk)
+        => LogSerial("Robot", "S", chunk, TxLogBrush);
+
+    private void Warehouse_FrameReceived(string frame)
+        => LogSerial("Kho", "R", frame, WarehouseRxLogBrush);
+
+    private void Warehouse_DataSent(string chunk)
+        => LogSerial("Kho", "S", chunk, WarehouseTxLogBrush);
+
+    private void LogSerial(string device, string direction, string raw, Brush brush)
     {
         Dispatcher.InvokeAsync(() =>
         {
-            var visible = EscapeSerialText(chunk);
-            AppendRobotSerialLog(FormatSerialLogEntry("S", visible, chunk), TxLogBrush);
-            RobotSerialDetail.Text = $"S: {visible}";
+            var visible = EscapeSerialText(raw);
+            AppendRobotSerialLog(FormatSerialLogEntry(device, direction, visible, raw), brush);
+            RobotSerialDetail.Text = $"{device} {direction}: {visible}";
         });
     }
 
@@ -216,10 +224,10 @@ public partial class MainWindow : System.Windows.Window
     private static string EscapeSerialText(string text)
         => text.Replace("\r", "\\r").Replace("\n", "\\n");
 
-    private static string FormatSerialLogEntry(string direction, string visible, string raw)
+    private static string FormatSerialLogEntry(string device, string direction, string visible, string raw)
     {
         var hex = BitConverter.ToString(Encoding.ASCII.GetBytes(raw));
-        return $"{DateTime.Now:HH:mm:ss}  {direction}: {visible}  [{hex}]";
+        return $"{DateTime.Now:HH:mm:ss}  {device,-5} {direction}: {visible}  [{hex}]";
     }
 
     private void UpdateRobotSerialStatus()

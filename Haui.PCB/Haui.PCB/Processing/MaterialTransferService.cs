@@ -182,6 +182,26 @@ public class MaterialTransferService : IMaterialTransferService
         }
 
         reportStatus($"Tất cả slot {group} FULL — đã gửi {command}x → {warehouseCom}.");
+
+        ResetSlotsToEmpty(slotNames, group, reportStatus);
+    }
+
+    private void ResetSlotsToEmpty(
+        IReadOnlyList<string> slotNames,
+        string group,
+        Action<string> reportStatus)
+    {
+        var failed = new List<string>();
+
+        foreach (var name in slotNames)
+        {
+            if (!_robotConfigService.TryMarkSlotEmpty(name, out var error))
+                failed.Add($"{name} ({error})");
+        }
+
+        reportStatus(failed.Count == 0
+            ? $"Đã đặt lại toàn bộ slot {group} về EMPTY."
+            : $"Đặt lại slot {group} về EMPTY lỗi: {string.Join("; ", failed)}");
     }
 
     private bool TrySendWarehouseCommand(string command, out string warehouseCom, out string? error)

@@ -94,6 +94,12 @@ public class RobotConfigBL : IRobotConfigBL
     }
 
     public bool TryMarkSlotFull(string posName, out string? error)
+        => TrySetSlotState(posName, SlotFullState.Full, out error);
+
+    public bool TryMarkSlotEmpty(string posName, out string? error)
+        => TrySetSlotState(posName, SlotFullState.Empty, out error);
+
+    private bool TrySetSlotState(string posName, string fullState, out string? error)
     {
         error = null;
 
@@ -111,7 +117,7 @@ public class RobotConfigBL : IRobotConfigBL
 
         try
         {
-            _repository.UpdateFullState(connectionString, posName.Trim(), SlotFullState.Full);
+            _repository.UpdateFullState(connectionString, posName.Trim(), fullState);
             return true;
         }
         catch (Exception ex)

@@ -17,10 +17,17 @@ public class WarehouseSerialService : IDisposable
     {
         _appSettingService = appSettingService;
         _serial.FrameReceived += OnFrameReceived;
+        _serial.DataSent += OnDataSent;
     }
 
     /// <summary>Nhà kho gửi CAPx — yêu cầu PC chụp ảnh và kiểm tra bo mạch.</summary>
     public event Action? CaptureRequested;
+
+    /// <summary>Frame hoàn chỉnh nhận từ nhà kho (để log).</summary>
+    public event Action<string>? FrameReceived;
+
+    /// <summary>Chuỗi thô vừa gửi tới nhà kho (để log).</summary>
+    public event Action<string>? DataSent;
 
     public bool IsConnected => _serial.IsConnected;
 
@@ -126,9 +133,14 @@ public class WarehouseSerialService : IDisposable
 
     private void OnFrameReceived(string frame)
     {
+        FrameReceived?.Invoke(frame);
+
         if (IsCaptureRequest(frame))
             CaptureRequested?.Invoke();
     }
+
+    private void OnDataSent(string chunk)
+        => DataSent?.Invoke(chunk);
 
     public static bool IsReadyResponse(string text)
         => HasFrame(text, IsCoFrame);
@@ -175,6 +187,7 @@ public class WarehouseSerialService : IDisposable
 
         _disposed = true;
         _serial.FrameReceived -= OnFrameReceived;
+        _serial.DataSent -= OnDataSent;
         _serial.Dispose();
     }
 }
