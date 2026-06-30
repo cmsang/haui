@@ -17,7 +17,9 @@ public partial class wdTeaching : Window
     private readonly bool _ownsSerialService;
     private bool _allowClose;
 
-    public wdTeaching(IRobotSerialService? sharedSerialService = null)
+    public wdTeaching(
+        IRobotSerialService? sharedSerialService = null,
+        RobotPositionTracker? positionTracker = null)
     {
         InitializeComponent();
 
@@ -37,7 +39,8 @@ public partial class wdTeaching : Window
             new RobotConfigService(appSettingService),
             _serialService,
             appSettingService,
-            disposeSerialService: _ownsSerialService);
+            disposeSerialService: _ownsSerialService,
+            positionTracker: positionTracker ?? new RobotPositionTracker());
         DataContext = _viewModel;
 
         JointsPanel.ItemsSource = _viewModel.Joints;

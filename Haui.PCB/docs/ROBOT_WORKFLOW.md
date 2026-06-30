@@ -25,7 +25,7 @@ Tài liệu mô tả các luồng điều khiển robot 5 khớp RRRRR + gripper
 │  Processing (Haui.PCB)                                       │
 │  RobotSerialService · RobotPickPlaceExecutor                 │
 │  MaterialTransferService · WarehouseSerialService            │
-│  RobotStartupHandshakeService                                │
+│  RobotStartupHandshakeService · RobotPositionTracker         │
 │  RobotConfigService (adapter)                                │
 └──────────────────────────┬──────────────────────────────────┘
                            │
@@ -69,7 +69,7 @@ Mọi lệnh ASCII gửi qua `SendAscii(cmd)` được firmware nhận dạng **
 | `H1x` … `H5x` | Homing một trục |
 | `Mj1,j2,j3,j4,j5x` | Di chuyển tới tọa độ 5 khớp (độ) |
 | `J1+10x`, `JG-5x` | Jog từng trục / gripper |
-| `G90x`, `G0x` | Mở / đóng gripper (góc độ) |
+| `G40x`, `G20x` | Mở / đóng gripper (góc độ — mở 40°, đóng 20°) |
 | `Dx` | Robot báo **hoàn thành** bước di chuyển (nhận) |
 
 ### Phản hồi homing
@@ -95,14 +95,14 @@ Mọi lệnh ASCII gửi qua `SendAscii(cmd)` được firmware nhận dạng **
 | Nhóm | Tên vị trí | Vai trò |
 |------|------------|---------|
 | Chung | `PickUp` | Điểm gắp PCB |
-| Chung | `Wait PickUp` | Chờ trước/sau gắp — lưu DB, teach được (seed: PickUp + offset J2–J4 từ cài đặt) |
+| Chung | `Wait PickUp` | Chờ trước/sau gắp — lưu DB, teach thủ công |
 | Chung | `Wait` | Hành lang giữa pick và place — lưu DB, teach được |
 | Chung | `Wait OK` | Chờ trước/sau đặt **Pass** — lưu DB, teach thủ công |
 | Chung | `Wait NG` | Chờ trước/sau đặt **Fail** — lưu DB, teach thủ công |
 | OK | `OK1` … `OK4` | Buffer hàng **Pass** |
 | NG | `NG1` … `NG4` | Buffer hàng **Fail** |
 
-Mọi vị trí **Wait** (`Wait PickUp`, `Wait`, `Wait OK`, `Wait NG`) được teach thủ công như các vị trí khác — chọn trong bảng, chỉnh khớp rồi **Teach**. Pass dùng **Wait OK** (bước 8, 11); Fail dùng **Wait NG**.
+Mọi vị trí **Wait** (`Wait PickUp`, `Wait`, `Wait OK`, `Wait NG`) được teach thủ công như các vị trí khác — chọn trong bảng, chỉnh khớp rồi **Teach**. Pass dùng **Wait OK** (bước 6, 9); Fail dùng **Wait NG**.
 
 Tọa độ J1–J5 lưu trong bảng `RobotConfig`. Gripper chỉ dùng trên UI/Serial, **không** lưu Database.
 
@@ -162,6 +162,7 @@ sequenceDiagram
 4. Nếu chưa nhận trong **1 giây** → gửi lại `Rx`.
 5. Khi nhận `Yx` → gửi `H0x` (homing toàn bộ).
 6. Chỉ chạy **một lần** mỗi phiên mở app (`IsCompleted`).
+7. Handshake xong (`IsCompleted`) → đặt `RobotPositionTracker = Home` (mục 8.6).
 
 ---
 
@@ -185,6 +186,7 @@ flowchart LR
 3. **Teach vị trí** — ghi J1–J5 của điểm đang chọn vào Database (không đổi `FullState`).
 4. **Lưu cấu hình** — ghi `jogStepDegrees`, `speedPercent`, COM… vào `setting.json`.
 5. Nếu Database lỗi → hiển thị thông báo trên thanh trạng thái (không fallback file JSON).
+6. Mọi jog/move/goto/homing thủ công đặt `RobotPositionTracker = Unknown`; khi đóng màn hình robot homing về Home → `Home` (mục 8.6).
 
 ---
 
@@ -196,28 +198,94 @@ flowchart LR
 
 Dùng để **test thủ công** chu trình gắp–đặt tới một slot OK hoặc NG do người dùng chọn.
 
-### Chu trình 13 bước (mỗi bước chờ `Dx`)
+### Chu trình 11 bước
 
 | Bước | Hành động |
 |------|-----------|
-| 1/13 | Move → **Wait** (không H0x) |
-| 2/13 | `G90x` — Mở gripper |
-| 3/13 | Move → **Wait PickUp** |
-| 4/13 | Move → **PickUp** |
-| 5/13 | `G0x` — Đóng gripper (gắp) |
-| 6/13 | Move → **Wait PickUp** (rút lui) |
-| 7/13 | Move → **Wait** |
-| 8/13 | Move → **Wait OK** hoặc **Wait NG** (theo đích) |
-| 9/13 | Move → **OKx / NGx** (Place) |
-| 10/13 | `G90x` — Mở gripper (thả) |
-| 11/13 | Move → **Wait OK/NG** (rút lui) |
-| 12/13 | Move → **Wait** |
-| 13/13 | `G0x` — Đóng gripper |
+| 1/11 | Move → **Wait PickUp** (chỉ bắt đầu khi robot ở **Home** hoặc **Wait** — xem mục 8.6) |
+| 2/11 | `G40x` — Mở gripper |
+| 3/11 | Move → **PickUp** |
+| 4/11 | `G20x` — Đóng gripper (gắp) |
+| 5/11 | Move → **Wait PickUp** (rút lui) |
+| 6/11 | Move → **Wait OK** hoặc **Wait NG** (theo đích) |
+| 7/11 | Move → **OKx / NGx** (Place) |
+| 8/11 | `G40x` — Mở gripper (thả) |
+| 9/11 | Move → **Wait OK/NG** (rút lui) |
+| 10/11 | Move → **Wait** |
+| 11/11 | `G20x` — Đóng gripper |
 
-**Wait PickUp** / **Wait OK** / **Wait NG** / **Wait** — đều từ Database (teach được).
+**Wait PickUp** / **Wait OK** / **Wait NG** / **Wait** — đều từ Database (teach thủ công như mọi vị trí khác).
 
-- Timeout mỗi bước: **120 giây**.
+- **Điều kiện xuất phát**: chu trình **chỉ chạy khi robot ở Home hoặc Wait** (xem mục 8.6). Vị trí bất kỳ → bị chặn, báo lỗi, không gửi lệnh.
+- Bước **Move / Home**: đăng ký lắng nghe **trước** khi gửi, chỉ chấp nhận `Dx` **sau** khi TX; timeout **120 giây**/bước, **thử lại 1 lần** nếu timeout.
+- Bước **gripper** (`G…x`): chờ `Dx` tối đa **5 giây**; luôn chờ thêm **500 ms** ổn định servo trước bước tiếp (tránh `Dx` trễ từ gripper làm kẹt bước Move).
 - Manual Control **không** cập nhật `FullState` trong Database.
+
+---
+
+## 8.5. Luồng Auto (CAPx → nhận dạng → robot)
+
+**Luồng Auto** = nhà kho gửi `CAPx` → PC chụp + nhận dạng → robot phân loại. Không cần nhấn Pass/Fail thủ công.
+
+```mermaid
+flowchart TD
+    WH[Warehouse gửi CAPx] --> CAP[WarehouseSerialService.CaptureRequested]
+    CAP --> INS[DashboardTabView.RequestInspection]
+    INS --> CAM[Chụp frame + InspectAsync]
+    CAM --> RES{PASS / FAIL}
+    RES --> HND[MainWindow.HandleInspectionCompletedAsync]
+    HND --> TR[MaterialTransferService.TransferAsync]
+    TR --> CM[CMx → chờ COx]
+    CM --> RB[Chu trình 11 bước Pick & Place]
+    RB --> FULL[Cập nhật FullState = FULL]
+```
+
+| Bước | Thành phần | Ghi chú |
+|------|------------|---------|
+| 1 | `CAPx` trên `warehouseCom` | `WarehouseSerialService` lắng nghe liên tục |
+| 2 | `RequestInspection()` | Camera phải đang chạy; bỏ qua nếu đang kiểm tra |
+| 3 | `InspectionCompleted` | PASS/FAIL từ YOLO |
+| 4 | `HandleInspectionCompletedAsync` | Robot phải handshake xong (`Rx→Yx→H0x`) |
+| 5 | `TransferAsync` | Giống nút Pass/Fail — CMx/COx rồi 11 bước |
+
+**Vị trí xuất phát:** robot **phải đang ở Home hoặc Wait** thì chu trình mới chạy (chốt chặn ở mục 8.6). Nếu đang ở vị trí bất kỳ (vừa jog/move/goto, hoặc chu trình trước lỗi giữa chừng) → bị chặn, báo lỗi, **không** gửi `CMx`. Bước 1 Move tới Wait PickUp, bước 2 mới mở gripper.
+
+**Lỗi thường gặp khi ở home:**
+
+| Triệu chứng | Nguyên nhân | Xử lý |
+|-------------|-------------|-------|
+| Chỉ thấy `G40x`, không có `M…x` | Phiên bản cũ: mở gripper trước khi Move; `Dx` trễ từ gripper kẹt bước Move | Đã sửa: Move Wait PickUp trước, `Dx` chỉ hợp lệ sau TX |
+| Không chạy robot sau nhận dạng | Robot chưa handshake / điểm teach toàn 0 | Teach PickUp, Wait PickUp, Wait, Wait OK/NG, slot đích |
+| Báo "robot đang ở vị trí … chỉ chạy khi Home/Wait" | Robot ở vị trí `Unknown` (vừa jog/move/goto) | Homing về Home rồi chạy lại (mục 8.6) |
+| `CAPx` nhưng không kiểm tra | Camera chưa Start | Bật camera trên Dashboard trước khi vận hành Auto |
+
+---
+
+## 8.6. Chốt vị trí xuất phát (RobotPositionTracker)
+
+Chu trình 11 bước **chỉ được phép bắt đầu khi cánh tay ở Home hoặc Wait** — không cho lao thẳng tới Wait PickUp từ vị trí bất kỳ.
+
+Firmware **chưa** có lệnh đọc toạ độ thật, nên hệ thống theo dõi **vị trí logic** bằng `RobotPositionTracker` (`Processing/RobotPositionTracker.cs`). Một instance dùng chung do `MainWindow` sở hữu, truyền vào `MaterialTransferService` và hai cửa sổ `wdTeaching` / `wdManualControl`.
+
+| Trạng thái | Ý nghĩa | Cho chạy chu trình? |
+|------------|---------|:---:|
+| `Home` | Đã homing (H0x) | ✅ |
+| `Wait` | Đứng ở Wait sau khi hoàn tất một chu trình | ✅ |
+| `Unknown` | Vừa jog/move/goto bất kỳ, hoặc chu trình lỗi giữa chừng | ❌ |
+
+**Cập nhật trạng thái:**
+
+| Sự kiện | Trạng thái mới |
+|---------|----------------|
+| Handshake khởi động xong (`Rx→Yx→H0x`) | `Home` |
+| `ReturnToHomeAsync` xong (đóng màn Teaching/Manual) | `Home` |
+| Chu trình Auto/test bắt đầu | `Unknown` |
+| Chu trình kết thúc ở bước 11 (Wait) | `Wait` |
+| Jog / Move / Go To / Homing thủ công | `Unknown` |
+
+**Chốt chặn** đặt ở đầu `MaterialTransferService.TransferAsync`: nếu `!CanStartCycle` → báo lỗi kèm vị trí hiện tại và **return ngay, không gửi `CMx`, không chạy robot**. Đưa robot về Home (homing) hoặc hoàn tất một chu trình hợp lệ rồi thử lại.
+
+> Khi có giao thức đọc vị trí thật từ firmware, chỉ cần đổi nguồn cập nhật `RobotPositionTracker`; phần chốt chặn giữ nguyên.
 
 ---
 
@@ -226,7 +294,7 @@ Dùng để **test thủ công** chu trình gắp–đặt tới một slot OK h
 **Service:** `MaterialTransferService` → `MainViewModel`  
 **Warehouse:** `WarehouseSerialService` (CMx/COx, C1x/C2x)
 
-Cả **nhận dạng tự động** và **nút Pass/Fail** đều hội tụ vào **một** hàm `MaterialTransferService.TransferAsync` — đảm bảo luôn gửi CMx và chờ COx trước khi chạy cánh tay robot.
+Cả **luồng Auto (CAPx)** và **nút Pass/Fail** đều hội tụ vào **một** hàm `MaterialTransferService.TransferAsync` — đảm bảo luôn gửi CMx và chờ COx trước khi chạy cánh tay robot.
 
 ### 9.1. Ba điểm kích hoạt
 
@@ -253,8 +321,8 @@ flowchart LR
 
 | Nguồn | File / sự kiện | Gọi tới |
 |-------|----------------|---------|
-| Nhận dạng PASS | `TestPipelineViewModel.InspectionCompleted` → `DashboardTabView` → `MainWindow.HandleInspectionCompletedAsync` | `TransferMaterialByInspectionResultAsync(true)` |
-| Nhận dạng FAIL | Cùng chuỗi trên | `TransferMaterialByInspectionResultAsync(false)` |
+| Nhận dạng PASS (Auto CAPx) | `CAPx` → `InspectionCompleted` → `DashboardTabView` → `MainWindow.HandleInspectionCompletedAsync` | `TransferMaterialByInspectionResultAsync(true)` |
+| Nhận dạng FAIL (Auto CAPx) | Cùng chuỗi trên | `TransferMaterialByInspectionResultAsync(false)` |
 | Nút **Pass** | `MainWindow.btnPass_Click` | `TransferPassMaterial()` |
 | Nút **Fail** | `MainWindow.btnFail_Click` | `TransferFailMaterial()` |
 
@@ -303,7 +371,7 @@ Nếu tất cả slot nhóm đó đã `FULL` → **không** gửi CMx, không ch
                     Dừng — không robot    Kết nối cổng robot (com)
                                                    │
                                                    ▼
-                              Chu trình 13 bước (RobotPickPlaceExecutor)
+                              Chu trình 11 bước (RobotPickPlaceExecutor)
                                                    │
                                                    ▼
                               Cập nhật FullState = FULL (slot vừa đặt)
@@ -322,7 +390,7 @@ flowchart TD
     V -->|Có| W[Gửi CMx → warehouseCom]
     W -->|Timeout / lỗi| X[Dừng — không chạy robot]
     W -->|Nhận COx| R[Kết nối cổng robot com]
-    R --> E[Chu trình 13 bước Pick & Place]
+    R --> E[Chu trình 11 bước Pick & Place]
     E --> F[Cập nhật FullState = FULL]
     F --> G{Tất cả OK/NG đều FULL?}
     G -->|Có| H[Gửi C1x hoặc C2x]
@@ -331,10 +399,11 @@ flowchart TD
 ```
 
 **Thứ tự thực thi:**
+0. **Kiểm tra vị trí xuất phát** — chỉ tiếp tục khi robot ở Home hoặc Wait (`RobotPositionTracker.CanStartCycle`, mục 8.6). Vị trí bất kỳ → báo lỗi, dừng, không gửi `CMx`.
 1. Load vị trí từ Database — tính Wait PickUp / Wait OK hoặc NG.
 2. **Gửi `CMx` → `warehouseCom`, chờ `COx`** (timeout 120 s). Chỉ khi nhận `COx` mới tiếp tục.
 3. Kết nối robot COM (`com`) nếu chưa online.
-4. Chạy **chu trình 13 bước** (`RobotPickPlaceExecutor`).
+4. Chạy **chu trình 11 bước** (`RobotPickPlaceExecutor`).
 5. Gọi `Update_RobotConfig_FullState` → slot vừa đặt = **`FULL`**.
 6. Nếu toàn bộ OK (hoặc NG) đều `FULL` → gửi `C1x` / `C2x`.
 
@@ -353,8 +422,8 @@ sequenceDiagram
         WH-->>App: COx
         Note over App: Nhà kho sẵn sàng
         App->>RB: Kết nối COM (nếu chưa)
-        loop 13 bước Pick & Place
-            App->>RB: M…x / G…x
+        loop 11 bước Pick & Place
+            App->>RB: M…x (chờ Dx) / G…x (chờ Dx tối đa 5 s)
             RB-->>App: Dx
         end
         Note over App: Cập nhật FullState = FULL
@@ -370,7 +439,7 @@ sequenceDiagram
 |------|------|-------|---------|
 | 1 | `CMx` | PC → warehouse | Yêu cầu chuyển material |
 | 2 | `COx` | warehouse → PC | **Bắt buộc** — mới được chạy robot |
-| 3 | M/G + chờ `Dx` | PC ↔ robot | Chu trình 13 bước |
+| 3 | M/G + chờ `Dx` | PC ↔ robot | Chu trình 11 bước |
 | 4 | `C1x` / `C2x` | PC → warehouse | Chỉ khi buffer đầy sau khi đặt hàng |
 
 Gửi warehouse qua cổng riêng (`warehouseCom`), mở COM → gửi/nhận → đóng — **không** dùng chung cổng robot.
@@ -411,7 +480,7 @@ flowchart TB
         P3[Chọn slot OK EMPTY]
         P4[Chọn slot NG EMPTY]
         P5[CMx → chờ COx]
-        P6[Kết nối robot + Pick & Place 13 bước]
+        P6[Kết nối robot + Pick & Place 11 bước]
         P7[FullState = FULL]
         P8[Buffer đầy? → C1x/C2x]
         P1 --> P2
@@ -423,7 +492,7 @@ flowchart TB
 
     subgraph Manual["Manual Control (test)"]
         M1[wdManualControl]
-        M2[Pick & Place 13 bước — không CMx/COx]
+        M2[Pick & Place 11 bước — không CMx/COx]
         M1 --> M2
     end
 
@@ -441,8 +510,9 @@ flowchart TB
 | `Haui.PCB/Processing/RobotSerialService.cs` | Gửi/nhận COM robot |
 | `Haui.PCB/Processing/RobotSerialProtocol.cs` | Định dạng lệnh M/J/H/G/R/C |
 | `Haui.PCB/Processing/RobotStartupHandshakeService.cs` | Handshake Rx/Yx/H0 |
-| `Haui.PCB/Processing/RobotPickPlaceExecutor.cs` | Chu trình 13 bước + chờ Dx |
-| `Haui.PCB/Processing/MaterialTransferService.cs` | Pass/Fail + FULL + warehouse |
+| `Haui.PCB/Processing/RobotPickPlaceExecutor.cs` | Chu trình 11 bước + chờ Dx |
+| `Haui.PCB/Processing/RobotPositionTracker.cs` | Theo dõi vị trí logic (Home/Wait/Unknown) — chốt chặn chu trình |
+| `Haui.PCB/Processing/MaterialTransferService.cs` | Pass/Fail + FULL + warehouse + chốt vị trí |
 | `Haui.PCB/Processing/WarehouseSerialService.cs` | CMx/COx handshake, C1x/C2x buffer đầy |
 | `Haui.PCB/Processing/RobotConfigService.cs` | Adapter UI → BL |
 | `BL.PCBDetect/RobotConfigBL.cs` | Nghiệp vụ RobotConfig |
@@ -464,6 +534,7 @@ flowchart TB
 | Tất cả slot FULL | Buffer đầy | Chờ warehouse xử lý (C1x/C2x đã gửi), reset `FullState` khi lấy hàng |
 | Timeout chờ COx | Nhà kho không phản hồi sau CMx | Kiểm tra `warehouseCom`, firmware warehouse, dây Serial |
 | Gửi C1x/C2x thất bại | Sai `warehouseCom` | Kiểm tra cổng COM22 và thiết bị warehouse |
+| "Robot đang ở vị trí … chỉ chạy khi Home/Wait" | Robot ở `Unknown` (vừa jog/move/goto hoặc chu trình trước lỗi) | Homing về Home rồi chạy lại (mục 8.6) |
 
 ---
 

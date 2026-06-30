@@ -3,13 +3,16 @@ using Haui.PCB.Models;
 namespace Haui.PCB.Processing;
 
 /// <summary>
-/// Chu trình Pick &amp; Place 13 bước — không gọi H0x (homing chỉ lúc khởi động app).
+/// Chu trình Pick &amp; Place 11 bước — không gọi H0x (homing chỉ lúc khởi động app).
+/// Bước 1 là Move tuyệt đối tới Wait PickUp nên chạy được từ bất kỳ vị trí nào (home, Wait, ...).
 /// </summary>
 public class RobotPickPlaceExecutor
 {
     private const int GripperOpenAngle = 40;
     private const int GripperCloseAngle = 20;
     private static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(120);
+    private static readonly TimeSpan GripperDoneTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan GripperSettleDelay = TimeSpan.FromMilliseconds(500);
 
     private readonly IRobotSerialService _serialService;
 
@@ -24,25 +27,28 @@ public class RobotPickPlaceExecutor
         CancellationToken ct)
     {
         reportStatus?.Invoke($"Di chuyển về {point.Name} — gửi lệnh...");
-        SendMove(point);
-        reportStatus?.Invoke($"Di chuyển về {point.Name} — chờ Dx...");
-        await WaitForDoneAsync(StepTimeout, ct);
+        await WaitForDoneAsync(
+            StepTimeout,
+            ct,
+            () => SendMove(point),
+            onSent: () => reportStatus?.Invoke($"Di chuyển về {point.Name} — chờ Dx..."));
         reportStatus?.Invoke($"Đã tới {point.Name}.");
     }
 
     public async Task HomeAllAxesAsync(Action<string>? reportStatus, CancellationToken ct)
     {
         reportStatus?.Invoke("Homing tất cả trục (H0x) — gửi lệnh...");
-        _serialService.SendHome(0);
-        reportStatus?.Invoke("Homing tất cả trục — chờ Dx...");
-        await WaitForDoneAsync(StepTimeout, ct);
+        await WaitForDoneAsync(
+            StepTimeout,
+            ct,
+            () => _serialService.SendHome(0),
+            onSent: () => reportStatus?.Invoke("Homing tất cả trục — chờ Dx..."));
         reportStatus?.Invoke("Homing hoàn tất — nhận Dx.");
     }
 
     /// <summary>
-    /// Mở gripper → Wait PickUp → PickUp → đóng → Wait PickUp → Wait Place
+    /// Wait PickUp → mở gripper → PickUp → đóng → Wait PickUp → Wait Place
     /// → Place → mở → Wait Place → Wait → đóng gripper.
-    /// Điểm Wait chỉ dùng ở cuối: robot về Wait rồi đóng gripper.
     /// </summary>
     public async Task RunPickUpToDestinationAsync(
         RobotTeachPoint pickUp,
@@ -53,28 +59,24 @@ public class RobotPickPlaceExecutor
         Action<string> reportStatus,
         CancellationToken ct)
     {
-        await RunStepAsync("1/11 — Mở gripper (G90x)",
-            () => SendGripper(GripperOpenAngle), reportStatus, ct);
-        await RunStepAsync($"2/11 — Move → {waitPickUp.Name}",
-            () => SendMove(waitPickUp), reportStatus, ct);
-        await RunStepAsync("3/11 — Move → PickUp",
-            () => SendMove(pickUp), reportStatus, ct);
-        await RunStepAsync("4/11 — Đóng gripper (G0x)",
-            () => SendGripper(GripperCloseAngle), reportStatus, ct);
-        await RunStepAsync($"5/11 — Move → {waitPickUp.Name} (rút lui)",
-            () => SendMove(waitPickUp), reportStatus, ct);
-        await RunStepAsync($"6/11 — Move → {waitPlace.Name}",
-            () => SendMove(waitPlace), reportStatus, ct);
-        await RunStepAsync($"7/11 — Move → {destination.Name} (Place)",
-            () => SendMove(destination), reportStatus, ct);
-        await RunStepAsync("8/11 — Mở gripper (G90x)",
-            () => SendGripper(GripperOpenAngle), reportStatus, ct);
-        await RunStepAsync($"9/11 — Move → {waitPlace.Name} (rút lui)",
-            () => SendMove(waitPlace), reportStatus, ct);
-        await RunStepAsync($"10/11 — Move → {wait.Name}",
-            () => SendMove(wait), reportStatus, ct);
-        await RunStepAsync("11/11 — Đóng gripper (G0x)",
-            () => SendGripper(GripperCloseAngle), reportStatus, ct);
+        await RunMoveStepAsync($"1/11 — Move → {waitPickUp.Name} (từ vị trí hiện tại)",
+            waitPickUp, reportStatus, ct);
+        await RunGripperStepAsync("2/11 — Mở gripper", GripperOpenAngle, reportStatus, ct);
+        await RunMoveStepAsync("3/11 — Move → PickUp",
+            pickUp, reportStatus, ct);
+        await RunGripperStepAsync("4/11 — Đóng gripper", GripperCloseAngle, reportStatus, ct);
+        await RunMoveStepAsync($"5/11 — Move → {waitPickUp.Name} (rút lui)",
+            waitPickUp, reportStatus, ct);
+        await RunMoveStepAsync($"6/11 — Move → {waitPlace.Name}",
+            waitPlace, reportStatus, ct);
+        await RunMoveStepAsync($"7/11 — Move → {destination.Name} (Place)",
+            destination, reportStatus, ct);
+        await RunGripperStepAsync("8/11 — Mở gripper", GripperOpenAngle, reportStatus, ct);
+        await RunMoveStepAsync($"9/11 — Move → {waitPlace.Name} (rút lui)",
+            waitPlace, reportStatus, ct);
+        await RunMoveStepAsync($"10/11 — Move → {wait.Name}",
+            wait, reportStatus, ct);
+        await RunGripperStepAsync("11/11 — Đóng gripper", GripperCloseAngle, reportStatus, ct);
     }
 
     public static bool IsDoneSignal(string text)
@@ -105,33 +107,89 @@ public class RobotPickPlaceExecutor
         _serialService.SendAscii(cmd);
     }
 
-    private async Task RunStepAsync(
+    private async Task RunMoveStepAsync(
         string label,
-        Action send,
+        RobotTeachPoint point,
         Action<string> reportStatus,
         CancellationToken ct)
     {
-        reportStatus($"{label} — gửi lệnh...");
-        send();
-        reportStatus($"{label} — chờ Dx...");
-        await WaitForDoneAsync(StepTimeout, ct);
+        reportStatus($"{label} — gửi lệnh {FormatMove(point)}...");
+
+        try
+        {
+            await WaitForDoneAsync(
+                StepTimeout,
+                ct,
+                () => SendMove(point),
+                onSent: () => reportStatus($"{label} — chờ Dx..."));
+        }
+        catch (TimeoutException)
+        {
+            reportStatus($"{label} — timeout, thử gửi lại lệnh...");
+            await WaitForDoneAsync(
+                StepTimeout,
+                ct,
+                () => SendMove(point),
+                onSent: () => reportStatus($"{label} — chờ Dx (lần 2)..."));
+        }
+
         reportStatus($"{label} — nhận Dx, chuyển bước tiếp.");
     }
 
-    private async Task WaitForDoneAsync(TimeSpan timeout, CancellationToken ct)
+    private async Task RunGripperStepAsync(
+        string label,
+        int angleDegrees,
+        Action<string> reportStatus,
+        CancellationToken ct)
+    {
+        reportStatus($"{label} — gửi lệnh G{angleDegrees}x...");
+        var gotDx = await TryWaitForDoneAsync(
+            GripperDoneTimeout, ct, () => SendGripper(angleDegrees));
+
+        if (!gotDx)
+            reportStatus($"{label} — không nhận Dx từ firmware.");
+
+        reportStatus($"{label} — chờ gripper ổn định...");
+        await Task.Delay(GripperSettleDelay, ct);
+        reportStatus($"{label} — hoàn thành, chuyển bước tiếp.");
+    }
+
+    private Task WaitForDoneAsync(TimeSpan timeout, CancellationToken ct, Action send, Action? onSent = null)
+        => WaitForDoneCoreAsync(timeout, ct, send, onSent, requireDone: true);
+
+    private async Task<bool> TryWaitForDoneAsync(
+        TimeSpan timeout,
+        CancellationToken ct,
+        Action send,
+        Action? onSent = null)
+        => await WaitForDoneCoreAsync(timeout, ct, send, onSent, requireDone: false);
+
+    private async Task<bool> WaitForDoneCoreAsync(
+        TimeSpan timeout,
+        CancellationToken ct,
+        Action send,
+        Action? onSent,
+        bool requireDone)
     {
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var armed = false;
 
         void OnFrame(string frame)
         {
-            if (IsDoneSignal(frame))
-                tcs.TrySetResult();
+            if (!armed || !IsDoneSignal(frame))
+                return;
+
+            tcs.TrySetResult();
         }
 
         _serialService.FrameReceived += OnFrame;
 
         try
         {
+            send();
+            armed = true;
+            onSent?.Invoke();
+
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
             linked.CancelAfter(timeout);
 
@@ -139,19 +197,26 @@ public class RobotPickPlaceExecutor
                 tcs.Task,
                 Task.Delay(Timeout.InfiniteTimeSpan, linked.Token));
 
-            if (completed != tcs.Task)
+            if (completed == tcs.Task)
             {
-                if (ct.IsCancellationRequested)
-                    throw new OperationCanceledException(ct);
-
-                throw new TimeoutException("Timeout — không nhận được Dx từ robot.");
+                await tcs.Task;
+                return true;
             }
 
-            await tcs.Task;
+            if (ct.IsCancellationRequested)
+                throw new OperationCanceledException(ct);
+
+            if (requireDone)
+                throw new TimeoutException("Timeout — không nhận được Dx từ robot.");
+
+            return false;
         }
         finally
         {
             _serialService.FrameReceived -= OnFrame;
         }
     }
+
+    private static string FormatMove(RobotTeachPoint point)
+        => RobotSerialProtocol.MoveCommand(point.J1, point.J2, point.J3, point.J4, point.J5);
 }
