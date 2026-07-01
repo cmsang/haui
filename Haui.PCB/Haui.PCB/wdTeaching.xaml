@@ -320,9 +320,27 @@
                                 <TextBlock Text="Homing tất cả" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Content="Zero UI" Style="{StaticResource SecondaryBtn}"
+                        <Button Content="Zero UI" Style="{StaticResource SecondaryBtn}" Margin="0,0,10,0"
                                 ToolTip="Reset góc hiển thị trên UI về 0°"
                                 Click="BtnZeroAll_Click"/>
+                        <Button Style="{StaticResource SecondaryBtn}" Margin="0,0,10,0"
+                                ToolTip="Mở gripper (gửi lệnh G mở)"
+                                IsEnabled="{Binding CanOperateRobot}"
+                                Click="BtnOpenGripper_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="ArrowExpandHorizontal" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Mở gripper" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource SecondaryBtn}"
+                                ToolTip="Đóng gripper (gửi lệnh G đóng)"
+                                IsEnabled="{Binding CanOperateRobot}"
+                                Click="BtnCloseGripper_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="ArrowCollapseHorizontal" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Đóng gripper" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Border>

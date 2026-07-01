@@ -95,6 +95,10 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private RobotTeachPoint? _goToTargetPoint;
     private static readonly TimeSpan AwaitDoneTimeout = TimeSpan.FromSeconds(120);
 
+    // Góc gripper (độ) — đồng bộ với RobotPickPlaceExecutor.
+    private const int GripperOpenAngle = 15;
+    private const int GripperCloseAngle = 4;
+
     public RobotTeachViewModel(
         IRobotConfigService robotConfigService,
         IRobotSerialService serialService,
@@ -429,6 +433,26 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
 
         _positionTracker.SetUnknown();
         StatusText = $"TX {cmd} — Homing {joint.Key} — chờ Dx...";
+    }
+
+    /// <summary>Mở gripper — gửi lệnh G{góc mở} và chờ Dx.</summary>
+    public void OpenGripper()
+        => SendGripperCommand(GripperOpenAngle, "Mở gripper");
+
+    /// <summary>Đóng gripper — gửi lệnh G{góc đóng} và chờ Dx.</summary>
+    public void CloseGripper()
+        => SendGripperCommand(GripperCloseAngle, "Đóng gripper");
+
+    private void SendGripperCommand(int angleDegrees, string label)
+    {
+        var cmd = RobotSerialProtocol.GripperCommand(angleDegrees);
+        if (!TrySend(() => _serialService.SendAscii(cmd), out var err, awaitDone: true))
+        {
+            StatusText = err;
+            return;
+        }
+
+        StatusText = $"TX {cmd} — {label} — chờ Dx...";
     }
 
     public void TeachSelectedPoint()

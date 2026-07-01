@@ -8,8 +8,8 @@ namespace Haui.PCB.Processing;
 /// </summary>
 public class RobotPickPlaceExecutor
 {
-    private const int GripperOpenAngle = 40;
-    private const int GripperCloseAngle = 20;
+    private const int GripperOpenAngle = 15;
+    private const int GripperCloseAngle = 4;
     private static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(120);
     private static readonly TimeSpan GripperDoneTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan GripperSettleDelay = TimeSpan.FromMilliseconds(500);
@@ -59,9 +59,9 @@ public class RobotPickPlaceExecutor
         Action<string> reportStatus,
         CancellationToken ct)
     {
-        await RunMoveStepAsync($"1/11 — Move → {waitPickUp.Name} (từ vị trí hiện tại)",
+        await RunGripperStepAsync("1/11 — Mở gripper", GripperOpenAngle, reportStatus, ct);
+        await RunMoveStepAsync($"2/11 — Move → {waitPickUp.Name} (từ vị trí hiện tại)",
             waitPickUp, reportStatus, ct);
-        await RunGripperStepAsync("2/11 — Mở gripper", GripperOpenAngle, reportStatus, ct);
         await RunMoveStepAsync("3/11 — Move → PickUp",
             pickUp, reportStatus, ct);
         await RunGripperStepAsync("4/11 — Đóng gripper", GripperCloseAngle, reportStatus, ct);

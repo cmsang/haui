@@ -1,7 +1,7 @@
 {
   "developerMode": true,
   "showInspectionResultAfterRecognition": false,
-  "com": "COM20",
+  "com": "COM3",
   "warehouseCom": "COM22",
   "baudRate": 115200,
   "stepsPerDeg": 100,
@@ -9,9 +9,9 @@
   "speedPercent": 31,
   "DatabaseConnection": "Data Source=.\\SQLExpress;Initial Catalog=SmartWarehouse;Integrated Security=True;TrustServerCertificate=True",
   "ComponentDetection": {
-    "modelPath": "Config/yolo26m_960x1280.onnx",
-    "inputWidth": 960,
-    "inputHeight": 1280,
+    "modelPath": "Config/yolo26m_720x960.onnx",
+    "inputWidth": 720,
+    "inputHeight": 960,
     "confThreshold": 0.25,
     "iouThreshold": 0.45,
     "classNames": [
@@ -31,24 +31,24 @@
     "componentGroups": [
       {
         "parent": "L23",
-        "children": ["L2", "L3"]
+        "children": [ "L2", "L3" ]
       },
       {
         "parent": "R12",
-        "children": ["R1", "R2"]
+        "children": [ "R1", "R2" ]
       },
       {
         "parent": "C365",
-        "children": ["C3", "C6", "C5"]
+        "children": [ "C3", "C6", "C5" ]
       },
       {
         "parent": "D12",
-        "children": ["D1", "D2"],
+        "children": [ "D1", "D2" ],
         "split": "Vertical"
       },
       {
         "parent": "KF",
-        "children": ["KF1", "KF2", "KF3"]
+        "children": [ "KF1", "KF2", "KF3" ]
       }
     ]
   },

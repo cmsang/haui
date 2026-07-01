@@ -196,6 +196,12 @@ public partial class wdTeaching : Window
         UpdateJointSummary();
     }
 
+    private void BtnOpenGripper_Click(object sender, RoutedEventArgs e)
+        => _viewModel.OpenGripper();
+
+    private void BtnCloseGripper_Click(object sender, RoutedEventArgs e)
+        => _viewModel.CloseGripper();
+
     private void TeachPointsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (TeachPointsGrid.SelectedItem is Models.RobotTeachPoint point)
