@@ -97,12 +97,12 @@ Mọi lệnh ASCII gửi qua `SendAscii(cmd)` được firmware nhận dạng **
 | Chung | `PickUp` | Điểm gắp PCB |
 | Chung | `Wait PickUp` | Chờ trước/sau gắp — lưu DB, teach thủ công |
 | Chung | `Wait` | Hành lang giữa pick và place — lưu DB, teach được |
-| Chung | `Wait OK` | Chờ trước/sau đặt **Pass** — lưu DB, teach thủ công |
-| Chung | `Wait NG` | Chờ trước/sau đặt **Fail** — lưu DB, teach thủ công |
+| Chung | `Wait OK1` … `Wait OK4` | Chờ trước/sau đặt **Pass** từng slot — teach thủ công |
+| Chung | `Wait NG1` … `Wait NG4` | Chờ trước/sau đặt **Fail** từng slot — teach thủ công |
 | OK | `OK1` … `OK4` | Buffer hàng **Pass** |
 | NG | `NG1` … `NG4` | Buffer hàng **Fail** |
 
-Mọi vị trí **Wait** (`Wait PickUp`, `Wait`, `Wait OK`, `Wait NG`) được teach thủ công như các vị trí khác — chọn trong bảng, chỉnh khớp rồi **Teach**. Pass dùng **Wait OK** (bước 6, 9); Fail dùng **Wait NG**.
+Mọi vị trí **Wait** được teach thủ công như các vị trí khác — chọn trong bảng, chỉnh khớp rồi **Teach**. Khi place vào **OK2**, chu trình dùng **Wait OK2** (bước 6, 9); tương tự **NG3** → **Wait NG3**.
 
 Tọa độ J1–J5 lưu trong bảng `RobotConfig`. Gripper chỉ dùng trên UI/Serial, **không** lưu Database.
 
@@ -207,14 +207,14 @@ Dùng để **test thủ công** chu trình gắp–đặt tới một slot OK h
 | 3/11 | Move → **PickUp** |
 | 4/11 | `G20x` — Đóng gripper (gắp) |
 | 5/11 | Move → **Wait PickUp** (rút lui) |
-| 6/11 | Move → **Wait OK** hoặc **Wait NG** (theo đích) |
+| 6/11 | Move → **Wait OKx** hoặc **Wait NGx** (theo slot đích, vd OK2 → Wait OK2) |
 | 7/11 | Move → **OKx / NGx** (Place) |
 | 8/11 | `G40x` — Mở gripper (thả) |
-| 9/11 | Move → **Wait OK/NG** (rút lui) |
+| 9/11 | Move → **Wait OKx/NGx** (rút lui — cùng điểm bước 6) |
 | 10/11 | Move → **Wait** |
 | 11/11 | `G20x` — Đóng gripper |
 
-**Wait PickUp** / **Wait OK** / **Wait NG** / **Wait** — đều từ Database (teach thủ công như mọi vị trí khác).
+**Wait PickUp** / **Wait OK1–4** / **Wait NG1–4** / **Wait** — đều từ Database (teach thủ công). Mỗi slot OK/NG có điểm wait riêng để tránh va đập.
 
 - **Điều kiện xuất phát**: chu trình **chỉ chạy khi robot ở Home hoặc Wait** (xem mục 8.6). Vị trí bất kỳ → bị chặn, báo lỗi, không gửi lệnh.
 - Bước **Move / Home**: đăng ký lắng nghe **trước** khi gửi, chỉ chấp nhận `Dx` **sau** khi TX; timeout **120 giây**/bước, **thử lại 1 lần** nếu timeout.
@@ -243,7 +243,7 @@ flowchart TD
 | Bước | Thành phần | Ghi chú |
 |------|------------|---------|
 | 1 | `CAPx` trên `warehouseCom` | `WarehouseSerialService` lắng nghe liên tục |
-| 2 | `RequestInspection()` | Camera phải đang chạy; bỏ qua nếu đang kiểm tra |
+| 2 | `TryRequestInspection()` | Camera phải chạy; nếu đang Teaching/Manual → **lưu CAPx chờ** (`WarehousePendingCaptureService`), chụp sau khi đóng màn hình |
 | 3 | `InspectionCompleted` | PASS/FAIL từ YOLO |
 | 4 | `HandleInspectionCompletedAsync` | Robot phải handshake xong (`Rx→Yx→H0x`) |
 | 5 | `TransferAsync` | Giống nút Pass/Fail — CMx/COx rồi 11 bước |
@@ -255,9 +255,10 @@ flowchart TD
 | Triệu chứng | Nguyên nhân | Xử lý |
 |-------------|-------------|-------|
 | Chỉ thấy `G40x`, không có `M…x` | Phiên bản cũ: mở gripper trước khi Move; `Dx` trễ từ gripper kẹt bước Move | Đã sửa: Move Wait PickUp trước, `Dx` chỉ hợp lệ sau TX |
-| Không chạy robot sau nhận dạng | Robot chưa handshake / điểm teach toàn 0 | Teach PickUp, Wait PickUp, Wait, Wait OK/NG, slot đích |
+| Không chạy robot sau nhận dạng | Robot chưa handshake / điểm teach toàn 0 | Teach PickUp, Wait PickUp, Wait, Wait OKx/NGx theo slot, slot đích |
 | Báo "robot đang ở vị trí … chỉ chạy khi Home/Wait" | Robot ở vị trí `Unknown` (vừa jog/move/goto) | Homing về Home rồi chạy lại (mục 8.6) |
 | `CAPx` nhưng không kiểm tra | Camera chưa Start | Bật camera trên Dashboard trước khi vận hành Auto |
+| CAPx bị bỏ qua khi đang Teaching/Manual | Nhà kho chỉ gửi CAP **một lần** | CAPx được **lưu chờ**; tự chụp khi đóng Teaching/Manual (hoặc khi bật camera / hết bận) |
 
 ---
 
@@ -349,8 +350,8 @@ Nếu tất cả slot nhóm đó đã `FULL` → **không** gửi CMx, không ch
          ┌─────────────────┼─────────────────┐
          ▼                 ▼                 ▼
     Kiểm tra DB      Tìm slot EMPTY    Kiểm tra teach points
-    (PickUp, Wait,   (OK1–4 / NG1–4)  (Wait PickUp, Wait OK/NG)
-     Wait OK/NG…)         │                 │
+    (PickUp, Wait,   (OK1–4 / NG1–4)  (Wait PickUp, Wait OKx/NGx)
+     slot đích…)          │                 │
          └─────────────────┴─────────────────┘
                            │
               ┌────────────┴────────────┐
@@ -400,7 +401,7 @@ flowchart TD
 
 **Thứ tự thực thi:**
 0. **Kiểm tra vị trí xuất phát** — chỉ tiếp tục khi robot ở Home hoặc Wait (`RobotPositionTracker.CanStartCycle`, mục 8.6). Vị trí bất kỳ → báo lỗi, dừng, không gửi `CMx`.
-1. Load vị trí từ Database — tính Wait PickUp / Wait OK hoặc NG.
+1. Load vị trí từ Database — tính Wait PickUp và Wait OKx/NGx theo slot đích.
 2. **Gửi `CMx` → `warehouseCom`, chờ `COx`** (timeout 120 s). Chỉ khi nhận `COx` mới tiếp tục.
 3. Kết nối robot COM (`com`) nếu chưa online.
 4. Chạy **chu trình 11 bước** (`RobotPickPlaceExecutor`).
@@ -512,6 +513,8 @@ flowchart TB
 | `Haui.PCB/Processing/RobotStartupHandshakeService.cs` | Handshake Rx/Yx/H0 |
 | `Haui.PCB/Processing/RobotPickPlaceExecutor.cs` | Chu trình 11 bước + chờ Dx |
 | `Haui.PCB/Processing/RobotPositionTracker.cs` | Theo dõi vị trí logic (Home/Wait/Unknown) — chốt chặn chu trình |
+| `Haui.PCB/Processing/RobotManualInterventionGate.cs` | Chặn auto khi Teaching/Manual Control đang mở |
+| `Haui.PCB/Processing/WarehousePendingCaptureService.cs` | Lưu CAPx chờ khi chưa thể chụp (Teaching/Manual, camera tắt, đang bận) |
 | `Haui.PCB/Processing/MaterialTransferService.cs` | Pass/Fail + FULL + warehouse + chốt vị trí |
 | `Haui.PCB/Processing/WarehouseSerialService.cs` | CMx/COx handshake, C1x/C2x buffer đầy |
 | `Haui.PCB/Processing/RobotConfigService.cs` | Adapter UI → BL |
@@ -544,6 +547,7 @@ flowchart TB
 1. Database/01_RobotConfig_Schema.sql
 2. Database/02_RobotConfig_SeedData.sql
 3. Database/03_RobotConfig_StoredProcedures.sql
+4. Database/04_RobotConfig_Clone_WaitSlots.sql   -- DB đã có sẵn OK/NG: clone Wait OK1–4 / Wait NG1–4
 ```
 
 Chạy trên đúng database trong `DatabaseConnection` (ví dụ `SmartWarehouse`).

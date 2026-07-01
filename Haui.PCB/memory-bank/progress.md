@@ -32,6 +32,8 @@
 - [x] DeveloperMode — **Chọn ảnh** (file inspect, no camera required) on Dashboard toolbar
 - [x] Virtual Serial Port — `VirtualRobotSerialService` when dev + virtual enabled (no COM required)
 - [x] **Wait points teach thủ công (2026-06-28)** — bỏ offset tự sinh; `Wait PickUp`/`Wait OK`/`Wait NG` teach trực tiếp như mọi điểm; gỡ `RobotTeachPointOffsets`, `waitPointJoint234OffsetDegrees`, ô Offset Wait trong Teaching
+- [x] **Chặn auto khi Teaching/Manual (2026-06-29)** — `RobotManualInterventionGate`; CAPx + nhận dạng + `TransferAsync` bị chặn khi màn Teaching/Manual Control đang mở
+- [x] **Wait points theo slot (2026-06-29)** — `Wait OK1–4` / `Wait NG1–4` thay `Wait OK`/`Wait NG` chung; clone SQL `04_RobotConfig_Clone_WaitSlots.sql`; chu trình 11 bước dùng wait riêng từng slot (bước 6, 9); teach trên màn Teaching
 - [x] **Chốt vị trí trước chu trình (2026-06-29)** — `RobotPositionTracker` (Home/Wait/Unknown) dùng chung; chu trình 11 bước chỉ chạy khi Home/Wait, không cho từ vị trí bất kỳ; chặn ở `MaterialTransferService.TransferAsync` + báo lỗi; jog/move/goto/homing thủ công → Unknown, homing/handshake → Home, kết thúc chu trình → Wait
 - [x] Sharpest-frame selection (Laplacian variance)
 - [x] Camera Mono8 — force `Mono8`, `CV_8UC1` grab, Gaussian blur at grab; segmentation skips Grayscale + duplicate blur for 1-channel frames

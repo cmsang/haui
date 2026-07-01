@@ -23,6 +23,13 @@ public static class RobotConnectionHelper
         "Robot đang kết nối hoặc thực hiện homing.\n\n" +
         "Vui lòng đợi homing hoàn tất rồi thực hiện thao tác.";
 
+    public const string AutoOperationInProgressTitle = "Đang thực hiện lệnh";
+
+    public static string AutoOperationInProgressWarning(string screenLabel) =>
+        "Chu trình tự động đang chạy (nhận dạng hoặc robot đang thực hiện lệnh).\n\n" +
+        $"Không thể mở {screenLabel} lúc này. Vui lòng chờ hoàn tất rồi thử lại.\n\n" +
+        "Sau khi đóng màn hình khác, auto sẽ tiếp tục bình thường.";
+
     /// <summary>Serial online và homing khởi động đã hoàn tất.</summary>
     public static bool IsRobotArmReady(
         IRobotSerialService serialService,

@@ -13,6 +13,7 @@ public class MaterialTransferService : IMaterialTransferService
     private readonly IAppSettingService _appSettingService;
     private readonly WarehouseSerialService _warehouseSerialService;
     private readonly RobotPositionTracker _positionTracker;
+    private readonly RobotManualInterventionGate _manualInterventionGate;
     private readonly RobotPickPlaceExecutor _pickPlaceExecutor;
 
     private bool _isRunning;
@@ -23,13 +24,15 @@ public class MaterialTransferService : IMaterialTransferService
         IRobotSerialService serialService,
         IAppSettingService appSettingService,
         WarehouseSerialService warehouseSerialService,
-        RobotPositionTracker positionTracker)
+        RobotPositionTracker positionTracker,
+        RobotManualInterventionGate manualInterventionGate)
     {
         _robotConfigService = robotConfigService;
         _serialService = serialService;
         _appSettingService = appSettingService;
         _warehouseSerialService = warehouseSerialService;
         _positionTracker = positionTracker;
+        _manualInterventionGate = manualInterventionGate;
         _pickPlaceExecutor = new RobotPickPlaceExecutor(serialService);
     }
 
@@ -62,6 +65,14 @@ public class MaterialTransferService : IMaterialTransferService
             reportStatus(
                 $"Robot đang ở vị trí {RobotPositionTracker.Describe(_positionTracker.Current)} — " +
                 "chỉ chạy chu trình khi robot ở Home hoặc Wait. Đưa robot về Home/Wait rồi thử lại.");
+            return;
+        }
+
+        if (_manualInterventionGate.IsActive)
+        {
+            reportStatus(
+                $"Đang mở {_manualInterventionGate.ActiveLabel} — không chạy chu trình tự động. " +
+                "Đóng màn hình đó rồi thử lại.");
             return;
         }
 
@@ -132,7 +143,8 @@ public class MaterialTransferService : IMaterialTransferService
         var waitPlace = RobotTeachPositions.FindWaitPlaceForDestination(points, destination);
         if (waitPlace == null)
         {
-            reportStatus($"Không tìm thấy Wait {(isPass ? "OK" : "NG")} — cần teach Wait {(isPass ? "OK" : "NG")}.");
+            var waitName = RobotTeachPositions.GetWaitPlaceNameForSlot(destination.Name);
+            reportStatus($"Không tìm thấy {waitName} — cần teach {waitName}.");
             return;
         }
 

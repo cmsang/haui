@@ -363,7 +363,8 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             RobotTeachPositions.Normalize(_allTeachPoints), destination);
         if (waitPlace == null)
         {
-            StatusText = $"Không tìm thấy Wait {(isNg ? "NG" : "OK")} — cần teach Wait {(isNg ? "NG" : "OK")}.";
+            var waitName = RobotTeachPositions.GetWaitPlaceNameForSlot(destination.Name);
+            StatusText = $"Không tìm thấy {waitName} — cần teach {waitName}.";
             return;
         }
 
