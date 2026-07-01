@@ -47,12 +47,13 @@ public class RobotPickPlaceExecutor
     }
 
     /// <summary>
-    /// Mở gripper → Wait PickUp → PickUp → đóng → Wait PickUp
+    /// Mở gripper → Wait PickUp → PickUp → đóng → Pick Done
     /// → Wait OKx/NGx (theo slot) → Place → mở → Wait OKx/NGx → Wait → đóng gripper.
     /// </summary>
     public async Task RunPickUpToDestinationAsync(
         RobotTeachPoint pickUp,
         RobotTeachPoint waitPickUp,
+        RobotTeachPoint pickDone,
         RobotTeachPoint waitPlace,
         RobotTeachPoint destination,
         RobotTeachPoint wait,
@@ -65,8 +66,8 @@ public class RobotPickPlaceExecutor
         await RunMoveStepAsync("3/11 — Move → PickUp",
             pickUp, reportStatus, ct);
         await RunGripperStepAsync("4/11 — Đóng gripper", GripperCloseAngle, reportStatus, ct);
-        await RunMoveStepAsync($"5/11 — Move → {waitPickUp.Name} (rút lui)",
-            waitPickUp, reportStatus, ct);
+        await RunMoveStepAsync($"5/11 — Move → {pickDone.Name} (sau gắp)",
+            pickDone, reportStatus, ct);
         await RunMoveStepAsync($"6/11 — Move → {waitPlace.Name}",
             waitPlace, reportStatus, ct);
         await RunMoveStepAsync($"7/11 — Move → {destination.Name} (Place)",

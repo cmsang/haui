@@ -357,7 +357,7 @@
 
                     <StackPanel Grid.Row="0">
                         <TextBlock Text="Danh sách vị trí teach" Style="{StaticResource SectionHeader}"/>
-                        <TextBlock Text="PickUp · Wait PickUp · Wait · Wait OK1–4 · Wait NG1–4 · OK1–4 · NG1–4"
+                        <TextBlock Text="PickUp · Wait PickUp · Pick Done · Wait · Wait OK1–4 · Wait NG1–4 · OK1–4 · NG1–4"
                                    FontSize="11" Foreground="#888" Margin="0,-6,0,0"/>
                     </StackPanel>
 
@@ -393,10 +393,14 @@
                             <Run> để lưu góc J1–J5. </Run>
                             <Run FontWeight="SemiBold">Wait PickUp</Run>
                             <Run>, </Run>
+                            <Run FontWeight="SemiBold">Pick Done</Run>
+                            <Run>, </Run>
                             <Run FontWeight="SemiBold">Wait OK1–4</Run>
                             <Run>, </Run>
                             <Run FontWeight="SemiBold">Wait NG1–4</Run>
-                            <Run> — teach thủ công từng điểm chờ trước/sau place (tránh va đập).</Run>
+                            <Run> — teach thủ công. Sau gắp robot về </Run>
+                            <Run FontWeight="SemiBold">Pick Done</Run>
+                            <Run> rồi mới tới vùng place (tránh va đập).</Run>
                         </TextBlock>
                     </Border>
 

@@ -14,6 +14,7 @@ GO
         -- PosName, PosGroup, J1,  J2,   J3,   J4,   J5
         (N'PickUp',      N'Chung', N'20', N'0',   N'0',   N'0',   N'0'),
         (N'Wait PickUp', N'Chung', N'20', N'-20', N'-20', N'-20', N'0'),
+        (N'Pick Done',   N'Chung', N'20', N'-15', N'-15', N'-15', N'0'),
         (N'Wait',        N'Chung', N'10', N'10',  N'0',   N'10',  N'0'),
         (N'Wait OK1',    N'Chung', N'10', N'0',   N'0',   N'10',  N'0'),
         (N'Wait OK2',    N'Chung', N'0',  N'0',   N'0',   N'0',   N'0'),

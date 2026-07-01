@@ -117,6 +117,13 @@ public class MaterialTransferService : IMaterialTransferService
             return;
         }
 
+        var pickDone = RobotTeachPositions.ResolvePickDone(points);
+        if (pickDone == null)
+        {
+            reportStatus("Không tìm thấy Pick Done — cần teach Pick Done.");
+            return;
+        }
+
         var slotNames = isPass ? RobotTeachPositions.OkSlotNames : RobotTeachPositions.NgSlotNames;
         var slotName = FindFirstEmptySlot(points, slotNames);
         if (slotName == null)
@@ -166,7 +173,7 @@ public class MaterialTransferService : IMaterialTransferService
             _positionTracker.SetUnknown();
 
             await _pickPlaceExecutor.RunPickUpToDestinationAsync(
-                pickUp, waitPickUp, waitPlace, destination, wait, reportStatus, _cts.Token);
+                pickUp, waitPickUp, pickDone, waitPlace, destination, wait, reportStatus, _cts.Token);
 
             // Bước 11 kết thúc ở Wait.
             _positionTracker.SetWait();
