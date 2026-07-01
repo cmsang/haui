@@ -21,4 +21,5 @@ public interface IAppSettingService
     CameraCaptureSettings LoadCameraCapture();
     ImageDownscaleSettings LoadCameraDownscale();
     HolderDetectionDownscaleSettings LoadHolderDetectionDownscale();
+    CameraGigEStreamSettings LoadCameraGigEStream();
 }

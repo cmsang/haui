@@ -140,6 +140,13 @@ public class AppSettingService : IAppSettingService
         return settings;
     }
 
+    public CameraGigEStreamSettings LoadCameraGigEStream()
+    {
+        var settings = Load().CameraGigEStream.Clone();
+        NormalizeCameraGigEStream(settings);
+        return settings;
+    }
+
     private static AppSetting CreateAndSaveDefault()
     {
         var setting = new AppSetting();
@@ -152,6 +159,33 @@ public class AppSettingService : IAppSettingService
     {
         NormalizeComponentDetection(setting.ComponentDetection);
         NormalizeSegmentation(setting.Segmentation);
+        NormalizeCameraGigEStream(setting.CameraGigEStream);
+    }
+
+    private static void NormalizeCameraGigEStream(CameraGigEStreamSettings settings)
+    {
+        if (settings.InterPacketDelay < 0)
+            settings.InterPacketDelay = 0;
+
+        if (settings.MaxNumBuffer <= 0)
+            settings.MaxNumBuffer = CameraGigEStreamSettings.DefaultMaxNumBuffer;
+        settings.MaxNumBuffer = Math.Clamp(settings.MaxNumBuffer, 5, 64);
+
+        if (settings.OutputQueueSize <= 0)
+            settings.OutputQueueSize = CameraGigEStreamSettings.DefaultOutputQueueSize;
+
+        if (settings.MaxTransferSizeMb <= 0)
+            settings.MaxTransferSizeMb = CameraGigEStreamSettings.DefaultMaxTransferSizeMb;
+
+        if (settings.MaxBufferSizeMb <= 0)
+            settings.MaxBufferSizeMb = CameraGigEStreamSettings.DefaultMaxBufferSizeMb;
+
+        if (settings.GrabLoopThreadPriority < 0)
+            settings.GrabLoopThreadPriority = 0;
+        settings.GrabLoopThreadPriority = Math.Clamp(settings.GrabLoopThreadPriority, 0, 31);
+
+        if (settings.ConsecutiveFailThreshold <= 0)
+            settings.ConsecutiveFailThreshold = CameraGigEStreamSettings.DefaultConsecutiveFailThreshold;
     }
 
     private static void NormalizeComponentDetection(ComponentDetectionSettings settings)

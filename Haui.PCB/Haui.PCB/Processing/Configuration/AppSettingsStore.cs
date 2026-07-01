@@ -25,4 +25,6 @@ internal static class AppSettingsStore
 
     public static HolderDetectionDownscaleSettings LoadHolderDetectionDownscale()
         => Service.LoadHolderDetectionDownscale();
+
+    public static CameraGigEStreamSettings LoadCameraGigEStream() => Service.LoadCameraGigEStream();
 }

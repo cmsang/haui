@@ -58,4 +58,7 @@ public class AppSetting
 
     [JsonPropertyName("HolderDetectionDownscale")]
     public HolderDetectionDownscaleSettings HolderDetectionDownscale { get; set; } = new();
+
+    [JsonPropertyName("CameraGigEStream")]
+    public CameraGigEStreamSettings CameraGigEStream { get; set; } = new();
 }

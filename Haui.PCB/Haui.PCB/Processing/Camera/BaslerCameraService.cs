@@ -1,4 +1,6 @@
-﻿using Basler.Pylon;
+﻿using System.Threading.Channels;
+using Basler.Pylon;
+using Haui.PCB.Models.Configuration;
 using OpenCvSharp;
 using PylonCamera = Basler.Pylon.Camera;
 
@@ -7,20 +9,35 @@ namespace Haui.PCB.Processing.Camera;
 /// <summary>
 /// Basler camera service via pylon .NET SDK (GigE / USB3).
 /// GigE fast path: announce + ICameraInfo connect; resolution probe cached per device.
+/// Grab processing runs on a background worker to avoid pylon buffer underruns.
 /// </summary>
 public class BaslerCameraService : ICameraService, ICameraParameterService
 {
     private const int GrabGaussianBlurKernelSize = 5;
+    private const uint IncompleteGrabErrorCode = 3_774_873_620u;
+    private const double GrabStatsWindowSeconds = 60;
+    private const double RecoveryCooldownSeconds = 30;
 
     private PylonCamera? _camera;
     private Mat? _lastFrame;
     private PixelDataConverter? _converter;
     private readonly object _frameLock = new();
+    private readonly object _recoveryLock = new();
     private bool _disposed;
     private CameraParameters _pendingParameters = CameraDefaultsLoader.LoadRecommended();
     private ImageDownscaleSettings _downscale = CameraDefaultsLoader.LoadDownscale();
+    private CameraGigEStreamSettings _gigEStream = CameraDefaultsLoader.LoadGigEStream();
     private string? _lastGrabError;
-    private int _grabFailCount;
+    private int _consecutiveFailCount;
+    private int _incompleteGrabCount;
+    private int _windowOkCount;
+    private int _windowFailCount;
+    private DateTime _windowStartUtc = DateTime.UtcNow;
+    private DateTime _lastRecoveryUtc = DateTime.MinValue;
+
+    private CancellationTokenSource? _workerCts;
+    private Task? _workerTask;
+    private Channel<IGrabResult>? _frameChannel;
 
     /// <summary>Grab errors for the status bar.</summary>
     public event Action<string>? GrabStatusChanged;
@@ -129,6 +146,8 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
         Stop();
 
         _downscale = CameraDefaultsLoader.LoadDownscale();
+        _gigEStream = CameraDefaultsLoader.LoadGigEStream();
+        ResetGrabMetrics();
 
         var opened = OpenCamera(camera);
         _camera = opened;
@@ -141,10 +160,20 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
         ConfigureRoi(width, height);
         ApplyExposureParameters(_pendingParameters, includeAutoWhiteBalance: true);
 
+        StartFrameWorker();
+
         opened.StreamGrabber.ImageGrabbed += OnImageGrabbed;
         opened.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
         IsRunning = true;
-        _grabFailCount = 0;
+    }
+
+    private void ResetGrabMetrics()
+    {
+        _consecutiveFailCount = 0;
+        _incompleteGrabCount = 0;
+        _windowOkCount = 0;
+        _windowFailCount = 0;
+        _windowStartUtc = DateTime.UtcNow;
         _lastGrabError = null;
     }
 
@@ -187,17 +216,127 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
     {
         if (_camera is null) return;
 
-        if (_camera.Parameters[PLStream.AutoPacketSize].IsWritable)
-            _camera.Parameters[PLStream.AutoPacketSize].SetValue(true);
+        var stream = _gigEStream;
+        var parameters = _camera.Parameters;
 
-        if (_camera.Parameters[PLCameraInstance.MaxNumBuffer].IsWritable)
-            _camera.Parameters[PLCameraInstance.MaxNumBuffer].SetValue(16);
+        var autoPacketSize = parameters[PLStream.AutoPacketSize];
+        if (autoPacketSize.IsWritable)
+            autoPacketSize.SetValue(stream.AutoPacketSize);
 
-        if (_camera.Parameters[PLStream.MaxTransferSize].IsWritable)
-            _camera.Parameters[PLStream.MaxTransferSize].SetValue(4 * 1024 * 1024);
+        if (!stream.AutoPacketSize && stream.PacketSize > 0)
+            TrySetIntegerParameter(parameters, "GevSCPSPacketSize", stream.PacketSize);
 
-        if (_camera.Parameters[PLStream.MaxBufferSize].IsWritable)
-            _camera.Parameters[PLStream.MaxBufferSize].SetValue(64 * 1024 * 1024);
+        if (stream.InterPacketDelay > 0)
+            TrySetIntegerParameter(parameters, "GevSCPD", stream.InterPacketDelay);
+
+        var maxNumBuffer = parameters[PLCameraInstance.MaxNumBuffer];
+        if (maxNumBuffer.IsWritable)
+            maxNumBuffer.SetValue(Math.Clamp((long)stream.MaxNumBuffer, maxNumBuffer.GetMinimum(), maxNumBuffer.GetMaximum()));
+
+        var outputQueueSize = parameters[PLCameraInstance.OutputQueueSize];
+        if (outputQueueSize.IsWritable)
+            outputQueueSize.SetValue(Math.Clamp((long)stream.OutputQueueSize, outputQueueSize.GetMinimum(), outputQueueSize.GetMaximum()));
+
+        var maxTransferSize = parameters[PLStream.MaxTransferSize];
+        if (maxTransferSize.IsWritable)
+            maxTransferSize.SetValue((long)stream.MaxTransferSizeMb * 1024 * 1024);
+
+        var maxBufferSize = parameters[PLStream.MaxBufferSize];
+        if (maxBufferSize.IsWritable)
+            maxBufferSize.SetValue((long)stream.MaxBufferSizeMb * 1024 * 1024);
+
+        if (stream.GrabLoopThreadPriority > 0)
+        {
+            TrySetIntegerParameter(parameters, "GrabLoopThreadPriority", stream.GrabLoopThreadPriority);
+            TrySetIntegerParameter(parameters, "InternalGrabEngineThreadPriority", stream.GrabLoopThreadPriority);
+        }
+    }
+
+    private static void TrySetIntegerParameter(IParameterCollection parameters, string name, long value)
+    {
+        if (!parameters.Contains(name))
+            return;
+
+        var param = parameters[name];
+        if (param is not IIntegerParameter intParam || !intParam.IsWritable)
+            return;
+
+        long min = intParam.GetMinimum();
+        long max = intParam.GetMaximum();
+        intParam.SetValue(Math.Clamp(value, min, max));
+    }
+
+    private void StartFrameWorker()
+    {
+        StopFrameWorker();
+
+        _frameChannel = Channel.CreateBounded<IGrabResult>(new BoundedChannelOptions(1)
+        {
+            SingleReader = true,
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.Wait
+        });
+
+        _workerCts = new CancellationTokenSource();
+        var token = _workerCts.Token;
+        _workerTask = Task.Run(() => FrameWorkerLoop(token), token);
+    }
+
+    private void StopFrameWorker()
+    {
+        if (_workerCts is not null)
+        {
+            _workerCts.Cancel();
+            _frameChannel?.Writer.TryComplete();
+            try
+            {
+                _workerTask?.Wait(TimeSpan.FromSeconds(2));
+            }
+            catch
+            {
+                // Worker cancelled during stop
+            }
+
+            _workerCts.Dispose();
+            _workerCts = null;
+            _workerTask = null;
+        }
+
+        if (_frameChannel is not null)
+        {
+            while (_frameChannel.Reader.TryRead(out IGrabResult? pending))
+                pending.Dispose();
+
+            _frameChannel = null;
+        }
+    }
+
+    private async Task FrameWorkerLoop(CancellationToken cancellationToken)
+    {
+        if (_frameChannel is null)
+            return;
+
+        try
+        {
+            await foreach (IGrabResult grabResult in _frameChannel.Reader.ReadAllAsync(cancellationToken))
+            {
+                using (grabResult)
+                {
+                    try
+                    {
+                        ProcessGrabResult(grabResult);
+                    }
+                    catch (Exception ex)
+                    {
+                        RecordGrabFailure(isConversionError: true, ex.Message);
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected on stop
+        }
     }
 
     private void TryConfigurePixelFormat()
@@ -319,6 +458,8 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
             _camera.Dispose();
             _camera = null;
         }
+
+        StopFrameWorker();
 
         lock (_frameLock)
         {
@@ -473,47 +614,150 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
         {
             if (!grabResult.GrabSucceeded)
             {
-                _grabFailCount++;
                 _lastGrabError = $"{grabResult.ErrorCode}: {grabResult.ErrorDescription}";
-                if (_grabFailCount <= 3 || _grabFailCount % 30 == 0)
-                    GrabStatusChanged?.Invoke($"Grab lỗi: {_lastGrabError}");
+                if (IsIncompleteBufferError(grabResult))
+                    _incompleteGrabCount++;
+
+                RecordGrabFailure(isConversionError: false, _lastGrabError);
+                TryAutoRecoverGrabber();
                 return;
             }
 
-            using var raw = ConvertGrabResultToMat(grabResult);
-            if (raw.Empty())
-                return;
-
-            using var blurred = new Mat();
-            Cv2.GaussianBlur(
-                raw,
-                blurred,
-                new Size(GrabGaussianBlurKernelSize, GrabGaussianBlurKernelSize),
-                0);
-
-            // Optionally downscale (preserving aspect ratio) before downstream processing.
-            using var processed = ApplyDownscale(blurred);
-
-            _grabFailCount = 0;
-
-            lock (_frameLock)
+            IGrabResult cloned = grabResult.Clone();
+            Channel<IGrabResult>? channel = _frameChannel;
+            if (channel is null)
             {
-                _lastFrame?.Dispose();
-                _lastFrame = processed.Clone();
+                cloned.Dispose();
+                return;
             }
 
-            FrameArrived?.Invoke(processed);
-        }
-        catch (Exception ex)
-        {
-            _grabFailCount++;
-            if (_grabFailCount <= 3)
-                GrabStatusChanged?.Invoke($"Convert lỗi: {ex.Message}");
+            if (!channel.Writer.TryWrite(cloned))
+            {
+                // Worker busy — drop frame but keep grab thread unblocked.
+                cloned.Dispose();
+            }
         }
         finally
         {
             grabResult.Dispose();
         }
+    }
+
+    private void ProcessGrabResult(IGrabResult grabResult)
+    {
+        using var raw = ConvertGrabResultToMat(grabResult);
+        if (raw.Empty())
+            return;
+
+        using var blurred = new Mat();
+        Cv2.GaussianBlur(
+            raw,
+            blurred,
+            new Size(GrabGaussianBlurKernelSize, GrabGaussianBlurKernelSize),
+            0);
+
+        using var processed = ApplyDownscale(blurred);
+
+        RecordGrabSuccess();
+
+        lock (_frameLock)
+        {
+            _lastFrame?.Dispose();
+            _lastFrame = processed.Clone();
+        }
+
+        FrameArrived?.Invoke(processed);
+    }
+
+    private void RecordGrabSuccess()
+    {
+        RollGrabStatsWindowIfNeeded();
+        _windowOkCount++;
+        _consecutiveFailCount = 0;
+    }
+
+    private void RecordGrabFailure(bool isConversionError, string message)
+    {
+        RollGrabStatsWindowIfNeeded();
+        _windowFailCount++;
+        _consecutiveFailCount++;
+
+        if (isConversionError)
+            GrabStatusChanged?.Invoke($"Convert lỗi: {message}");
+        else
+            PublishGrabFailureStatus();
+    }
+
+    private void PublishGrabFailureStatus()
+    {
+        int total = _windowOkCount + _windowFailCount;
+        if (total <= 0)
+        {
+            GrabStatusChanged?.Invoke($"Grab lỗi: {_lastGrabError}");
+            return;
+        }
+
+        int percent = (int)Math.Round(100.0 * _windowFailCount / total);
+        GrabStatusChanged?.Invoke($"Grab lỗi: {_windowFailCount}/{total} frame ({percent}%)");
+    }
+
+    private void RollGrabStatsWindowIfNeeded()
+    {
+        if ((DateTime.UtcNow - _windowStartUtc).TotalSeconds < GrabStatsWindowSeconds)
+            return;
+
+        _windowOkCount = 0;
+        _windowFailCount = 0;
+        _windowStartUtc = DateTime.UtcNow;
+    }
+
+    private void TryAutoRecoverGrabber()
+    {
+        if (!_gigEStream.EnableAutoRecovery)
+            return;
+
+        if (_consecutiveFailCount < _gigEStream.ConsecutiveFailThreshold)
+            return;
+
+        lock (_recoveryLock)
+        {
+            if ((DateTime.UtcNow - _lastRecoveryUtc).TotalSeconds < RecoveryCooldownSeconds)
+                return;
+
+            if (_camera is null || !_camera.IsOpen || !IsRunning)
+                return;
+
+            _lastRecoveryUtc = DateTime.UtcNow;
+            _gigEStream = CameraDefaultsLoader.LoadGigEStream();
+
+            try
+            {
+                GrabStatusChanged?.Invoke("Đang khôi phục luồng camera...");
+
+                bool wasGrabbing = _camera.StreamGrabber.IsGrabbing;
+                if (wasGrabbing)
+                    _camera.StreamGrabber.Stop();
+
+                ConfigureStream();
+
+                if (wasGrabbing)
+                    _camera.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStreamGrabber);
+
+                _consecutiveFailCount = 0;
+            }
+            catch (Exception ex)
+            {
+                GrabStatusChanged?.Invoke($"Khôi phục camera lỗi: {ex.Message}");
+            }
+        }
+    }
+
+    private static bool IsIncompleteBufferError(IGrabResult grabResult)
+    {
+        if ((uint)grabResult.ErrorCode == IncompleteGrabErrorCode)
+            return true;
+
+        return grabResult.ErrorDescription?.Contains("incompletely grabbed", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     /// <summary>
@@ -535,7 +779,6 @@ public class BaslerCameraService : ICameraService, ICameraParameterService
             (double)maxWidth / source.Width,
             (double)maxHeight / source.Height);
 
-        // Only downscale; never upscale smaller frames.
         if (scale >= 1.0)
             return source.Clone();
 
