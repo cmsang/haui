@@ -4,7 +4,7 @@ namespace Haui.PCB.Processing;
 
 /// <summary>
 /// Chu trình Pick &amp; Place 11 bước — không gọi H0x (homing chỉ lúc khởi động app).
-/// Bước 1 là Move tuyệt đối tới Wait PickUp nên chạy được từ bất kỳ vị trí nào (home, Wait, ...).
+/// Bước 6 và 9 dùng Wait OKx / Wait NGx riêng theo slot đích (tránh va đập).
 /// </summary>
 public class RobotPickPlaceExecutor
 {
@@ -47,8 +47,8 @@ public class RobotPickPlaceExecutor
     }
 
     /// <summary>
-    /// Wait PickUp → mở gripper → PickUp → đóng → Wait PickUp → Wait Place
-    /// → Place → mở → Wait Place → Wait → đóng gripper.
+    /// Mở gripper → Wait PickUp → PickUp → đóng → Wait PickUp
+    /// → Wait OKx/NGx (theo slot) → Place → mở → Wait OKx/NGx → Wait → đóng gripper.
     /// </summary>
     public async Task RunPickUpToDestinationAsync(
         RobotTeachPoint pickUp,

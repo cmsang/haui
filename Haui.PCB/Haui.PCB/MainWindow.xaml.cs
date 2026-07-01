@@ -24,6 +24,8 @@ public partial class MainWindow : System.Windows.Window
     private readonly WarehouseSerialService _warehouseSerialService;
     private readonly RobotStartupHandshakeService _startupHandshake;
     private readonly RobotPositionTracker _positionTracker = new();
+    private readonly RobotManualInterventionGate _manualInterventionGate = new();
+    private readonly WarehousePendingCaptureService _pendingCapture = new();
 
     private readonly Queue<(string Line, Brush Brush)> _robotSerialLog = new();
     private const int MaxRobotSerialLogLines = 30;
@@ -45,7 +47,8 @@ public partial class MainWindow : System.Windows.Window
             _serialService,
             appSettingService,
             _warehouseSerialService,
-            _positionTracker);
+            _positionTracker,
+            _manualInterventionGate);
         _viewModel = new MainViewModel(materialTransfer);
         _robotViewModel = new RobotTeachViewModel(
             new RobotConfigService(appSettingService),
@@ -78,6 +81,8 @@ public partial class MainWindow : System.Windows.Window
                 Dispatcher.InvokeAsync(() => _dashboardTab?.SetStatusMessage(_viewModel.StatusText));
             else if (e.PropertyName == nameof(MainViewModel.IsMaterialTransferRunning))
                 Dispatcher.InvokeAsync(UpdateRobotOperationButtons);
+            else if (e.PropertyName == nameof(MainViewModel.IsRunning) && _viewModel.IsRunning)
+                Dispatcher.InvokeAsync(TryExecutePendingWarehouseCapture);
         };
 
         Loaded += Window_Loaded;
@@ -85,13 +90,31 @@ public partial class MainWindow : System.Windows.Window
         NavigateTo(MainTabKind.Dashboard);
     }
 
+    private DashboardTabView GetOrCreateDashboardTab()
+    {
+        if (_dashboardTab != null)
+            return _dashboardTab;
+
+        _dashboardTab = new DashboardTabView(
+            _viewModel, this, HandleInspectionCompletedAsync, _manualInterventionGate);
+        _dashboardTab.AutoOperationStateChanged += OnAutoOperationStateChanged;
+        return _dashboardTab;
+    }
+
+    private void OnAutoOperationStateChanged()
+        => Dispatcher.InvokeAsync(() =>
+        {
+            UpdateRobotOperationButtons();
+            TryExecutePendingWarehouseCapture();
+        });
+
     private void NavigateTo(MainTabKind kind)
     {
         MainContentHost.Content = kind switch
         {
-            MainTabKind.Dashboard => _dashboardTab ??= new DashboardTabView(_viewModel, this, HandleInspectionCompletedAsync),
+            MainTabKind.Dashboard => GetOrCreateDashboardTab(),
             MainTabKind.Setting => _settingTab ??= new SettingTabView(),
-            _ => _dashboardTab ??= new DashboardTabView(_viewModel, this, HandleInspectionCompletedAsync)
+            _ => GetOrCreateDashboardTab()
         };
 
         SidebarDashboard.Background = kind == MainTabKind.Dashboard ? SidebarActiveBrush : SidebarIdleBrush;
@@ -169,17 +192,78 @@ public partial class MainWindow : System.Windows.Window
     }
 
     private void OnWarehouseCaptureRequested()
-        => Dispatcher.InvokeAsync(() => _dashboardTab?.RequestInspection());
+        => Dispatcher.InvokeAsync(HandleWarehouseCaptureRequested);
+
+    private void HandleWarehouseCaptureRequested()
+    {
+        if (_manualInterventionGate.IsActive)
+        {
+            _pendingCapture.MarkPending();
+            var label = _manualInterventionGate.ActiveLabel;
+            var msg = $"Nhận CAPx — lưu yêu cầu, sẽ chụp sau khi đóng {label}.";
+            AppendRobotSerialLog(msg, WarehouseRxLogBrush);
+            GetOrCreateDashboardTab().SetStatusMessage(msg);
+            return;
+        }
+
+        if (!TryExecuteWarehouseCaptureImmediate())
+            _pendingCapture.MarkPending();
+    }
+
+    private void TryExecutePendingWarehouseCapture()
+    {
+        if (!_pendingCapture.HasPending)
+            return;
+
+        if (_manualInterventionGate.IsActive || IsAutoOperationInProgress())
+            return;
+
+        TryExecuteWarehouseCaptureImmediate();
+    }
+
+    private bool TryExecuteWarehouseCaptureImmediate()
+    {
+        var tab = GetOrCreateDashboardTab();
+
+        if (!tab.TryRequestInspection())
+            return false;
+
+        if (_pendingCapture.HasPending)
+        {
+            _pendingCapture.TryTakePending();
+            tab.SetStatusMessage("Thực hiện CAPx đang chờ...");
+        }
+
+        return true;
+    }
 
     private void UpdateRobotOperationButtons()
     {
         var ready = RobotConnectionHelper.IsRobotArmReady(_serialService, _startupHandshake);
-        var busy = _viewModel.IsMaterialTransferRunning;
+        var autoBusy = IsAutoOperationInProgress();
 
-        btnTeaching.IsEnabled = ready && !busy;
-        btnManualControl.IsEnabled = ready && !busy;
-        btnPass.IsEnabled = ready && !busy;
-        btnFail.IsEnabled = ready && !busy;
+        // Teaching/Manual stay enabled when robot ready — click shows warning if auto is busy.
+        btnTeaching.IsEnabled = ready;
+        btnManualControl.IsEnabled = ready;
+        btnPass.IsEnabled = ready && !autoBusy;
+        btnFail.IsEnabled = ready && !autoBusy;
+    }
+
+    private bool IsAutoOperationInProgress()
+        => _viewModel.IsMaterialTransferRunning
+           || (_dashboardTab?.IsInspectionBusy ?? false);
+
+    private bool EnsureCanOpenManualIntervention(string screenLabel)
+    {
+        if (!IsAutoOperationInProgress())
+            return true;
+
+        MessageBox.Show(
+            RobotConnectionHelper.AutoOperationInProgressWarning(screenLabel),
+            RobotConnectionHelper.AutoOperationInProgressTitle,
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+        return false;
     }
 
     private void Serial_FrameReceived(string frame)
@@ -296,6 +380,14 @@ public partial class MainWindow : System.Windows.Window
             return;
         }
 
+        if (_manualInterventionGate.IsActive)
+        {
+            await Dispatcher.InvokeAsync(() =>
+                _dashboardTab?.SetStatusMessage(
+                    $"Nhận dạng: {label} — đang mở {_manualInterventionGate.ActiveLabel}, bỏ qua phân loại tự động."));
+            return;
+        }
+
         await Dispatcher.InvokeAsync(UpdateRobotOperationButtons);
         await Dispatcher.InvokeAsync(() =>
             _dashboardTab?.SetStatusMessage($"Nhận dạng: {label} — đang phân loại bằng robot..."));
@@ -317,8 +409,20 @@ public partial class MainWindow : System.Windows.Window
         if (!RobotConnectionHelper.EnsureRobotArmReady(_serialService, _startupHandshake))
             return;
 
+        if (!EnsureCanOpenManualIntervention("Manual Control"))
+            return;
+
         var win = new wdManualControl(_serialService, _positionTracker) { Owner = this };
-        win.ShowDialog();
+        _manualInterventionGate.Enter("Manual Control");
+        try
+        {
+            win.ShowDialog();
+        }
+        finally
+        {
+            _manualInterventionGate.Exit();
+            TryExecutePendingWarehouseCapture();
+        }
         EnsureMainSerialDataReceiver();
         _robotViewModel.SyncConnectionState();
         UpdateRobotSerialStatus();
@@ -339,8 +443,20 @@ public partial class MainWindow : System.Windows.Window
         if (!RobotConnectionHelper.EnsureRobotArmReady(_serialService, _startupHandshake))
             return;
 
+        if (!EnsureCanOpenManualIntervention("Teaching"))
+            return;
+
         var win = new wdTeaching(_serialService, _positionTracker) { Owner = this };
-        win.ShowDialog();
+        _manualInterventionGate.Enter("Teaching");
+        try
+        {
+            win.ShowDialog();
+        }
+        finally
+        {
+            _manualInterventionGate.Exit();
+            TryExecutePendingWarehouseCapture();
+        }
         EnsureMainSerialDataReceiver();
         _robotViewModel.SyncConnectionState();
         UpdateRobotSerialStatus();

@@ -8,6 +8,7 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using Haui.PCB.Processing.Detection;
 using Haui.PCB.Processing.Segmentation;
+using Haui.PCB.Processing;
 using Haui.PCB.ViewModels;
 using Haui.PCB.Views.Windows;
 
@@ -29,6 +30,7 @@ public partial class DashboardTabView : UserControl
     private readonly TestPipelineViewModel _inspectionViewModel;
     private readonly Window _owner;
     private readonly Func<bool, Task>? _onInspectionCompleted;
+    private readonly RobotManualInterventionGate? _manualInterventionGate;
     private readonly IAppSettingService _appSettingService = new AppSettingService();
     private bool _developerMode;
     private bool _showInspectionResultAfterRecognition;
@@ -39,11 +41,18 @@ public partial class DashboardTabView : UserControl
     private BitmapSource? _latestCameraFrame;
     private int _cameraFrameDispatchQueued;
 
-    public DashboardTabView(MainViewModel viewModel, Window owner, Func<bool, Task>? onInspectionCompleted = null)
+    public event Action? AutoOperationStateChanged;
+
+    public DashboardTabView(
+        MainViewModel viewModel,
+        Window owner,
+        Func<bool, Task>? onInspectionCompleted = null,
+        RobotManualInterventionGate? manualInterventionGate = null)
     {
         _viewModel = viewModel;
         _owner = owner;
         _onInspectionCompleted = onInspectionCompleted;
+        _manualInterventionGate = manualInterventionGate;
 
         _inspectionViewModel = new TestPipelineViewModel(
             new PcbSegmentationService(),
@@ -111,7 +120,11 @@ public partial class DashboardTabView : UserControl
             if (e.PropertyName == nameof(TestPipelineViewModel.IsFullMatch))
                 Dispatcher.InvokeAsync(UpdatePassFailDisplay);
             else if (e.PropertyName is nameof(TestPipelineViewModel.IsBusy) or nameof(TestPipelineViewModel.HasPipelineSteps))
+            {
                 Dispatcher.InvokeAsync(UpdatePipelineStepsPlaceholder, DispatcherPriority.Background);
+                if (e.PropertyName == nameof(TestPipelineViewModel.IsBusy))
+                    AutoOperationStateChanged?.Invoke();
+            }
             else if (e.PropertyName == nameof(TestPipelineViewModel.StatusText))
                 Dispatcher.InvokeAsync(() =>
                 {
@@ -154,6 +167,9 @@ public partial class DashboardTabView : UserControl
                 StatusText.Text = $"Lỗi phân loại robot sau nhận dạng: {ex.Message}");
         }
     }
+
+    /// <summary>True while CAPx/manual inspection pipeline is running.</summary>
+    public bool IsInspectionBusy => _inspectionViewModel.IsBusy;
 
     private void UpdatePassFailDisplay()
     {
@@ -349,30 +365,34 @@ public partial class DashboardTabView : UserControl
         ProcessImage();
     }
 
-    /// <summary>
-    /// Trigger an inspection from outside the UI (e.g. warehouse CAPx). Marshals to the UI thread.
-    /// </summary>
-    public void RequestInspection()
+    /// <summary>Trigger an inspection from outside the UI (e.g. warehouse CAPx). Marshals to the UI thread.</summary>
+    /// <returns>True if inspection was started; false if deferred or skipped.</returns>
+    public bool TryRequestInspection()
     {
         if (!Dispatcher.CheckAccess())
         {
-            Dispatcher.InvokeAsync(RequestInspection);
-            return;
+            bool started = false;
+            Dispatcher.Invoke(() => started = TryRequestInspection());
+            return started;
         }
+
+        if (_manualInterventionGate?.IsActive == true)
+            return false;
 
         if (!_viewModel.IsRunning)
         {
-            StatusText.Text = "Nhận CAPx nhưng camera chưa chạy — bỏ qua.";
-            return;
+            StatusText.Text = "Nhận CAPx nhưng camera chưa chạy — chờ bật camera.";
+            return false;
         }
 
         if (_inspectionViewModel.IsBusy)
         {
-            StatusText.Text = "Đang kiểm tra — bỏ qua CAPx.";
-            return;
+            StatusText.Text = "Đang kiểm tra — CAPx chờ xong chu trình hiện tại.";
+            return false;
         }
 
         ProcessImage();
+        return true;
     }
 
     private async void ProcessImage()

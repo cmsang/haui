@@ -15,8 +15,14 @@ GO
         (N'PickUp',      N'Chung', N'20', N'0',   N'0',   N'0',   N'0'),
         (N'Wait PickUp', N'Chung', N'20', N'-20', N'-20', N'-20', N'0'),
         (N'Wait',        N'Chung', N'10', N'10',  N'0',   N'10',  N'0'),
-        (N'Wait OK',     N'Chung', N'10', N'-20', N'-20', N'-10', N'0'),
-        (N'Wait NG',     N'Chung', N'0',  N'-20', N'-20', N'-20', N'0'),
+        (N'Wait OK1',    N'Chung', N'10', N'0',   N'0',   N'10',  N'0'),
+        (N'Wait OK2',    N'Chung', N'0',  N'0',   N'0',   N'0',   N'0'),
+        (N'Wait OK3',    N'Chung', N'0',  N'0',   N'0',   N'0',   N'0'),
+        (N'Wait OK4',    N'Chung', N'0',  N'0',   N'0',   N'0',   N'0'),
+        (N'Wait NG1',    N'Chung', N'0',  N'0',   N'0',   N'0',   N'0'),
+        (N'Wait NG2',    N'Chung', N'0',  N'0',   N'0',   N'0',   N'0'),
+        (N'Wait NG3',    N'Chung', N'0',  N'0',   N'0',   N'0',   N'0'),
+        (N'Wait NG4',    N'Chung', N'0',  N'0',   N'0',   N'0',   N'0'),
         (N'OK1',         N'OK',    N'10', N'0',   N'0',   N'10',  N'0'),
         (N'OK2',         N'OK',    N'0',  N'0',   N'0',   N'0',   N'0'),
         (N'OK3',         N'OK',    N'0',  N'0',   N'0',   N'0',   N'0'),
@@ -60,7 +66,8 @@ WHEN NOT MATCHED BY TARGET THEN
             source.J4, source.J5, source.FullState, source.UpdateTime);
 GO
 
--- Home / Wait Place cũ (tên đơn) không còn dùng
+-- Home / Wait Place / Wait OK|NG cũ (tên đơn) không còn dùng
 DELETE FROM RobotConfig WHERE PosName = N'Home';
 DELETE FROM RobotConfig WHERE PosName = N'Wait Place';
+DELETE FROM RobotConfig WHERE PosName IN (N'Wait OK', N'Wait NG');
 GO
