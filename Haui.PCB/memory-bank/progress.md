@@ -37,6 +37,7 @@
 - [x] **Chốt vị trí trước chu trình (2026-06-29)** — `RobotPositionTracker` (Home/Wait/Unknown) dùng chung; chu trình 11 bước chỉ chạy khi Home/Wait, không cho từ vị trí bất kỳ; chặn ở `MaterialTransferService.TransferAsync` + báo lỗi; jog/move/goto/homing thủ công → Unknown, homing/handshake → Home, kết thúc chu trình → Wait
 - [x] Sharpest-frame selection (Laplacian variance)
 - [x] Camera Mono8 — force `Mono8`, `CV_8UC1` grab, Gaussian blur at grab; segmentation skips Grayscale + duplicate blur for 1-channel frames
+- [x] **Basler GigE grab stability (2026-07-01)** — `CameraGigEStream` in `setting.json`; worker-thread frame processing; auto grabber recovery; status bar rolling fail %; bench max **8 FPS**
 
 ## Known limitations
 

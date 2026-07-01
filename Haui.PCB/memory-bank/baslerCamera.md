@@ -48,20 +48,35 @@ _camera.StreamGrabber.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByStream
 
 ### Stream settings (Haui.PCB)
 
-| Parameter | Value |
-|-----------|-------|
-| `PLStream.AutoPacketSize` | `true` |
-| `PLCameraInstance.MaxNumBuffer` | `16` |
-| `PLStream.MaxTransferSize` | 4 MB |
-| `PLStream.MaxBufferSize` | 64 MB |
+Configured via `Config/setting.json` → **`CameraGigEStream`** (loaded on each `StartCore` / recovery). Bench camera runs at **max ~8 FPS** (~28 MB/s — not GigE bandwidth limited).
 
-### Pixel format priority (Haui.PCB)
+| Parameter | Default | GenICam / pylon |
+|-----------|---------|-----------------|
+| `interPacketDelay` | `1000` | `GevSCPD` — reduces sporadic packet loss; does not lower display FPS @ 8 FPS |
+| `autoPacketSize` | `true` | `PLStream.AutoPacketSize` |
+| `packetSize` | `0` | `GevSCPSPacketSize` (when auto off) |
+| `maxNumBuffer` | `24` | `MaxNumBuffer` |
+| `outputQueueSize` | `2` | `OutputQueueSize` + `LatestImages` |
+| `maxTransferSizeMb` | `4` | `PLStream.MaxTransferSize` |
+| `maxBufferSizeMb` | `64` | `PLStream.MaxBufferSize` |
+| `grabLoopThreadPriority` | `25` | `GrabLoopThreadPriority` / `InternalGrabEngineThreadPriority` if present |
+| `consecutiveFailThreshold` | `15` | App: auto-restart grabber |
+| `enableAutoRecovery` | `true` | App: throttle 30 s between restarts |
 
-Configured `pixelFormat` in `setting.json` is tried first; if unavailable, fallback:
+**Grab path (2026-07):** `OnImageGrabbed` clones + disposes on pylon thread immediately; convert/blur/downscale on a **background worker** (`Channel` capacity 1). Rolling 60 s grab fail stats on status bar; auto `StreamGrabber` restart after consecutive failures.
 
-`Mono8` → `BGR8` → `BayerRG8` → `BayerBG8` → `BayerGR8` → `BayerGB8` → `RGB8`
+### Troubleshooting `0xE1000014` (buffer incompletely grabbed)
 
-Convert to OpenCV: `PixelDataConverter` with `OutputPixelFormat = PixelType.BGR8packed` → `Mat` CV_8UC3.
+| Symptom | Action |
+|---------|--------|
+| Sporadic errors @ 8 FPS | Ensure worker offload deployed; tune `interPacketDelay` 1000→5000 in JSON |
+| Errors during inspection + preview | Raise `maxNumBuffer` to 32; enable `CameraDownscale` |
+| Persistent after Phase B | `autoPacketSize: false`, `packetSize: 1500`; check cable/NIC |
+| Basler KB | [Error 0xE1000014](https://docs.baslerweb.com/knowledge/troubleshooting-error-code-3774873620-0xe1000014-with-gige-cameras) |
+
+### Pixel format (Haui.PCB)
+
+Configured `pixelFormat` in `setting.json` is tried first; code enforces **Mono8** at connect (`TryConfigurePixelFormat`).
 
 ### Auto parameters on connect (Haui.PCB)
 

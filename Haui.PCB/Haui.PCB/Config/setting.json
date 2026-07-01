@@ -10,7 +10,7 @@
   "DatabaseConnection": "Data Source=.\\SQLExpress;Initial Catalog=SmartWarehouse;Integrated Security=True;TrustServerCertificate=True",
   "ComponentDetection": {
     "modelPath": "Config/yolo26m_720x960.onnx",
-    "inputWidth": 720,
+    "inputWidth": 736,
     "inputHeight": 960,
     "confThreshold": 0.25,
     "iouThreshold": 0.45,
@@ -86,5 +86,25 @@
     "enabled": true,
     "width": 1920,
     "height": 1080
+  },
+  "CameraGigEStream": {
+    // GenICam GevSCPD — khoảng dừng giữa các gói UDP. Camera bench tối đa 8 FPS → tăng delay thường KHÔNG đổi FPS hiển thị.
+    // Dùng để giảm mất gói rải rác. Sau offload grab thread: thử 1000 → 3000 → 5000 nếu vẫn lỗi.
+    "interPacketDelay": 1000,
+    // PLStream.AutoPacketSize — camera tự thương lượng kích thước gói với NIC.
+    "autoPacketSize": true,
+    // GevSCPSPacketSize (byte); chỉ khi autoPacketSize=false. 0 = bỏ qua. Phổ biến: 1500 hoặc 8192.
+    "packetSize": 0,
+    // MaxNumBuffer — số buffer ảnh pylon cấp phát (~3.5 MB × maxNumBuffer @ 2304×1536 Mono8).
+    "maxNumBuffer": 24,
+    // OutputQueueSize — hàng đợi LatestImages (2–3 cho live preview).
+    "outputQueueSize": 2,
+    "maxTransferSizeMb": 4,
+    "maxBufferSizeMb": 64,
+    // GrabLoopThreadPriority 25–30 khuyến nghị GigE; 0 = không ghi.
+    "grabLoopThreadPriority": 25,
+    // Số lỗi grab liên tiếp trước khi tự restart StreamGrabber (tối đa 1 lần/30s).
+    "consecutiveFailThreshold": 15,
+    "enableAutoRecovery": true
   }
 }

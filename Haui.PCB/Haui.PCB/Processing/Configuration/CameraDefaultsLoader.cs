@@ -9,4 +9,6 @@ public static class CameraDefaultsLoader
     public static CameraParameters LoadRecommended() => AppSettingsStore.LoadCameraBasler();
 
     public static ImageDownscaleSettings LoadDownscale() => AppSettingsStore.LoadCameraDownscale();
+
+    public static CameraGigEStreamSettings LoadGigEStream() => AppSettingsStore.LoadCameraGigEStream();
 }
