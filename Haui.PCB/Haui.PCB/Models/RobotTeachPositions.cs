@@ -7,6 +7,7 @@ namespace Haui.PCB.Models;
 public static class RobotTeachPositions
 {
     public const string PickUp = "PickUp";
+    public const string PickDone = "Pick Done";
     public const string Wait = "Wait";
     public const string WaitPickUp = "Wait PickUp";
     public const string Ok1 = "OK1";
@@ -26,7 +27,7 @@ public static class RobotTeachPositions
 
     public static readonly IReadOnlyList<string> StandardNames =
     [
-        PickUp, WaitPickUp, Wait,
+        PickUp, WaitPickUp, PickDone, Wait,
         .. OkWaitSlotNames,
         .. NgWaitSlotNames,
         .. OkSlotNames,
@@ -58,6 +59,7 @@ public static class RobotTeachPositions
     public static string GetGroup(string name) => name.ToUpperInvariant() switch
     {
         "PICKUP" => "Chung",
+        _ when name.Equals(PickDone, StringComparison.OrdinalIgnoreCase) => "Chung",
         _ when name.Equals(Wait, StringComparison.OrdinalIgnoreCase) => "Chung",
         _ when name.Equals(WaitPickUp, StringComparison.OrdinalIgnoreCase) => "Chung",
         _ when IsWaitPlaceSlot(name) => "Chung",
@@ -118,6 +120,15 @@ public static class RobotTeachPositions
             p.Name.Equals(WaitPickUp, StringComparison.OrdinalIgnoreCase));
 
         return waitPickUp != null && !IsUntaught(waitPickUp) ? waitPickUp : null;
+    }
+
+    /// <summary>Trả về Pick Done đã teach; null nếu chưa teach.</summary>
+    public static RobotTeachPoint? ResolvePickDone(IEnumerable<RobotTeachPoint> points)
+    {
+        var pickDone = points.FirstOrDefault(p =>
+            p.Name.Equals(PickDone, StringComparison.OrdinalIgnoreCase));
+
+        return pickDone != null && !IsUntaught(pickDone) ? pickDone : null;
     }
 
     /// <summary>Trả về Wait OKx / Wait NGx (theo slot đích) đã teach; null nếu chưa teach.</summary>

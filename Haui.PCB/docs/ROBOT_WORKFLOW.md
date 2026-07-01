@@ -95,8 +95,9 @@ Mọi lệnh ASCII gửi qua `SendAscii(cmd)` được firmware nhận dạng **
 | Nhóm | Tên vị trí | Vai trò |
 |------|------------|---------|
 | Chung | `PickUp` | Điểm gắp PCB |
-| Chung | `Wait PickUp` | Chờ trước/sau gắp — lưu DB, teach thủ công |
-| Chung | `Wait` | Hành lang giữa pick và place — lưu DB, teach được |
+| Chung | `Wait PickUp` | Chờ trước khi vào gắp — teach thủ công |
+| Chung | `Pick Done` | Chờ sau khi gắp xong — teach thủ công, rồi mới đi place |
+| Chung | `Wait` | Hành lang cuối chu trình — teach được |
 | Chung | `Wait OK1` … `Wait OK4` | Chờ trước/sau đặt **Pass** từng slot — teach thủ công |
 | Chung | `Wait NG1` … `Wait NG4` | Chờ trước/sau đặt **Fail** từng slot — teach thủ công |
 | OK | `OK1` … `OK4` | Buffer hàng **Pass** |
@@ -206,7 +207,7 @@ Dùng để **test thủ công** chu trình gắp–đặt tới một slot OK h
 | 2/11 | `G40x` — Mở gripper |
 | 3/11 | Move → **PickUp** |
 | 4/11 | `G20x` — Đóng gripper (gắp) |
-| 5/11 | Move → **Wait PickUp** (rút lui) |
+| 5/11 | Move → **Pick Done** (sau gắp — trước khi tới vùng place) |
 | 6/11 | Move → **Wait OKx** hoặc **Wait NGx** (theo slot đích, vd OK2 → Wait OK2) |
 | 7/11 | Move → **OKx / NGx** (Place) |
 | 8/11 | `G40x` — Mở gripper (thả) |
@@ -214,7 +215,7 @@ Dùng để **test thủ công** chu trình gắp–đặt tới một slot OK h
 | 10/11 | Move → **Wait** |
 | 11/11 | `G20x` — Đóng gripper |
 
-**Wait PickUp** / **Wait OK1–4** / **Wait NG1–4** / **Wait** — đều từ Database (teach thủ công). Mỗi slot OK/NG có điểm wait riêng để tránh va đập.
+**Wait PickUp** / **Pick Done** / **Wait OK1–4** / **Wait NG1–4** / **Wait** — đều từ Database (teach thủ công). Sau gắp (bước 4) robot **bắt buộc** về Pick Done (bước 5) rồi mới tới Wait OKx/NGx và slot đích.
 
 - **Điều kiện xuất phát**: chu trình **chỉ chạy khi robot ở Home hoặc Wait** (xem mục 8.6). Vị trí bất kỳ → bị chặn, báo lỗi, không gửi lệnh.
 - Bước **Move / Home**: đăng ký lắng nghe **trước** khi gửi, chỉ chấp nhận `Dx` **sau** khi TX; timeout **120 giây**/bước, **thử lại 1 lần** nếu timeout.
@@ -255,7 +256,7 @@ flowchart TD
 | Triệu chứng | Nguyên nhân | Xử lý |
 |-------------|-------------|-------|
 | Chỉ thấy `G40x`, không có `M…x` | Phiên bản cũ: mở gripper trước khi Move; `Dx` trễ từ gripper kẹt bước Move | Đã sửa: Move Wait PickUp trước, `Dx` chỉ hợp lệ sau TX |
-| Không chạy robot sau nhận dạng | Robot chưa handshake / điểm teach toàn 0 | Teach PickUp, Wait PickUp, Wait, Wait OKx/NGx theo slot, slot đích |
+| Không chạy robot sau nhận dạng | Robot chưa handshake / điểm teach toàn 0 | Teach PickUp, Wait PickUp, Pick Done, Wait, Wait OKx/NGx theo slot, slot đích |
 | Báo "robot đang ở vị trí … chỉ chạy khi Home/Wait" | Robot ở vị trí `Unknown` (vừa jog/move/goto) | Homing về Home rồi chạy lại (mục 8.6) |
 | `CAPx` nhưng không kiểm tra | Camera chưa Start | Bật camera trên Dashboard trước khi vận hành Auto |
 | CAPx bị bỏ qua khi đang Teaching/Manual | Nhà kho chỉ gửi CAP **một lần** | CAPx được **lưu chờ**; tự chụp khi đóng Teaching/Manual (hoặc khi bật camera / hết bận) |
@@ -401,7 +402,7 @@ flowchart TD
 
 **Thứ tự thực thi:**
 0. **Kiểm tra vị trí xuất phát** — chỉ tiếp tục khi robot ở Home hoặc Wait (`RobotPositionTracker.CanStartCycle`, mục 8.6). Vị trí bất kỳ → báo lỗi, dừng, không gửi `CMx`.
-1. Load vị trí từ Database — tính Wait PickUp và Wait OKx/NGx theo slot đích.
+1. Load vị trí từ Database — tính Wait PickUp, Pick Done và Wait OKx/NGx theo slot đích.
 2. **Gửi `CMx` → `warehouseCom`, chờ `COx`** (timeout 120 s). Chỉ khi nhận `COx` mới tiếp tục.
 3. Kết nối robot COM (`com`) nếu chưa online.
 4. Chạy **chu trình 11 bước** (`RobotPickPlaceExecutor`).
@@ -548,6 +549,7 @@ flowchart TB
 2. Database/02_RobotConfig_SeedData.sql
 3. Database/03_RobotConfig_StoredProcedures.sql
 4. Database/04_RobotConfig_Clone_WaitSlots.sql   -- DB đã có sẵn OK/NG: clone Wait OK1–4 / Wait NG1–4
+5. Database/05_RobotConfig_Add_PickDone.sql      -- thêm Pick Done (clone từ PickUp)
 ```
 
 Chạy trên đúng database trong `DatabaseConnection` (ví dụ `SmartWarehouse`).

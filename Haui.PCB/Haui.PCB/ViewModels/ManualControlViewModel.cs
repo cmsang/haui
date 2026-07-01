@@ -351,6 +351,14 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        var pickDone = RobotTeachPositions.ResolvePickDone(
+            RobotTeachPositions.Normalize(_allTeachPoints));
+        if (pickDone == null)
+        {
+            StatusText = "Không tìm thấy Pick Done — cần teach Pick Done.";
+            return;
+        }
+
         var isNg = RobotTeachPositions.IsNgSlot(destination.Name);
 
         if (RobotTeachPositions.IsUntaught(destination))
@@ -382,7 +390,7 @@ public class ManualControlViewModel : INotifyPropertyChanged, IDisposable
             _positionTracker.SetUnknown();
 
             await _pickPlaceExecutor.RunPickUpToDestinationAsync(
-                pickUp, waitPickUp, waitPlace, destination, wait, msg => StatusText = msg, ct);
+                pickUp, waitPickUp, pickDone, waitPlace, destination, wait, msg => StatusText = msg, ct);
 
             _positionTracker.SetWait();
             StatusText = $"Test hoàn tất: PickUp → {destination.Name} → Wait.";

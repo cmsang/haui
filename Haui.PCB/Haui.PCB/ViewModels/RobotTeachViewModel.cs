@@ -161,7 +161,7 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     public bool IsSelectedPointStandard =>
         SelectedPoint != null && RobotTeachPositions.IsStandard(SelectedPoint.Name);
 
-    /// <summary>Cho phép teach mọi vị trí chuẩn (gồm Wait PickUp / Wait OK1–4 / Wait NG1–4).</summary>
+    /// <summary>Cho phép teach mọi vị trí chuẩn (gồm Wait PickUp / Pick Done / Wait OK1–4 / Wait NG1–4).</summary>
     public bool CanTeachSelectedPoint =>
         HasSelectedPoint && IsSelectedPointStandard;
 
