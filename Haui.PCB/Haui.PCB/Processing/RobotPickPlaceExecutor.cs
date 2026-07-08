@@ -8,8 +8,8 @@ namespace Haui.PCB.Processing;
 /// </summary>
 public class RobotPickPlaceExecutor
 {
-    private const int GripperOpenAngle = 15;
-    private const int GripperCloseAngle = 4;
+    private const int GripperOpenAngle = 35;
+    private const int GripperCloseAngle = 8;
     private static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(120);
     private static readonly TimeSpan GripperDoneTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan GripperSettleDelay = TimeSpan.FromMilliseconds(500);

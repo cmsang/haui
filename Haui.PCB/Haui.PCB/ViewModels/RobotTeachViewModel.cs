@@ -96,8 +96,8 @@ public class RobotTeachViewModel : INotifyPropertyChanged, IDisposable
     private static readonly TimeSpan AwaitDoneTimeout = TimeSpan.FromSeconds(120);
 
     // Góc gripper (độ) — đồng bộ với RobotPickPlaceExecutor.
-    private const int GripperOpenAngle = 15;
-    private const int GripperCloseAngle = 4;
+    private const int GripperOpenAngle = 35;
+    private const int GripperCloseAngle = 8;
 
     public RobotTeachViewModel(
         IRobotConfigService robotConfigService,
